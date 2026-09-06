@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useState } from "react"
 import { Plus, ChevronDown, ChefHat } from "lucide-react"
 import { useCart } from "@/lib/cart-context"
@@ -13,9 +14,13 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <article className="group flex flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm transition-shadow hover:shadow-lg">
       <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
-        <img
+        <Image
           src={product.image || "/placeholder.svg"}
-          alt={`${product.name} served in a bowl`}
+          alt={product.name}
+          width={960}
+          height={720}
+          sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) 50vw, 33vw"
+          loading="lazy"
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         {product.badge && (
@@ -49,9 +54,7 @@ export function ProductCard({ product }: { product: Product }) {
                 {product.prepTitle ?? "How to prepare"}
               </span>
               <ChevronDown
-                className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
-                  showPrep ? "rotate-180" : ""
-                }`}
+                className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${showPrep ? "rotate-180" : ""}`}
                 aria-hidden="true"
               />
             </button>
