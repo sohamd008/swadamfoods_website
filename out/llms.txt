@@ -1,0 +1,34 @@
+# Swadam Foods
+
+> Authentic Indian snacks and instant premixes, made with real ingredients and traditional recipes. A women-owned and women-operated food business based in Pune, India.
+
+## Products
+
+- **Patal Poha Chivda** (200 g, ₹90) — Signature crunchy flattened rice snack with roasted peanuts, curry leaves and turmeric-spice blend. Ready to eat. Bestseller.
+- **Instant Kanda Poha Premix** (150 g, ₹70) — Just add hot water, rest 5 minutes. Authentic Maharashtra-style Kanda Poha with onions, chilies and turmeric.
+- **Instant Upma Premix** (150 g, ₹70) — Just add hot water, rest 5 minutes. Savoury semolina upma with curry leaves, mustard and chilies.
+
+## Business Information
+
+- **Owner:** Women-owned and women-operated business
+- **Location:** Lane No. 30/31 B, Ganesh Nagar, Dhayari, Pune, Maharashtra, India
+- **Phone:** +91 88888 51522
+- **Email:** swadamfoodsindia@gmail.com
+- **Instagram:** @swadamfoodsindia
+- **WhatsApp ordering:** https://wa.me/918888851522
+
+## Registrations & Compliance
+
+- **FSSAI License:** 21526080002094
+- **UDYAM MSME:** UDYAM-MH-26-1188295
+- **GSTIN:** 27AOCPD1930N1Z1
+
+## How to Order
+
+Add products to the cart on the website, then check out via WhatsApp. We confirm the order and arrange delivery. You can also message us directly on WhatsApp.
+
+## Links
+
+- [Website](https://swadamfoods.eu.cc)
+- [Product Catalog API](https://swadamfoods.eu.cc/.well-known/service-desc)
+- [Service Documentation](https://swadamfoods.eu.cc/.well-known/service-doc)

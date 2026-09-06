@@ -36,6 +36,15 @@ export function AboutSection() {
             quality seriously, and we&apos;re proud to be a registered,
             compliant Indian food business.
           </p>
+          <p className="text-pretty leading-relaxed text-muted-foreground">
+            Based in Pune, Maharashtra, we prepare every batch in small
+            quantities to guarantee freshness. Our Patal Poha Chivda uses thin
+            flattened rice (patal poha) for an extra-light, crunchy texture that
+            distinguishes it from thicker varieties. Our instant premixes are
+            designed for busy households — simply add hot water, wait five
+            minutes, and enjoy a home-style breakfast without compromising on
+            taste or quality.
+          </p>
 
           <dl className="mt-2 grid grid-cols-3 gap-4 border-t border-border pt-6">
             <div>
