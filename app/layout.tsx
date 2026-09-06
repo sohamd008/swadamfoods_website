@@ -19,6 +19,7 @@ const poppins = Poppins({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://swadamfoods.eu.cc'),
   title: 'Swadam Foods | Authentic Indian Snacks & Instant Premixes',
   description:
     'Swadam Foods manufactures authentic Indian snacks — Patal Poha Chivda and instant Kanda Poha & Upma premixes. FSSAI compliant, UDYAM MSME & GSTIN registered. Order directly on WhatsApp.',
