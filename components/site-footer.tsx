@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { MessageCircle, Phone, Mail, MapPin } from "lucide-react"
 import { WHATSAPP_NUMBER, business } from "@/lib/products"
 
@@ -95,10 +96,26 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <p className="mt-12 border-t border-border pt-6 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} {business.name}. All rights reserved. ·
-          Women-owned &amp; operated.
-        </p>
+        <div className="mt-12 flex flex-col items-center gap-4 border-t border-border pt-6 sm:flex-row sm:justify-between">
+          <p className="text-center text-xs text-muted-foreground">
+            © {new Date().getFullYear()} {business.name}. All rights reserved. ·
+            Women-owned &amp; operated.
+          </p>
+          <nav className="flex items-center gap-5" aria-label="Legal">
+            <Link
+              href="/terms"
+              className="text-xs font-medium text-muted-foreground transition-colors hover:text-primary"
+            >
+              Terms of Service
+            </Link>
+            <Link
+              href="/refund-policy"
+              className="text-xs font-medium text-muted-foreground transition-colors hover:text-primary"
+            >
+              Refund &amp; Cancellation Policy
+            </Link>
+          </nav>
+        </div>
       </div>
     </footer>
   )

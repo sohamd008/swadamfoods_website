@@ -19,6 +19,8 @@ export const business = {
   gstin: "27AOCPD1930N1Z1",
   fssai: "21526080002094",
   udyam: "UDYAM-MH-26-1188295",
+  legalEmail: "swadamfoodsindia@gmail.com",
+  legalPhone: "8888851522",
 } as const
 
 export const products: Product[] = [
