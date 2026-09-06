@@ -1,3 +1,4 @@
+import Image from "next/image"
 import { ShieldCheck, Leaf, Clock } from "lucide-react"
 
 const highlights = [
@@ -12,9 +13,12 @@ export function Hero() {
       <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 md:grid-cols-2 md:py-20">
         <div className="flex flex-col gap-6">
           <div className="w-fit overflow-hidden rounded-2xl border border-border bg-[#f7f2e7] p-3 shadow-sm">
-            <img
+            <Image
               src="/images/swadam-logo.jpg"
               alt="Swadam Foods — Taste of Purity and Care"
+              width={224}
+              height={112}
+              sizes="112px"
               className="h-24 w-auto sm:h-28"
             />
           </div>
@@ -63,9 +67,13 @@ export function Hero() {
             aria-hidden="true"
             className="absolute -inset-4 -z-10 rounded-[2.5rem] bg-primary/15 blur-2xl"
           />
-          <img
+          <Image
             src="/images/hero-chivda.png"
             alt="A rustic bowl of Patal Poha Chivda garnished with peanuts and curry leaves"
+            width={1200}
+            height={1200}
+            sizes="(max-width: 767px) calc(100vw - 2rem), 50vw"
+            priority
             className="aspect-square w-full rounded-[2rem] border border-border object-cover shadow-xl"
           />
           <div className="absolute bottom-4 left-4 rounded-2xl border border-border bg-card/95 px-4 py-3 shadow-lg backdrop-blur">
