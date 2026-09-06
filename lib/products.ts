@@ -7,6 +7,8 @@ export type Product = {
   price: number
   image: string
   badge?: string
+  prepTitle?: string
+  prepSteps?: string[]
 }
 
 export const WHATSAPP_NUMBER = "918888851522"
@@ -34,6 +36,13 @@ export const products: Product[] = [
     price: 90,
     image: "/images/patal-poha-chivda.png",
     badge: "Bestseller",
+    prepTitle: "Serving & storage",
+    prepSteps: [
+      "Ready to eat — no cooking needed. Just open and enjoy.",
+      "Pairs perfectly with a cup of chai or coffee.",
+      "Reseal the pack tightly after opening to keep it crisp.",
+      "Store in a cool, dry place away from direct sunlight.",
+    ],
   },
   {
     id: "kanda-poha-premix",
@@ -45,6 +54,13 @@ export const products: Product[] = [
     price: 70,
     image: "/images/kanda-poha.png",
     badge: "Ready in 5 min",
+    prepTitle: "How to prepare",
+    prepSteps: [
+      "Empty the premix into a bowl.",
+      "Add hot boiling water equal to exactly half the amount of premix (1 part water to 2 parts premix).",
+      "Cover the bowl and let it rest.",
+      "It will be ready in 5 minutes. Fluff gently and serve.",
+    ],
   },
   {
     id: "upma-premix",
@@ -56,5 +72,12 @@ export const products: Product[] = [
     price: 70,
     image: "/images/upma.png",
     badge: "Ready in 5 min",
+    prepTitle: "How to prepare",
+    prepSteps: [
+      "Empty the premix into a bowl.",
+      "Add hot boiling water equal to exactly the same amount as the premix (1 part water to 1 part premix).",
+      "Cover the bowl and let it rest.",
+      "It will be ready in 5 minutes. Fluff gently and serve.",
+    ],
   },
 ]
