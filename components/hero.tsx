@@ -11,6 +11,13 @@ export function Hero() {
     <section id="top" className="relative overflow-hidden">
       <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 md:grid-cols-2 md:py-20">
         <div className="flex flex-col gap-6">
+          <div className="w-fit overflow-hidden rounded-2xl border border-border bg-[#f7f2e7] p-3 shadow-sm">
+            <img
+              src="/images/swadam-logo.jpg"
+              alt="Swadam Foods — Taste of Purity and Care"
+              className="h-24 w-auto sm:h-28"
+            />
+          </div>
           <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-foreground">
             Made in India · Home-style recipes
           </span>

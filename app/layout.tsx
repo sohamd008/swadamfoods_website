@@ -32,11 +32,17 @@ export const metadata: Metadata = {
     'instant breakfast',
     'FSSAI',
   ],
+  icons: {
+    icon: '/images/swadam-logo.jpg',
+    shortcut: '/images/swadam-logo.jpg',
+    apple: '/images/swadam-logo.jpg',
+  },
   openGraph: {
     title: 'Swadam Foods | Authentic Indian Snacks',
     description:
       'Handcrafted Patal Poha Chivda and instant Kanda Poha & Upma premixes. Order directly on WhatsApp.',
     type: 'website',
+    images: [{ url: '/images/swadam-logo.jpg' }],
   },
 }
 
