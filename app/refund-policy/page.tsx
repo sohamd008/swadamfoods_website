@@ -4,39 +4,45 @@ import { business } from "@/lib/products"
 
 export const metadata: Metadata = {
   title: "Refund & Cancellation Policy | Swadam Foods",
-  description:
-    "Cancellation, replacement, and refund terms for orders placed with Swadam Foods.",
+  description: "Cancellation and refund policy for Swadam Foods orders.",
 }
 
 export default function RefundPolicyPage() {
   return (
     <LegalPage
       title="Refund & Cancellation Policy"
+      intro="This refund and cancellation policy outlines how you can cancel or seek a refund for a product or service that you have purchased through the Platform."
       sections={[
         {
-          heading: "Cancellation Terms",
+          heading: "Cancellation",
           paragraphs: [
-            `After making payment to Swadam Foods, customers may request for cancelling the order within 6 hours of payment by contacting ${business.legalEmail} or ${business.legalPhone}. Swadam Foods reserves the right to accept or reject any cancellation request at its sole discretion, including cases where order processing, dispatch, or service preparation has already begun. Any concerns or disputes will be handled directly between Swadam Foods and the customer.`,
+            "Cancellations will only be considered if the request is made within 7 days of placing the order. However, cancellation requests may not be entertained if the order has been communicated for shipping, the shipping process has been initiated, or the product is out for delivery. In such an event, you may choose to reject the product at the doorstep.",
+            `${business.name} does not accept cancellation requests for perishable items like eatables. However, a refund or replacement can be made if the customer establishes that the quality of the product delivered is not good.`,
           ],
         },
         {
-          heading: "Replacement Terms",
+          heading: "Damaged or Defective Products",
           paragraphs: [
-            `Swadam Foods entertains requests for replacement only in cases of proven product defects, damage during transit, or service issues. Refunds are not provided under any circumstances. To request a replacement, customers must contact Swadam Foods via ${business.legalEmail} or ${business.legalPhone} within 2 days of delivery / service completion, along with the invoices, order information and supporting details to establish the alleged defects, damages, or deficiencies.`,
-            "Swadam Foods may accept or reject a replacement request at its sole discretion. If Swadam Foods approves the replacement request, the replacement will be processed within the timeline communicated by Swadam Foods. Any concerns or disputes will be handled directly between Swadam Foods and the customer.",
+            "In case of receipt of damaged or defective items, please report the issue to our customer service team. The request will be entertained once the product has been checked and the same is determined by us. This should be reported within 7 days of receipt of products.",
+            "If you feel that the product received is not as shown on the site or is not as per your expectations, you must bring it to the notice of our customer service within 7 days of receiving the product. Our customer service team, after looking into your complaint, will take an appropriate decision.",
           ],
         },
         {
-          heading: "Refund Terms",
+          heading: "Manufacturer Warranty",
           paragraphs: [
-            `Swadam Foods entertains requests for refunds only in cases of proven defects in product, damage during transit, service issues. To make a request, customers should contact Swadam Foods via ${business.legalEmail} or ${business.legalPhone} within 7 days of delivery / service completion with the invoices, order information and supporting information to establish the alleged defects, damages or deficiencies.`,
-            "Swadam Foods may accept or reject a request for refund at its sole discretion. If Swadam Foods approves the refund request, refunds will be processed within the timeline communicated by Swadam Foods. Any concerns or disputes will be handled directly between Swadam Foods and the customer.",
+            "In case of complaints regarding products that come with a warranty from the manufacturers, please refer the issue to the manufacturer concerned.",
+          ],
+        },
+        {
+          heading: "Refund Processing",
+          paragraphs: [
+            "In case any refund is approved by Swadam Foods, it will take 5 days for the refund to be processed.",
           ],
         },
         {
           heading: "Contact Information",
           paragraphs: [
-            `For any cancellation, refund, or return requests, please contact us at ${business.legalEmail} / ${business.legalPhone}.`,
+            `For cancellation or refund requests, please contact ${business.name} at ${business.email} / ${business.phoneDisplay}.`,
           ],
         },
       ]}
