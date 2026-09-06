@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { Instagram, MessageCircle, Phone, Mail, MapPin } from "lucide-react"
+import { MessageCircle, Phone, Mail, MapPin } from "lucide-react"
 import { WHATSAPP_NUMBER, business } from "@/lib/products"
 
 export function SiteFooter() {
@@ -37,7 +37,14 @@ export function SiteFooter() {
             <span className="text-sm font-semibold uppercase tracking-widest text-primary">Get in touch</span>
             <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium text-foreground transition-colors hover:text-primary"><Phone className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />{business.phoneDisplay}</a>
             <a href={`mailto:${business.email}`} className="flex items-center gap-2 text-sm font-medium text-foreground transition-colors hover:text-primary"><Mail className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />{business.email}</a>
-            <a href="https://www.instagram.com/swadamfoodsindia" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium text-foreground transition-colors hover:text-primary"><Instagram className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />@swadamfoodsindia</a>
+            <a href="https://www.instagram.com/swadamfoodsindia" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium text-foreground transition-colors hover:text-primary">
+              <svg className="h-4 w-4 shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect width="20" height="20" x="2" y="2" rx="5" />
+                <circle cx="12" cy="12" r="4" />
+                <circle cx="17.5" cy="6.5" r="0.75" fill="currentColor" stroke="none" />
+              </svg>
+              @swadamfoodsindia
+            </a>
             <p className="flex items-start gap-2 text-sm text-muted-foreground"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />{business.address}</p>
           </div>
 
