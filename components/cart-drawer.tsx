@@ -1,0 +1,214 @@
+"use client"
+
+import { useState } from "react"
+import { Minus, Plus, ShoppingBag, Trash2, X, MessageCircle } from "lucide-react"
+import { useCart } from "@/lib/cart-context"
+import { WHATSAPP_NUMBER } from "@/lib/products"
+
+export function CartDrawer() {
+  const { items, isOpen, closeCart, totalItems, totalPrice, setQuantity, removeItem } =
+    useCart()
+  const [name, setName] = useState("")
+  const [address, setAddress] = useState("")
+
+  function buildWhatsAppLink() {
+    const lines = [
+      "Hello Swadam Foods! I'd like to place an order:",
+      "",
+      ...items.map(
+        (item, index) =>
+          `${index + 1}. ${item.product.name} (${item.product.weight}) x${item.quantity} — ₹${item.product.price * item.quantity}`,
+      ),
+      "",
+      `Total: ₹${totalPrice}`,
+    ]
+    if (name.trim()) lines.push("", `Name: ${name.trim()}`)
+    if (address.trim()) lines.push(`Delivery address: ${address.trim()}`)
+
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join("\n"))}`
+  }
+
+  return (
+    <div
+      className={`fixed inset-0 z-50 ${isOpen ? "" : "pointer-events-none"}`}
+      aria-hidden={!isOpen}
+    >
+      {/* Overlay */}
+      <div
+        onClick={closeCart}
+        className={`absolute inset-0 bg-foreground/40 backdrop-blur-sm transition-opacity duration-300 ${
+          isOpen ? "opacity-100" : "opacity-0"
+        }`}
+      />
+
+      {/* Panel */}
+      <aside
+        role="dialog"
+        aria-label="Your order"
+        className={`absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-background shadow-2xl transition-transform duration-300 ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="h-5 w-5 text-primary" aria-hidden="true" />
+            <h2 className="font-heading text-lg font-bold text-foreground">
+              Your order
+            </h2>
+            {totalItems > 0 && (
+              <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+                {totalItems} {totalItems === 1 ? "item" : "items"}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={closeCart}
+            className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            aria-label="Close cart"
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
+
+        {items.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
+              <ShoppingBag className="h-7 w-7 text-muted-foreground" aria-hidden="true" />
+            </span>
+            <p className="font-heading text-lg font-bold text-foreground">
+              Your cart is empty
+            </p>
+            <p className="max-w-xs text-sm text-muted-foreground">
+              Add some snacks and premixes, then send your order to us on
+              WhatsApp.
+            </p>
+            <button
+              type="button"
+              onClick={closeCart}
+              className="mt-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+            >
+              Browse products
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              <ul className="flex flex-col gap-4">
+                {items.map((item) => (
+                  <li
+                    key={item.product.id}
+                    className="flex gap-3 rounded-2xl border border-border bg-card p-3"
+                  >
+                    <img
+                      src={item.product.image || "/placeholder.svg"}
+                      alt={item.product.name}
+                      className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                    />
+                    <div className="flex flex-1 flex-col gap-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-heading text-sm font-bold leading-tight text-foreground">
+                            {item.product.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.product.weight} · ₹{item.product.price}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeItem(item.product.id)}
+                          className="rounded-md p-1 text-muted-foreground transition-colors hover:text-destructive"
+                          aria-label={`Remove ${item.product.name}`}
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1 rounded-full border border-border">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setQuantity(item.product.id, item.quantity - 1)
+                            }
+                            className="flex h-7 w-7 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary"
+                            aria-label={`Decrease ${item.product.name} quantity`}
+                          >
+                            <Minus className="h-3.5 w-3.5" aria-hidden="true" />
+                          </button>
+                          <span className="min-w-6 text-center text-sm font-semibold text-foreground">
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setQuantity(item.product.id, item.quantity + 1)
+                            }
+                            className="flex h-7 w-7 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary"
+                            aria-label={`Increase ${item.product.name} quantity`}
+                          >
+                            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                          </button>
+                        </div>
+                        <span className="font-heading text-sm font-bold text-foreground">
+                          ₹{item.product.price * item.quantity}
+                        </span>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-5 flex flex-col gap-3">
+                <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+                  Your name <span className="text-muted-foreground">(optional)</span>
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Priya Sharma"
+                    className="rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+                  Delivery address{" "}
+                  <span className="text-muted-foreground">(optional)</span>
+                  <textarea
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    rows={2}
+                    placeholder="House / street, city, pincode"
+                    className="resize-none rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="border-t border-border bg-card px-5 py-4">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground">
+                  Total
+                </span>
+                <span className="font-heading text-2xl font-extrabold text-foreground">
+                  ₹{totalPrice}
+                </span>
+              </div>
+              <a
+                href={buildWhatsAppLink()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-3.5 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02] active:scale-95"
+              >
+                <MessageCircle className="h-5 w-5" aria-hidden="true" />
+                Send order on WhatsApp
+              </a>
+              <p className="mt-2 text-center text-xs text-muted-foreground">
+                You&apos;ll be taken to WhatsApp to confirm your order with us.
+              </p>
+            </div>
+          </>
+        )}
+      </aside>
+    </div>
+  )
+}
