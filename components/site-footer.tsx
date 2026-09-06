@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { MessageCircle, Phone, Mail, MapPin } from "lucide-react"
+import { Instagram, MessageCircle, Phone, Mail, MapPin } from "lucide-react"
 import { WHATSAPP_NUMBER, business } from "@/lib/products"
 
 export function SiteFooter() {
@@ -37,6 +37,7 @@ export function SiteFooter() {
             <span className="text-sm font-semibold uppercase tracking-widest text-primary">Get in touch</span>
             <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium text-foreground transition-colors hover:text-primary"><Phone className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />{business.phoneDisplay}</a>
             <a href={`mailto:${business.email}`} className="flex items-center gap-2 text-sm font-medium text-foreground transition-colors hover:text-primary"><Mail className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />{business.email}</a>
+            <a href="https://www.instagram.com/swadamfoodsindia" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium text-foreground transition-colors hover:text-primary"><Instagram className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />@swadamfoodsindia</a>
             <p className="flex items-start gap-2 text-sm text-muted-foreground"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />{business.address}</p>
           </div>
 
