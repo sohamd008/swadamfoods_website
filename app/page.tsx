@@ -5,12 +5,10 @@ import { AboutSection } from "@/components/about-section"
 import { TrustSection } from "@/components/trust-section"
 import { SiteFooter } from "@/components/site-footer"
 import { CartDrawer } from "@/components/cart-drawer"
-import { WebMCPTools } from "@/components/webmcp-tools"
 
 export default function Page() {
   return (
     <>
-      <WebMCPTools />
       <SiteHeader />
       <main>
         <Hero />
