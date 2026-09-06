@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useState } from "react"
 import {
   Minus,
@@ -75,21 +76,15 @@ export function CartDrawer() {
       className={`fixed inset-0 z-50 ${isOpen ? "" : "pointer-events-none"}`}
       aria-hidden={!isOpen}
     >
-      {/* Overlay */}
       <div
         onClick={closeCart}
-        className={`absolute inset-0 bg-foreground/40 backdrop-blur-sm transition-opacity duration-300 ${
-          isOpen ? "opacity-100" : "opacity-0"
-        }`}
+        className={`absolute inset-0 bg-foreground/40 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0"}`}
       />
 
-      {/* Panel */}
       <aside
         role="dialog"
         aria-label="Your order"
-        className={`absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-background shadow-2xl transition-transform duration-300 ${
-          isOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-background shadow-2xl transition-transform duration-300 ${isOpen ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-2">
@@ -122,8 +117,7 @@ export function CartDrawer() {
               Your cart is empty
             </p>
             <p className="max-w-xs text-sm text-muted-foreground">
-              Add some snacks and premixes, then send your order to us on
-              WhatsApp.
+              Add some snacks and premixes, then send your order to us on WhatsApp.
             </p>
             <button
               type="button"
@@ -142,9 +136,13 @@ export function CartDrawer() {
                     key={item.product.id}
                     className="flex gap-3 rounded-2xl border border-border bg-card p-3"
                   >
-                    <img
+                    <Image
                       src={item.product.image || "/placeholder.svg"}
                       alt={item.product.name}
+                      width={64}
+                      height={64}
+                      sizes="64px"
+                      loading="lazy"
                       className="h-16 w-16 shrink-0 rounded-xl object-cover"
                     />
                     <div className="flex flex-1 flex-col gap-2">
@@ -202,7 +200,6 @@ export function CartDrawer() {
                 ))}
               </ul>
 
-              {/* Delivery method */}
               <div className="mt-6">
                 <p className="mb-2 text-sm font-semibold text-foreground">
                   Delivery option
@@ -216,18 +213,10 @@ export function CartDrawer() {
                         type="button"
                         onClick={() => setDelivery(id)}
                         aria-pressed={selected}
-                        className={`flex items-start gap-3 rounded-2xl border p-3 text-left transition-colors ${
-                          selected
-                            ? "border-primary bg-primary/10"
-                            : "border-border bg-card hover:border-primary/50"
-                        }`}
+                        className={`flex items-start gap-3 rounded-2xl border p-3 text-left transition-colors ${selected ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/50"}`}
                       >
                         <span
-                          className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                            selected
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-secondary text-muted-foreground"
-                          }`}
+                          className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${selected ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
                         >
                           <Icon className="h-5 w-5" aria-hidden="true" />
                         </span>
@@ -237,9 +226,7 @@ export function CartDrawer() {
                               {title}
                             </span>
                             <span
-                              className={`shrink-0 text-xs font-bold uppercase tracking-wide ${
-                                id === "pune" ? "text-accent" : "text-primary"
-                              }`}
+                              className={`shrink-0 text-xs font-bold uppercase tracking-wide ${id === "pune" ? "text-accent" : "text-primary"}`}
                             >
                               {detail}
                             </span>
@@ -301,9 +288,7 @@ export function CartDrawer() {
                 </span>
               </div>
               <div className="mb-3 flex items-center justify-between border-t border-border pt-3">
-                <span className="text-sm font-medium text-muted-foreground">
-                  Total
-                </span>
+                <span className="text-sm font-medium text-muted-foreground">Total</span>
                 <span className="font-heading text-2xl font-extrabold text-foreground">
                   ₹{totalPrice}
                   {delivery === "porter" && (
