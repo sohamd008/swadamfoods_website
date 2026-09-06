@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 import { MessageCircle, Phone, Mail, MapPin } from "lucide-react"
 import { WHATSAPP_NUMBER, business } from "@/lib/products"
@@ -38,9 +39,12 @@ export function SiteFooter() {
         <div className="mt-12 grid gap-8 md:grid-cols-3">
           <div className="flex flex-col gap-3">
             <span className="w-fit overflow-hidden rounded-xl border border-border bg-[#f7f2e7] p-2">
-              <img
+              <Image
                 src="/images/swadam-logo.jpg"
                 alt="Swadam Foods logo"
+                width={160}
+                height={80}
+                sizes="80px"
                 className="h-16 w-auto"
               />
             </span>
