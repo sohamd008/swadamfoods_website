@@ -18,16 +18,16 @@ const credentials = [
   },
   {
     icon: ShieldCheck,
-    title: "FSSAI Compliant",
+    title: "FSSAI Registered",
     description:
-      "Manufactured under Food Safety and Standards Authority of India guidelines for safe, hygienic food.",
+      "Registered with the Food Safety and Standards Authority of India for safe, hygienic food business operations.",
     reg: { label: "FSSAI", value: business.fssai },
   },
   {
     icon: ReceiptText,
     title: "GSTIN Registered",
     description:
-      "A fully GST-registered business, so you always get proper, transparent billing on every order.",
+      "A GST-registered business with transparent billing information for every order.",
     reg: { label: "GSTIN", value: business.gstin },
   },
 ]
@@ -41,36 +41,46 @@ export function TrustSection() {
             Why Swadam
           </span>
           <h2 className="mt-2 text-balance font-heading text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            A registered, compliant food business
+            Registered and ready to serve
           </h2>
           <p className="mt-3 text-pretty text-muted-foreground">
-            Order with confidence — we meet India&apos;s food-safety and business
-            standards.
+            Shop with confidence and see our business registration details at a glance.
           </p>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {credentials.map(({ icon: Icon, title, description, reg }) => (
             <div
               key={title}
-              className="flex flex-col gap-3 rounded-3xl border border-border bg-card p-6 shadow-sm"
+              className="group flex flex-col overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-lg"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/12 text-accent">
-                <Icon className="h-6 w-6" aria-hidden="true" />
-              </span>
-              <h3 className="font-heading text-lg font-bold text-foreground">
+              <div className="flex items-start justify-between gap-4">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/12 text-accent">
+                  <Icon className="h-6 w-6" aria-hidden="true" />
+                </span>
+                {reg && (
+                  <span className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
+                    Registered
+                  </span>
+                )}
+              </div>
+
+              <h3 className="mt-4 font-heading text-lg font-bold text-foreground">
                 {title}
               </h3>
-              <p className="flex-1 text-sm leading-relaxed text-muted-foreground">
+              <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
                 {description}
               </p>
+
               {reg && (
-                <p className="mt-1 border-t border-border pt-3 text-xs text-muted-foreground">
-                  {reg.label}:{" "}
-                  <span className="font-mono font-medium text-foreground">
+                <div className="mt-5 rounded-2xl border border-border bg-secondary/45 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    {reg.label} Registration No.
+                  </p>
+                  <p className="mt-1 break-all font-mono text-sm font-semibold text-foreground">
                     {reg.value}
-                  </span>
-                </p>
+                  </p>
+                </div>
               )}
             </div>
           ))}
