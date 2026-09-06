@@ -2,3 +2,9 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+/
+  Link: </.well-known/api-catalog>; rel="api-catalog"
+  Link: </.well-known/service-desc>; rel="service-desc"
+  Link: </.well-known/service-doc>; rel="service-doc"
+  Link: </.well-known/describedby>; rel="describedby"
