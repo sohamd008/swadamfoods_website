@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://swadamfoods.eu.cc'),
   title: 'Swadam Foods | Authentic Indian Snacks & Instant Premixes',
   description:
-    'Swadam Foods manufactures authentic Indian snacks — Patal Poha Chivda and instant Kanda Poha & Upma premixes. FSSAI compliant, UDYAM MSME & GSTIN registered. Order directly on WhatsApp.',
+    'Swadam Foods manufactures authentic Indian snacks — Patal Poha Chivda and instant Kanda Poha & Upma premixes. FSSAI registered, UDYAM MSME & GSTIN registered. Order directly on WhatsApp.',
   generator: 'v0.app',
   keywords: [
     'Swadam Foods',
@@ -43,7 +43,17 @@ export const metadata: Metadata = {
     description:
       'Handcrafted Patal Poha Chivda and instant Kanda Poha & Upma premixes. Order directly on WhatsApp.',
     type: 'website',
-    images: [{ url: '/images/swadam-logo.jpg' }],
+    url: 'https://swadamfoods.eu.cc',
+    siteName: 'Swadam Foods',
+    locale: 'en_IN',
+    images: [{ url: '/images/swadam-logo.jpg', alt: 'Swadam Foods logo' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Swadam Foods | Authentic Indian Snacks',
+    description:
+      'Handcrafted Patal Poha Chivda and instant Kanda Poha & Upma premixes.',
+    images: ['/images/swadam-logo.jpg'],
   },
 }
 
