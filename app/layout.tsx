@@ -2,6 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Inter, Poppins } from 'next/font/google'
 import { CartProvider } from '@/lib/cart-context'
+import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
 const inter = Inter({
@@ -40,7 +41,10 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#e8a33d',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f7f2e7' },
+    { media: '(prefers-color-scheme: dark)', color: '#25201a' },
+  ],
 }
 
 export default function RootLayout({
@@ -49,9 +53,20 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`bg-background ${inter.variable} ${poppins.variable}`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`bg-background ${inter.variable} ${poppins.variable}`}
+    >
       <body className="font-sans antialiased">
-        <CartProvider>{children}</CartProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <CartProvider>{children}</CartProvider>
+        </ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

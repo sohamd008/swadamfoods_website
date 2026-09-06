@@ -1,15 +1,53 @@
 "use client"
 
 import { useState } from "react"
-import { Minus, Plus, ShoppingBag, Trash2, X, MessageCircle } from "lucide-react"
+import {
+  Minus,
+  Plus,
+  ShoppingBag,
+  Trash2,
+  X,
+  MessageCircle,
+  Truck,
+  PackageCheck,
+} from "lucide-react"
 import { useCart } from "@/lib/cart-context"
 import { WHATSAPP_NUMBER } from "@/lib/products"
+
+type DeliveryMethod = "pune" | "porter"
+
+const deliveryOptions: {
+  id: DeliveryMethod
+  icon: typeof Truck
+  title: string
+  detail: string
+  note: string
+}[] = [
+  {
+    id: "pune",
+    icon: PackageCheck,
+    title: "Home delivery in Pune",
+    detail: "FREE",
+    note: "We deliver to your doorstep across Pune at no extra cost.",
+  },
+  {
+    id: "porter",
+    icon: Truck,
+    title: "Outside Pune (via Porter)",
+    detail: "Charges added later",
+    note: "We'll book Porter and share the delivery charge with you on WhatsApp before dispatch.",
+  },
+]
 
 export function CartDrawer() {
   const { items, isOpen, closeCart, totalItems, totalPrice, setQuantity, removeItem } =
     useCart()
   const [name, setName] = useState("")
+  const [phone, setPhone] = useState("")
   const [address, setAddress] = useState("")
+  const [delivery, setDelivery] = useState<DeliveryMethod>("pune")
+
+  const activeOption = deliveryOptions.find((option) => option.id === delivery)!
 
   function buildWhatsAppLink() {
     const lines = [
@@ -20,9 +58,13 @@ export function CartDrawer() {
           `${index + 1}. ${item.product.name} (${item.product.weight}) x${item.quantity} — ₹${item.product.price * item.quantity}`,
       ),
       "",
-      `Total: ₹${totalPrice}`,
+      `Subtotal: ₹${totalPrice}`,
+      delivery === "pune"
+        ? "Delivery: Home delivery in Pune (FREE)"
+        : "Delivery: Outside Pune via Porter (charges to be confirmed)",
     ]
     if (name.trim()) lines.push("", `Name: ${name.trim()}`)
+    if (phone.trim()) lines.push(`Phone: ${phone.trim()}`)
     if (address.trim()) lines.push(`Delivery address: ${address.trim()}`)
 
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join("\n"))}`
@@ -160,6 +202,58 @@ export function CartDrawer() {
                 ))}
               </ul>
 
+              {/* Delivery method */}
+              <div className="mt-6">
+                <p className="mb-2 text-sm font-semibold text-foreground">
+                  Delivery option
+                </p>
+                <div className="flex flex-col gap-2.5">
+                  {deliveryOptions.map(({ id, icon: Icon, title, detail, note }) => {
+                    const selected = delivery === id
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setDelivery(id)}
+                        aria-pressed={selected}
+                        className={`flex items-start gap-3 rounded-2xl border p-3 text-left transition-colors ${
+                          selected
+                            ? "border-primary bg-primary/10"
+                            : "border-border bg-card hover:border-primary/50"
+                        }`}
+                      >
+                        <span
+                          className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                            selected
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-secondary text-muted-foreground"
+                          }`}
+                        >
+                          <Icon className="h-5 w-5" aria-hidden="true" />
+                        </span>
+                        <span className="flex flex-1 flex-col gap-0.5">
+                          <span className="flex items-center justify-between gap-2">
+                            <span className="font-heading text-sm font-bold text-foreground">
+                              {title}
+                            </span>
+                            <span
+                              className={`shrink-0 text-xs font-bold uppercase tracking-wide ${
+                                id === "pune" ? "text-accent" : "text-primary"
+                              }`}
+                            >
+                              {detail}
+                            </span>
+                          </span>
+                          <span className="text-xs leading-relaxed text-muted-foreground">
+                            {note}
+                          </span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
               <div className="mt-5 flex flex-col gap-3">
                 <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
                   Your name <span className="text-muted-foreground">(optional)</span>
@@ -171,13 +265,24 @@ export function CartDrawer() {
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+                  Phone number{" "}
+                  <span className="text-muted-foreground">(optional)</span>
+                  <input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    inputMode="tel"
+                    placeholder="e.g. 98765 43210"
+                    className="rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
                   Delivery address{" "}
                   <span className="text-muted-foreground">(optional)</span>
                   <textarea
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     rows={2}
-                    placeholder="House / street, city, pincode"
+                    placeholder="House / street, area, city, pincode"
                     className="resize-none rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
                   />
                 </label>
@@ -185,12 +290,27 @@ export function CartDrawer() {
             </div>
 
             <div className="border-t border-border bg-card px-5 py-4">
-              <div className="mb-3 flex items-center justify-between">
+              <div className="mb-1 flex items-center justify-between text-sm">
+                <span className="font-medium text-muted-foreground">Subtotal</span>
+                <span className="font-semibold text-foreground">₹{totalPrice}</span>
+              </div>
+              <div className="mb-3 flex items-center justify-between text-sm">
+                <span className="font-medium text-muted-foreground">Delivery</span>
+                <span className="font-semibold text-foreground">
+                  {delivery === "pune" ? "Free (Pune)" : "Added later"}
+                </span>
+              </div>
+              <div className="mb-3 flex items-center justify-between border-t border-border pt-3">
                 <span className="text-sm font-medium text-muted-foreground">
                   Total
                 </span>
                 <span className="font-heading text-2xl font-extrabold text-foreground">
                   ₹{totalPrice}
+                  {delivery === "porter" && (
+                    <span className="ml-1 align-middle text-xs font-medium text-muted-foreground">
+                      + Porter
+                    </span>
+                  )}
                 </span>
               </div>
               <a
@@ -203,7 +323,9 @@ export function CartDrawer() {
                 Send order on WhatsApp
               </a>
               <p className="mt-2 text-center text-xs text-muted-foreground">
-                You&apos;ll be taken to WhatsApp to confirm your order with us.
+                {activeOption.id === "porter"
+                  ? "We'll confirm the Porter delivery charge on WhatsApp before dispatch."
+                  : "You'll be taken to WhatsApp to confirm your order with us."}
               </p>
             </div>
           </>

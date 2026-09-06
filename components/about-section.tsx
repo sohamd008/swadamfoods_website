@@ -18,10 +18,11 @@ export function AboutSection() {
             Home-style taste, made with care
           </h2>
           <p className="text-pretty leading-relaxed text-muted-foreground">
-            Swadam Foods began with a simple idea — bring the honest, home-style
-            flavours of Indian snacks to busy kitchens everywhere. Every batch of
-            our Patal Poha Chivda and instant premixes is prepared with carefully
-            sourced ingredients and time-tested recipes.
+            Swadam Foods is a women-owned and women-operated business, born from a
+            simple idea — bring the honest, home-style flavours of Indian snacks
+            to busy kitchens everywhere. Every batch of our Patal Poha Chivda and
+            instant premixes is prepared with carefully sourced ingredients and
+            time-tested recipes.
           </p>
           <p className="text-pretty leading-relaxed text-muted-foreground">
             No shortcuts, no artificial flavours — just the authentic taste you
@@ -52,7 +53,7 @@ export function AboutSection() {
                 Made in
               </dt>
               <dd className="font-heading text-2xl font-extrabold text-foreground">
-                India
+                Pune
               </dd>
             </div>
           </dl>

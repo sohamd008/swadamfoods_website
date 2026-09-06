@@ -1,23 +1,34 @@
-import { BadgeCheck, ShieldCheck, ReceiptText } from "lucide-react"
+import { BadgeCheck, ShieldCheck, ReceiptText, HeartHandshake } from "lucide-react"
+import { business } from "@/lib/products"
 
 const credentials = [
+  {
+    icon: HeartHandshake,
+    title: "Women-Owned Business",
+    description:
+      "Solely owned and run by a woman entrepreneur — every recipe and every batch is a labour of love.",
+    reg: null,
+  },
   {
     icon: BadgeCheck,
     title: "UDYAM MSME Registered",
     description:
-      "A recognised Micro, Small & Medium Enterprise under the Government of India's UDYAM registration.",
+      "A recognised Micro enterprise under the Government of India's UDYAM registration.",
+    reg: { label: "UDYAM", value: business.udyam },
   },
   {
     icon: ShieldCheck,
     title: "FSSAI Compliant",
     description:
-      "Manufactured following the Food Safety and Standards Authority of India guidelines for safe, hygienic food.",
+      "Manufactured under Food Safety and Standards Authority of India guidelines for safe, hygienic food.",
+    reg: { label: "FSSAI", value: business.fssai },
   },
   {
     icon: ReceiptText,
     title: "GSTIN Registered",
     description:
       "A fully GST-registered business, so you always get proper, transparent billing on every order.",
+    reg: { label: "GSTIN", value: business.gstin },
   },
 ]
 
@@ -38,8 +49,8 @@ export function TrustSection() {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {credentials.map(({ icon: Icon, title, description }) => (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {credentials.map(({ icon: Icon, title, description, reg }) => (
             <div
               key={title}
               className="flex flex-col gap-3 rounded-3xl border border-border bg-card p-6 shadow-sm"
@@ -50,9 +61,17 @@ export function TrustSection() {
               <h3 className="font-heading text-lg font-bold text-foreground">
                 {title}
               </h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">
+              <p className="flex-1 text-sm leading-relaxed text-muted-foreground">
                 {description}
               </p>
+              {reg && (
+                <p className="mt-1 border-t border-border pt-3 text-xs text-muted-foreground">
+                  {reg.label}:{" "}
+                  <span className="font-mono font-medium text-foreground">
+                    {reg.value}
+                  </span>
+                </p>
+              )}
             </div>
           ))}
         </div>

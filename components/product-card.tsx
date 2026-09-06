@@ -39,7 +39,7 @@ export function ProductCard({ product }: { product: Product }) {
               ₹{product.price}
             </span>
             <span className="text-xs text-muted-foreground">
-              {product.weight} pack
+              Single {product.weight} packet
             </span>
           </div>
           <button
