@@ -1,11 +1,17 @@
+import Image from "next/image"
+
 export function AboutSection() {
   return (
     <section id="about" className="scroll-mt-20 py-16 md:py-20">
       <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 md:grid-cols-2">
         <div className="relative order-last md:order-first">
-          <img
+          <Image
             src="/images/kanda-poha.png"
             alt="Freshly prepared Kanda Poha garnished with coriander and coconut"
+            width={1200}
+            height={900}
+            sizes="(max-width: 767px) calc(100vw - 2rem), 50vw"
+            loading="lazy"
             className="aspect-[4/3] w-full rounded-3xl border border-border object-cover shadow-lg"
           />
         </div>
