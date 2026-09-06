@@ -6,7 +6,7 @@ export function AboutSection() {
       <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 md:grid-cols-2">
         <div className="relative order-last md:order-first">
           <Image
-            src="/images/kanda-poha.png"
+            src="/images/kanda-poha.webp"
             alt="Freshly prepared Kanda Poha garnished with coriander and coconut"
             width={1200}
             height={900}

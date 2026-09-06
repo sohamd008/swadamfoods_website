@@ -33,9 +33,9 @@ export const metadata: Metadata = {
     'FSSAI',
   ],
   icons: {
-    icon: '/images/swadam-logo.jpg',
-    shortcut: '/images/swadam-logo.jpg',
-    apple: '/images/swadam-logo.jpg',
+    icon: '/images/swadam-logo.webp',
+    shortcut: '/images/swadam-logo.webp',
+    apple: '/images/swadam-logo.webp',
   },
   openGraph: {
     title: 'Swadam Foods | Authentic Indian Snacks',
@@ -45,14 +45,14 @@ export const metadata: Metadata = {
     url: 'https://swadamfoods.eu.cc',
     siteName: 'Swadam Foods',
     locale: 'en_IN',
-    images: [{ url: '/images/swadam-logo.jpg', alt: 'Swadam Foods logo' }],
+    images: [{ url: '/images/swadam-logo.webp', alt: 'Swadam Foods logo' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Swadam Foods | Authentic Indian Snacks',
     description:
       'Handcrafted Patal Poha Chivda and instant Kanda Poha & Upma premixes.',
-    images: ['/images/swadam-logo.jpg'],
+    images: ['/images/swadam-logo.webp'],
   },
 }
 

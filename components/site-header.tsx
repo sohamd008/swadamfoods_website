@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { ShoppingBag } from "lucide-react"
 import { useCart } from "@/lib/cart-context"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -19,9 +20,12 @@ export function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <a href="#top" className="flex items-center gap-3">
           <span className="flex items-center justify-center overflow-hidden rounded-xl bg-[#f7f2e7] p-1 ring-1 ring-border">
-            <img
-              src="/images/swadam-logo.jpg"
+            <Image
+              src="/images/swadam-logo.webp"
               alt="Swadam Foods logo"
+              width={112}
+              height={36}
+              sizes="56px"
               className="h-9 w-auto"
             />
           </span>

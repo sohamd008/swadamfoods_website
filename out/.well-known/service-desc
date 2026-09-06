@@ -1,0 +1,25 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Swadam Foods Product Catalog API",
+    "version": "1.0.0",
+    "description": "A public, read-only catalog of Swadam Foods products and ordering information."
+  },
+  "servers": [{"url":"https://swadamfoods.eu.cc"}],
+  "paths": {
+    "/api/products": {
+      "get": {
+        "operationId": "listProducts",
+        "summary": "List Swadam Foods products",
+        "responses": {"200": {"description":"Product catalog","content":{"application/json":{"schema":{"type":"object"}}}}}
+      }
+    },
+    "/api/status": {
+      "get": {
+        "operationId": "getStatus",
+        "summary": "Get catalog service status",
+        "responses": {"200": {"description":"Service status","content":{"application/json":{"schema":{"type":"object"}}}}}
+      }
+    }
+  }
+}

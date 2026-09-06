@@ -1,0 +1,19 @@
+{
+  "protocol": {
+    "name": "acp",
+    "version": "2026-01-30"
+  },
+  "api_base_url": "https://swadamfoods.eu.cc/api",
+  "transports": [
+    "https"
+  ],
+  "capabilities": {
+    "services": [
+      {
+        "name": "product_catalog",
+        "description": "Public Swadam Foods product catalog with product names, pack sizes, prices, availability metadata, and preparation information.",
+        "endpoint": "https://swadamfoods.eu.cc/api/products"
+      }
+    ]
+  }
+}

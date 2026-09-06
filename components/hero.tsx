@@ -14,7 +14,7 @@ export function Hero() {
         <div className="flex flex-col gap-6">
           <div className="w-fit overflow-hidden rounded-2xl border border-border bg-[#f7f2e7] p-3 shadow-sm">
             <Image
-              src="/images/swadam-logo.jpg"
+              src="/images/swadam-logo.webp"
               alt="Swadam Foods — Taste of Purity and Care"
               width={224}
               height={112}
@@ -68,7 +68,7 @@ export function Hero() {
             className="absolute -inset-4 -z-10 rounded-[2.5rem] bg-primary/15 blur-2xl"
           />
           <Image
-            src="/images/hero-chivda.png"
+            src="/images/hero-chivda.webp"
             alt="A rustic bowl of Patal Poha Chivda garnished with peanuts and curry leaves"
             width={1200}
             height={1200}

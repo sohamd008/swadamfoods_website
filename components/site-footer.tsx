@@ -28,7 +28,7 @@ export function SiteFooter() {
         <div className="mt-12 grid gap-8 md:grid-cols-3">
           <div className="flex flex-col gap-3">
             <span className="w-fit overflow-hidden rounded-xl border border-border bg-[#f7f2e7] p-2">
-              <Image src="/images/swadam-logo.jpg" alt="Swadam Foods logo" width={160} height={80} sizes="80px" className="h-16 w-auto" />
+              <Image src="/images/swadam-logo.webp" alt="Swadam Foods logo" width={160} height={80} sizes="80px" className="h-16 w-auto" />
             </span>
             <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">Authentic Indian snacks and instant premixes, made with real ingredients and traditional recipes. Proudly a women-owned and women-operated business.</p>
           </div>

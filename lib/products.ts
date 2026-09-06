@@ -34,7 +34,7 @@ export const products: Product[] = [
       "Thin, crisp flattened rice tossed with roasted peanuts, curry leaves and a delicate turmeric-spice blend. A light, moreish tea-time snack made the traditional way.",
     weight: "200 g",
     price: 90,
-    image: "/images/patal-poha-chivda.png",
+    image: "/images/patal-poha-chivda.webp",
     badge: "Bestseller",
     prepTitle: "Serving & storage",
     prepSteps: [
@@ -52,7 +52,7 @@ export const products: Product[] = [
       "Everything you need for authentic Kanda Poha in one pack. Just add hot water, rest, and enjoy a soft, fragrant breakfast with onions, chilies and turmeric.",
     weight: "150 g",
     price: 70,
-    image: "/images/kanda-poha.png",
+    image: "/images/kanda-poha.webp",
     badge: "Ready in 5 min",
     prepTitle: "How to prepare",
     prepSteps: [
@@ -70,7 +70,7 @@ export const products: Product[] = [
       "A savoury semolina premix with curry leaves, mustard and chilies. Add hot water for a warm, comforting upma anytime of the day.",
     weight: "150 g",
     price: 70,
-    image: "/images/upma.png",
+    image: "/images/upma.webp",
     badge: "Ready in 5 min",
     prepTitle: "How to prepare",
     prepSteps: [
