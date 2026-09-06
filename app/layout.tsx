@@ -23,7 +23,6 @@ export const metadata: Metadata = {
   title: 'Swadam Foods | Authentic Indian Snacks & Instant Premixes',
   description:
     'Swadam Foods manufactures authentic Indian snacks — Patal Poha Chivda and instant Kanda Poha & Upma premixes. FSSAI registered, UDYAM MSME & GSTIN registered. Order directly on WhatsApp.',
-  generator: 'v0.app',
   keywords: [
     'Swadam Foods',
     'Indian snacks',
