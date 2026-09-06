@@ -64,7 +64,7 @@
   --secondary: oklch(0.95 0.02 85);
   --secondary-foreground: oklch(0.3 0.03 55);
   --muted: oklch(0.95 0.017 85);
-  --muted-foreground: oklch(0.52 0.03 60);
+  --muted-foreground: oklch(0.45 0.03 60);
   /* curry-leaf green accent */
   --accent: oklch(0.53 0.1 150);
   --accent-foreground: oklch(0.98 0.014 85);
