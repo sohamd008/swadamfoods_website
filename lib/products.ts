@@ -16,7 +16,7 @@ export const WHATSAPP_NUMBER = "918888851522"
 export const business = {
   name: "Swadam Foods",
   phoneDisplay: "+91 88888 51522",
-  email: "swadamfoods.eu.cc",
+  email: "swadamfoodsindia@gmail.com",
   address: "Lane No. 30/31 B, Ganesh Nagar, Dhayari, Pune",
   gstin: "27AOCPD1930N1Z1",
   fssai: "21526080002094",
@@ -67,7 +67,7 @@ export const products: Product[] = [
     name: "Instant Upma Premix",
     tagline: "Comforting South Indian classic",
     description:
-      "A savoury semolina premix with curry leaves, mustard, chilies and cashew notes. Add hot water for a warm, wholesome upma anytime of the day.",
+      "A savoury semolina premix with curry leaves, mustard and chilies. Add hot water for a warm, comforting upma anytime of the day.",
     weight: "150 g",
     price: 70,
     image: "/images/upma.png",
