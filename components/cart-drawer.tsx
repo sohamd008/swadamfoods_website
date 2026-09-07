@@ -203,7 +203,7 @@ export function CartDrawer() {
                       height={64}
                       sizes="64px"
                       loading="lazy"
-                      className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                      className="aspect-square h-16 w-16 shrink-0 rounded-xl object-cover"
                     />
                     <div className="flex flex-1 flex-col gap-2">
                       <div className="flex items-start justify-between gap-2">
