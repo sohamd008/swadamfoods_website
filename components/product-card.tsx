@@ -20,7 +20,7 @@ export function ProductCard({ product }: { product: Product }) {
           height={720}
           sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) 50vw, 33vw"
           loading="lazy"
-          className="aspect-[4/3] h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="block aspect-[4/3] h-auto w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         {product.badge && (
           <span className="absolute left-3 top-3 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground shadow">
