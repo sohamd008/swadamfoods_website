@@ -16,10 +16,10 @@ export function Hero() {
             <Image
               src="/images/swadam-logo.webp"
               alt="Swadam Foods — Taste of Purity and Care"
-              width={224}
-              height={112}
-              sizes="112px"
-              className="h-24 w-auto sm:h-28"
+              width={176}
+              height={96}
+              sizes="(max-width: 639px) 176px, 224px"
+              className="h-auto w-auto sm:h-24"
             />
           </div>
           <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-foreground">
