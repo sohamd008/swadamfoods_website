@@ -1,6 +1,5 @@
 import Script from 'next/script'
 import type { Metadata, Viewport } from 'next'
-import { Inter, Poppins } from 'next/font/google'
 import { CartProvider } from '@/lib/cart-context'
 import { ThemeProvider } from '@/components/theme-provider'
 import { business, products } from '@/lib/products'
@@ -76,7 +75,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`bg-background ${inter.variable} ${poppins.variable}`}
+      className="bg-background"
     >
       <body className="font-sans antialiased">
         <Script
