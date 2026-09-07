@@ -74,6 +74,7 @@ export function Hero() {
             height={1200}
             sizes="(max-width: 767px) calc(100vw - 2rem), 50vw"
             priority
+            fetchPriority="high"
             className="aspect-square w-full rounded-[2rem] border border-border object-cover shadow-xl"
           />
           <div className="absolute bottom-4 left-4 rounded-2xl border border-border bg-card/95 px-4 py-3 shadow-lg backdrop-blur">

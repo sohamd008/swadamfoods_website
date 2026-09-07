@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   Minus,
   Plus,
@@ -47,8 +47,54 @@ export function CartDrawer() {
   const [phone, setPhone] = useState("")
   const [address, setAddress] = useState("")
   const [delivery, setDelivery] = useState<DeliveryMethod>("pune")
+  const asideRef = useRef<HTMLElement>(null)
+  const closeBtnRef = useRef<HTMLButtonElement>(null)
 
   const activeOption = deliveryOptions.find((option) => option.id === delivery)!
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden"
+      const timer = setTimeout(() => {
+        closeBtnRef.current?.focus()
+      }, 100)
+      return () => {
+        clearTimeout(timer)
+        document.body.style.overflow = ""
+      }
+    } else {
+      document.body.style.overflow = ""
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        closeCart()
+        return
+      }
+      if (e.key === "Tab" && asideRef.current) {
+        const focusable = asideRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, [tabindex]:not([tabindex="-1"])'
+        )
+        if (focusable.length === 0) return
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [isOpen, closeCart])
 
   function buildWhatsAppLink() {
     const lines = [
@@ -82,7 +128,9 @@ export function CartDrawer() {
       />
 
       <aside
+        ref={asideRef}
         role="dialog"
+        aria-modal="true"
         aria-label="Your order"
         className={`absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-background shadow-2xl transition-transform duration-300 ${isOpen ? "translate-x-0" : "translate-x-full"}`}
       >
@@ -99,9 +147,10 @@ export function CartDrawer() {
             )}
           </div>
           <button
+            ref={closeBtnRef}
             type="button"
             onClick={closeCart}
-            className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             aria-label="Close cart"
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -122,7 +171,7 @@ export function CartDrawer() {
             <button
               type="button"
               onClick={closeCart}
-              className="mt-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+              className="mt-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
             >
               Browse products
             </button>
@@ -158,7 +207,7 @@ export function CartDrawer() {
                         <button
                           type="button"
                           onClick={() => removeItem(item.product.id)}
-                          className="rounded-md p-1 text-muted-foreground transition-colors hover:text-destructive"
+                          className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive"
                           aria-label={`Remove ${item.product.name}`}
                         >
                           <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -172,7 +221,7 @@ export function CartDrawer() {
                             onClick={() =>
                               setQuantity(item.product.id, item.quantity - 1)
                             }
-                            className="flex h-7 w-7 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary"
+                            className="flex h-9 w-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary"
                             aria-label={`Decrease ${item.product.name} quantity`}
                           >
                             <Minus className="h-3.5 w-3.5" aria-hidden="true" />
@@ -185,7 +234,7 @@ export function CartDrawer() {
                             onClick={() =>
                               setQuantity(item.product.id, item.quantity + 1)
                             }
-                            className="flex h-7 w-7 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary"
+                            className="flex h-9 w-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary"
                             aria-label={`Increase ${item.product.name} quantity`}
                           >
                             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
@@ -248,7 +297,7 @@ export function CartDrawer() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Priya Sharma"
-                    className="rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
+                    className="rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
@@ -259,7 +308,7 @@ export function CartDrawer() {
                     onChange={(e) => setPhone(e.target.value)}
                     inputMode="tel"
                     placeholder="e.g. 98765 43210"
-                    className="rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
+                    className="rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
@@ -270,7 +319,7 @@ export function CartDrawer() {
                     onChange={(e) => setAddress(e.target.value)}
                     rows={2}
                     placeholder="House / street, area, city, pincode"
-                    className="resize-none rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
+                    className="resize-none rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
                   />
                 </label>
               </div>
