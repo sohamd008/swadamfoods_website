@@ -5,18 +5,6 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { business, products } from '@/lib/products'
 import './globals.css'
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-})
-
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['700', '800'],
-  variable: '--font-poppins',
-  display: 'swap',
-})
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://swadamfoods.eu.cc'),
