@@ -1,5 +1,5 @@
 import Script from 'next/script'
-import { Manrope, Playfair_Display } from 'next/font/google'
+import { Cormorant_Garamond, Manrope } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
 import { CartProvider } from '@/lib/cart-context'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -14,11 +14,12 @@ const manrope = Manrope({
   display: 'swap',
 })
 
-const playfair = Playfair_Display({
+const cormorant = Cormorant_Garamond({
   subsets: ['latin'],
-  variable: '--font-playfair',
-  weight: ['700', '800'],
+  variable: '--font-cormorant',
+  weight: ['600', '700'],
   display: 'swap',
+  style: ['normal', 'italic'],
 })
 
 export const metadata: Metadata = {
@@ -78,7 +79,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`bg-background ${manrope.variable} ${playfair.variable}`}
+      className={`bg-background ${manrope.variable} ${cormorant.variable}`}
     >
       <body className="font-sans antialiased">
         <Script
