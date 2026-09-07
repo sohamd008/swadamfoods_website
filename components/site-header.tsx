@@ -1,8 +1,5 @@
-"use client"
-
 import Image from "next/image"
-import { ShoppingBag } from "lucide-react"
-import { useCart } from "@/lib/cart-context"
+import { CartButton } from "@/components/cart-button"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 const navLinks = [
@@ -13,8 +10,6 @@ const navLinks = [
 ]
 
 export function SiteHeader() {
-  const { totalItems, openCart } = useCart()
-
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
@@ -53,19 +48,7 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <button
-            type="button"
-            onClick={openCart}
-            className="relative flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.03] active:scale-95"
-          >
-            <ShoppingBag className="h-4 w-4" aria-hidden="true" />
-            <span className="hidden sm:inline">Cart</span>
-            {totalItems > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-bold text-background">
-                {totalItems}
-              </span>
-            )}
-          </button>
+          <CartButton />
         </div>
       </div>
     </header>
