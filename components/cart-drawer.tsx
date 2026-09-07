@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { useCart } from "@/lib/cart-context"
 import { WHATSAPP_NUMBER } from "@/lib/products"
+import { trackEvent } from "@/lib/analytics"
 
 type DeliveryMethod = "pune" | "porter"
 
@@ -54,6 +55,16 @@ export function CartDrawer() {
 
   useEffect(() => {
     if (isOpen) {
+      trackEvent("view_cart", {
+        currency: "INR",
+        value: totalPrice,
+        items: items.map((item) => ({
+          item_id: item.product.id,
+          item_name: item.product.name,
+          price: item.product.price,
+          quantity: item.quantity,
+        })),
+      })
       document.body.style.overflow = "hidden"
       const timer = setTimeout(() => {
         closeBtnRef.current?.focus()
