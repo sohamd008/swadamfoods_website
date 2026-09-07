@@ -13,8 +13,7 @@
   Link: </.well-known/service-desc>; rel="service-desc"
   Link: </.well-known/service-doc>; rel="service-doc"
   Link: </.well-known/describedby>; rel="describedby"
-  Link: </images/hero-chivda.webp>; rel=preload; as=image; imagesrcset-width=1200
-  Link: </images/swadam-logo.webp>; rel=preload; as=image
+  Link: </images/hero-chivda.webp>; rel=preload; as=image
 
 /.well-known/api-catalog
   Content-Type: application/linkset+json; profile="https://www.rfc-editor.org/info/rfc9727"
