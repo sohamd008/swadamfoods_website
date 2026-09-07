@@ -1,14 +1,9 @@
-"use client"
-
 import Image from "next/image"
-import { useState } from "react"
-import { Plus, ChevronDown, ChefHat } from "lucide-react"
-import { useCart } from "@/lib/cart-context"
+import { ChevronDown, ChefHat } from "lucide-react"
+import { AddToCartButton } from "@/components/add-to-cart-button"
 import type { Product } from "@/lib/products"
 
 export function ProductCard({ product }: { product: Product }) {
-  const { addItem } = useCart()
-  const [showPrep, setShowPrep] = useState(false)
   const hasPrep = Boolean(product.prepSteps?.length)
 
   return (
@@ -42,35 +37,28 @@ export function ProductCard({ product }: { product: Product }) {
         </p>
 
         {hasPrep && (
-          <div className="rounded-2xl border border-border bg-secondary/40">
-            <button
-              type="button"
-              onClick={() => setShowPrep((v) => !v)}
-              aria-expanded={showPrep}
-              className="flex w-full items-center justify-between gap-2 rounded-2xl px-3.5 py-2.5 text-left"
-            >
+          <details className="group/details rounded-2xl border border-border bg-secondary/40">
+            <summary className="flex w-full cursor-pointer list-none items-center justify-between gap-2 rounded-2xl px-3.5 py-2.5 text-left">
               <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <ChefHat className="h-4 w-4 text-primary" aria-hidden="true" />
                 {product.prepTitle ?? "How to prepare"}
               </span>
               <ChevronDown
-                className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${showPrep ? "rotate-180" : ""}`}
+                className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open/details:rotate-180"
                 aria-hidden="true"
               />
-            </button>
-            {showPrep && (
-              <ol className="flex list-none flex-col gap-2 px-3.5 pb-3.5 pt-1">
-                {product.prepSteps!.map((step, i) => (
-                  <li key={i} className="flex gap-2.5 text-sm text-muted-foreground">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                      {i + 1}
-                    </span>
-                    <span className="leading-relaxed">{step}</span>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
+            </summary>
+            <ol className="flex list-none flex-col gap-2 px-3.5 pb-3.5 pt-1">
+              {product.prepSteps!.map((step, i) => (
+                <li key={i} className="flex gap-2.5 text-sm text-muted-foreground">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                    {i + 1}
+                  </span>
+                  <span className="leading-relaxed">{step}</span>
+                </li>
+              ))}
+            </ol>
+          </details>
         )}
 
         <div className="mt-2 flex items-center justify-between gap-3">
@@ -82,14 +70,7 @@ export function ProductCard({ product }: { product: Product }) {
               Single {product.weight} packet
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => addItem(product)}
-            className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.03] active:scale-95"
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Add to order
-          </button>
+          <AddToCartButton product={product} />
         </div>
       </div>
     </article>
