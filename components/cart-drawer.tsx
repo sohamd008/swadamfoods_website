@@ -132,9 +132,9 @@ export function CartDrawer() {
         role="dialog"
         aria-modal="true"
         aria-label="Your order"
-        className={`absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-background shadow-2xl transition-transform duration-300 ${isOpen ? "translate-x-0" : "translate-x-full"}`}
+        className={`absolute right-0 top-0 flex h-full w-full max-w-md flex-col overflow-hidden border-l border-white/35 bg-background/80 shadow-2xl ring-1 ring-black/5 backdrop-blur-2xl transition-transform duration-300 sm:top-3 sm:right-3 sm:h-[calc(100%-1.5rem)] sm:rounded-[2rem] ${isOpen ? "translate-x-0" : "translate-x-full"}`}
       >
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <div className="flex items-center justify-between border-b border-white/35 bg-white/20 px-5 py-4 backdrop-blur-xl dark:bg-black/10">
           <div className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5 text-primary" aria-hidden="true" />
             <h2 className="font-heading text-lg font-bold text-foreground">
@@ -150,7 +150,7 @@ export function CartDrawer() {
             ref={closeBtnRef}
             type="button"
             onClick={closeCart}
-            className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-border/70 bg-background/45 text-muted-foreground shadow-sm backdrop-blur transition-all hover:-translate-y-0.5 hover:bg-background/70 hover:text-foreground"
             aria-label="Close cart"
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -159,7 +159,7 @@ export function CartDrawer() {
 
         {items.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
+            <span className="flex h-16 w-16 items-center justify-center rounded-[1.35rem] border border-white/50 bg-white/35 shadow-inner backdrop-blur-xl dark:bg-white/10">
               <ShoppingBag className="h-7 w-7 text-muted-foreground" aria-hidden="true" />
             </span>
             <p className="font-heading text-lg font-bold text-foreground">
@@ -171,7 +171,7 @@ export function CartDrawer() {
             <button
               type="button"
               onClick={closeCart}
-              className="mt-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
+              className="mt-2 rounded-full border border-primary/20 bg-primary/90 px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/15 transition-transform hover:-translate-y-0.5 active:scale-95"
             >
               Browse products
             </button>
@@ -325,7 +325,7 @@ export function CartDrawer() {
               </div>
             </div>
 
-            <div className="border-t border-border bg-card px-5 py-4">
+            <div className="border-t border-white/35 bg-card/65 px-5 py-4 backdrop-blur-xl dark:bg-card/60">
               <div className="mb-1 flex items-center justify-between text-sm">
                 <span className="font-medium text-muted-foreground">Subtotal</span>
                 <span className="font-semibold text-foreground">₹{totalPrice}</span>
@@ -351,7 +351,7 @@ export function CartDrawer() {
                 href={buildWhatsAppLink()}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-3.5 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02] active:scale-95"
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-white/30 bg-accent/95 px-6 py-3.5 text-sm font-semibold text-accent-foreground shadow-lg shadow-accent/15 backdrop-blur transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98]"
               >
                 <MessageCircle className="h-5 w-5" aria-hidden="true" />
                 Send order on WhatsApp
