@@ -1,6 +1,7 @@
 import Image from "next/image"
 import { CartButton } from "@/components/cart-button"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { MobileMenu } from "@/components/mobile-menu"
 
 export const navLinks = [
   { label: "Products", href: "#products" },
@@ -52,6 +53,7 @@ export function SiteHeader() {
           <CartButton />
           <MobileMenu />
         </div>
+      </div>
     </header>
   )
 }
