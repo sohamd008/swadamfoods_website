@@ -1,10 +1,25 @@
 import Script from 'next/script'
+import { Manrope, Playfair_Display } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
 import { CartProvider } from '@/lib/cart-context'
 import { ThemeProvider } from '@/components/theme-provider'
 import { business, products } from '@/lib/products'
 import './globals.css'
 
+
+const manrope = Manrope({
+  subsets: ['latin'],
+  variable: '--font-manrope',
+  weight: ['500', '600', '700'],
+  display: 'swap',
+})
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  weight: ['700', '800'],
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://swadamfoods.eu.cc'),
@@ -63,7 +78,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className="bg-background"
+      className={`bg-background ${manrope.variable} ${playfair.variable}`}
     >
       <body className="font-sans antialiased">
         <Script
