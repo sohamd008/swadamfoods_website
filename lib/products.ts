@@ -18,7 +18,6 @@ export const business = {
   phoneDisplay: "+91 88888 51522",
   email: "swadamfoodsindia@gmail.com",
   address: "Lane No. 30/31 B, Ganesh Nagar, Dhayari, Pune",
-  gstin: "27AOCPD1930N1Z1",
   fssai: "21526080002094",
   udyam: "UDYAM-MH-26-1188295",
   legalEmail: "swadamfoodsindia@gmail.com",
