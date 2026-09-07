@@ -5,7 +5,7 @@ import { AboutSection } from "@/components/about-section"
 import { TrustSection } from "@/components/trust-section"
 import { FaqSection } from "@/components/faq-section"
 import { SiteFooter } from "@/components/site-footer"
-import { CartDrawer } from "@/components/cart-drawer"
+import { CartDrawerGate } from "@/components/cart-drawer-gate"
 
 export default function Page() {
   return (
@@ -25,7 +25,7 @@ export default function Page() {
         <FaqSection />
       </main>
       <SiteFooter />
-      <CartDrawer />
+      <CartDrawerGate />
     </>
   )
 }
