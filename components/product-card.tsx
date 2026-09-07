@@ -1,9 +1,12 @@
+"use client"
+
 import Image from "next/image"
-import { ChevronDown, ChefHat } from "lucide-react"
-import { AddToCartButton } from "@/components/add-to-cart-button"
+import { ChevronDown, ChefHat, Plus } from "lucide-react"
+import { useCart } from "@/lib/cart-context"
 import type { Product } from "@/lib/products"
 
 export function ProductCard({ product }: { product: Product }) {
+  const { addItem } = useCart()
   const hasPrep = Boolean(product.prepSteps?.length)
 
   return (
@@ -70,7 +73,14 @@ export function ProductCard({ product }: { product: Product }) {
               Single {product.weight} packet
             </span>
           </div>
-          <AddToCartButton product={product} />
+          <button
+            type="button"
+            onClick={() => addItem(product)}
+            className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.03] active:scale-95"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Add to order
+          </button>
         </div>
       </div>
     </article>
