@@ -4,7 +4,7 @@
 
 @theme inline {
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-playfair), Georgia, serif;
+  --font-heading: var(--font-cormorant), Georgia, serif;
 
   --color-ring: var(--ring);
   --color-input: var(--input);
