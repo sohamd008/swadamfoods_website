@@ -12,7 +12,7 @@ export function AboutSection() {
             height={900}
             sizes="(max-width: 767px) calc(100vw - 2rem), 50vw"
             loading="lazy"
-            className="aspect-[4/3] w-full rounded-3xl border border-border object-cover shadow-lg"
+            className="aspect-[4/3] h-auto w-full rounded-3xl border border-border object-cover shadow-lg"
           />
         </div>
 
