@@ -9,7 +9,6 @@ export function SiteFooter() {
   )}`
 
   const registrations = [
-    { label: "GSTIN", value: business.gstin },
     { label: "FSSAI", value: business.fssai },
     { label: "UDYAM MSME", value: business.udyam },
   ]
@@ -56,7 +55,10 @@ export function SiteFooter() {
 
         <div className="mt-12 border-t border-border pt-6">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-            <p className="text-center text-xs text-muted-foreground sm:text-left">© {new Date().getFullYear()} {business.name}. All rights reserved. · Women-owned &amp; operated.</p>
+            <div className="text-center text-xs text-muted-foreground sm:text-left">
+              <p>© {new Date().getFullYear()} {business.name}. All rights reserved. · Women-owned &amp; operated.</p>
+              <p className="mt-1">Ownership: DANDEKAR VIDYA AJIT</p>
+            </div>
             <nav className="grid grid-cols-2 gap-x-6 gap-y-2 sm:flex sm:flex-wrap sm:justify-end sm:gap-5" aria-label="Legal">
               <Link href="/terms" className="text-xs font-medium text-muted-foreground transition-colors hover:text-primary">Terms &amp; Conditions</Link>
               <Link href="/privacy-policy" className="text-xs font-medium text-muted-foreground transition-colors hover:text-primary">Privacy Policy</Link>
