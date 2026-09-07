@@ -24,7 +24,7 @@ const faqs = [
   {
     question: "Is Swadam Foods a registered business?",
     answer:
-      "Yes. We are FSSAI registered (license no. 21526080002094), UDYAM MSME registered (UDYAM-MH-26-1188295), and GSTIN registered (27AOCPD1930N1Z1). We are a women-owned and women-operated business based in Pune, Maharashtra.",
+      "Yes. We are FSSAI registered (license no. 21526080002094) and UDYAM MSME registered (UDYAM-MH-26-1188295). We are a women-owned and women-operated business based in Pune, Maharashtra.",
   },
   {
     question: "Does Patal Poha Chivda need cooking?",
