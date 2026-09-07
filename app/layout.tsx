@@ -1,3 +1,4 @@
+import Script from 'next/script'
 import type { Metadata, Viewport } from 'next'
 import { Inter, Poppins } from 'next/font/google'
 import { CartProvider } from '@/lib/cart-context'
@@ -78,6 +79,16 @@ export default function RootLayout({
       className={`bg-background ${inter.variable} ${poppins.variable}`}
     >
       <body className="font-sans antialiased">
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-9MMSSWSXB0"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-9MMSSWSXB0');`}
+        </Script>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
