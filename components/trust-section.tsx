@@ -1,4 +1,4 @@
-import { BadgeCheck, ShieldCheck, ReceiptText, HeartHandshake } from "lucide-react"
+import { BadgeCheck, ShieldCheck, HeartHandshake } from "lucide-react"
 import { business } from "@/lib/products"
 
 const credentials = [
@@ -23,13 +23,6 @@ const credentials = [
       "Registered with the Food Safety and Standards Authority of India for safe, hygienic food business operations.",
     reg: { label: "FSSAI", value: business.fssai },
   },
-  {
-    icon: ReceiptText,
-    title: "GSTIN Registered",
-    description:
-      "A GST-registered business with transparent billing information for every order.",
-    reg: { label: "GSTIN", value: business.gstin },
-  },
 ]
 
 export function TrustSection() {
@@ -48,7 +41,7 @@ export function TrustSection() {
           </p>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {credentials.map(({ icon: Icon, title, description, reg }) => (
             <div
               key={title}
