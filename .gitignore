@@ -1,16 +1,17 @@
-# v0 sandbox internal files
+# Generated build output
+out/
+.next/
+
+# Local development
+node_modules/
+.DS_Store
+.env
+.env*.local
+
+# Legacy v0/Vercel tooling (kept ignored if recreated locally)
+.vercel/
+.snowflake/
+.v0-trash/
 __v0_runtime_loader.js
 __v0_devtools.tsx
 __v0_jsx-dev-runtime.ts
-.snowflake/
-.v0-trash/
-.vercel/
-
-# Environment variables
-.env*.local
-
-# Common ignores
-node_modules
-.next/
-.DS_Store
-.env
