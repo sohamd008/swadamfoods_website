@@ -1,26 +1,11 @@
 import Script from 'next/script'
-import { Cormorant_Garamond, Manrope } from 'next/font/google'
+import { Cormorant_Garamond } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
 import { CartProvider } from '@/lib/cart-context'
 import { ThemeProvider } from '@/components/theme-provider'
 import { business, products } from '@/lib/products'
 import './globals.css'
 
-
-const manrope = Manrope({
-  subsets: ['latin'],
-  variable: '--font-manrope',
-  weight: ['500', '600', '700'],
-  display: 'swap',
-})
-
-const cormorant = Cormorant_Garamond({
-  subsets: ['latin'],
-  variable: '--font-cormorant',
-  weight: ['600', '700'],
-  display: 'swap',
-  style: ['normal', 'italic'],
-})
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://swadamfoods.eu.cc'),
@@ -79,7 +64,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`bg-background ${manrope.variable} ${cormorant.variable}`}
+      className={`bg-background ${cormorant.variable}`)
     >
       <body className="font-sans antialiased">
         <Script
