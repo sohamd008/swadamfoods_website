@@ -63,10 +63,6 @@ export function Hero() {
         </div>
 
         <div className="relative">
-          <div
-            aria-hidden="true"
-            className="absolute -inset-4 -z-10 rounded-[2.5rem] bg-primary/15 blur-2xl"
-          />
           <Image
             src="/images/hero-chivda.webp"
             alt="A rustic bowl of Patal Poha Chivda garnished with peanuts and curry leaves"
