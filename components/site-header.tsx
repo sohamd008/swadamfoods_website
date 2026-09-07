@@ -29,9 +29,9 @@ export function SiteHeader() {
   }, [mobileOpen])
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/95 supports-[backdrop-filter]:bg-background/85">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-        <a href="#top" className="flex items-center gap-3">
+        <a href="#top" className="flex min-w-0 items-center gap-2.5 sm:gap-3">
           <span className="flex items-center justify-center overflow-hidden rounded-xl bg-[#f7f2e7] p-1 ring-1 ring-border">
             <Image
               src="/images/swadam-logo.webp"
@@ -39,14 +39,14 @@ export function SiteHeader() {
               width={112}
               height={36}
               sizes="56px"
-              className="h-9 w-auto"
+              className="h-9 w-auto shrink-0"
             />
           </span>
-          <span className="flex flex-col leading-none">
+          <span className="flex min-w-0 flex-col leading-none">
             <span className="font-heading text-lg font-extrabold tracking-tight text-foreground">
-              Swadam Foods
+              <span className="whitespace-nowrap">Swadam Foods</span>
             </span>
-            <span className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+            <span className="hidden text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground sm:block">
               Taste of Purity and Care
             </span>
           </span>
@@ -85,7 +85,7 @@ export function SiteHeader() {
         className={`md:hidden ${mobileOpen ? "block" : "hidden"}`}
       >
         <nav
-          className="flex flex-col gap-1 border-t border-border bg-background px-4 pb-4 pt-2"
+          className="flex flex-col gap-1 border-t border-border bg-background/95 px-4 pb-4 pt-2 shadow-lg"
           aria-label="Mobile navigation"
         >
           {navLinks.map((link) => (
