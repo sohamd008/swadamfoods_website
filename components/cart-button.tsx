@@ -10,6 +10,7 @@ export function CartButton() {
     <button
       type="button"
       onClick={openCart}
+      aria-label={totalItems > 0 ? `Open cart, ${totalItems} ${totalItems === 1 ? "item" : "items"}` : "Open cart"}
       className="relative flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.03] active:scale-95"
     >
       <ShoppingBag className="h-4 w-4" aria-hidden="true" />
