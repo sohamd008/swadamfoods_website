@@ -155,7 +155,7 @@ export default function RootLayout({
                     { question: 'How do I prepare the Instant Kanda Poha Premix?', answer: 'Empty the premix into a bowl, add hot boiling water equal to half the amount of premix (1 part water to 2 parts premix), cover and rest for 5 minutes.' },
                     { question: 'How do I prepare the Instant Upma Premix?', answer: 'Empty the premix into a bowl, add hot boiling water equal to the same amount as the premix (1:1 ratio), cover and rest for 5 minutes.' },
                     { question: 'How do I order from Swadam Foods?', answer: 'Add products to the cart on our website, then check out via WhatsApp. We confirm the order and arrange delivery.' },
-                    { question: 'Is Swadam Foods a registered business?', answer: 'Yes, we are FSSAI registered, UDYAM MSME registered, and GSTIN registered. We are a women-owned business based in Pune, Maharashtra.' },
+                    { question: 'Is Swadam Foods a registered business?', answer: 'Yes, we are FSSAI registered and UDYAM MSME registered. We are a women-owned business based in Pune, Maharashtra.' },
                   ].map((f) => ({
                     '@type': 'Question',
                     name: f.question,
