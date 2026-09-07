@@ -133,19 +133,21 @@ export function CartDrawer() {
       className={`fixed inset-0 z-50 ${isOpen ? "" : "pointer-events-none"}`}
       inert={!isOpen ? true : undefined}
     >
-      <div
-        onClick={closeCart}
-        className={`absolute inset-0 bg-foreground/40 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0"}`}
-      />
+      {isOpen && (
+        <div
+          onClick={closeCart}
+          className="absolute inset-0 bg-foreground/35 transition-opacity duration-200"
+        />
+      )}
 
       <aside
         ref={asideRef}
         role="dialog"
         aria-modal="true"
         aria-label="Your order"
-        className={`absolute right-0 top-0 flex h-full w-full max-w-md flex-col overflow-hidden border-l border-white/35 bg-background/80 shadow-2xl ring-1 ring-black/5 backdrop-blur-2xl transition-transform duration-300 sm:top-3 sm:right-3 sm:h-[calc(100%-1.5rem)] sm:rounded-[2rem] ${isOpen ? "translate-x-0" : "translate-x-full"}`}
+        className={`absolute right-0 top-0 flex h-full w-full max-w-md flex-col overflow-hidden border-l border-white/45 bg-background/88 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl will-change-transform transition-transform duration-200 ease-out sm:top-3 sm:right-3 sm:h-[calc(100%-1.5rem)] sm:rounded-[2rem] ${isOpen ? "translate-x-0" : "translate-x-full"}`}
       >
-        <div className="flex items-center justify-between border-b border-white/35 bg-white/20 px-5 py-4 backdrop-blur-xl dark:bg-black/10">
+        <div className="flex items-center justify-between border-b border-white/35 bg-white/25 px-5 py-4 dark:bg-black/10">
           <div className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5 text-primary" aria-hidden="true" />
             <h2 className="font-heading text-lg font-bold text-foreground">
@@ -336,7 +338,7 @@ export function CartDrawer() {
               </div>
             </div>
 
-            <div className="border-t border-white/35 bg-card/65 px-5 py-4 backdrop-blur-xl dark:bg-card/60">
+            <div className="border-t border-white/35 bg-card/75 px-5 py-4 dark:bg-card/70">
               <div className="mb-1 flex items-center justify-between text-sm">
                 <span className="font-medium text-muted-foreground">Subtotal</span>
                 <span className="font-semibold text-foreground">₹{totalPrice}</span>
