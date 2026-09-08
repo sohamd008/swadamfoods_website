@@ -28,9 +28,7 @@ export async function GET(request: Request) {
   if (!sameOrigin(request)) return json({ error: "Invalid request origin." }, 403)
 
   const orderId = new URL(request.url).searchParams.get("orderId")?.trim() ?? ""
-  if (!/^SWD-\d{8}-[A-Z0-9]{8}$/.test(orderId)) {
-    return json({ error: "Invalid order ID." }, 400)
-  }
+  if (!/^SWD-\d{8}-[A-Z0-9]{8}$/.test(orderId)) return json({ error: "Invalid order ID." }, 400)
 
   const { env } = getCloudflareContext()
   const db = (env as CloudflareEnv & { DB: D1Database }).DB
@@ -38,7 +36,7 @@ export async function GET(request: Request) {
   try {
     const order = await db
       .prepare(
-        `SELECT id, total, currency, payment_gateway, payment_status
+        `SELECT id, total, currency, payment_gateway, gateway_order_id, payment_status
          FROM orders WHERE id = ? LIMIT 1`,
       )
       .bind(orderId)
@@ -47,17 +45,26 @@ export async function GET(request: Request) {
         total: number
         currency: string
         payment_gateway: string | null
+        gateway_order_id: string | null
         payment_status: string
       }>()
 
     if (!order) return json({ error: "Order not found." }, 404)
-    if (order.payment_gateway !== "phonepe") {
+    if (order.payment_gateway !== "phonepe" || !order.gateway_order_id) {
       return json({ error: "PhonePe is not assigned to this order." }, 409)
     }
 
-    const status = await getPhonePeOrderStatus(orderId)
+    if (order.payment_status === "paid") {
+      return json({ orderId, state: "COMPLETED", paymentStatus: "paid" })
+    }
+
+    const status = await getPhonePeOrderStatus(order.gateway_order_id)
     if (status.amount !== undefined && status.amount !== order.total * 100) {
-      console.error("PhonePe amount mismatch", { orderId, expected: order.total * 100, received: status.amount })
+      console.error("PhonePe amount mismatch", {
+        orderId,
+        expected: order.total * 100,
+        received: status.amount,
+      })
       return json({ error: "Payment verification failed." }, 502)
     }
 
@@ -70,9 +77,7 @@ export async function GET(request: Request) {
     if (paymentStatus !== order.payment_status) {
       await db
         .prepare(
-          `UPDATE orders
-           SET payment_status = ?, updated_at = datetime('now')
-           WHERE id = ?`,
+          `UPDATE orders SET payment_status = ?, updated_at = datetime('now') WHERE id = ?`,
         )
         .bind(paymentStatus, orderId)
         .run()
