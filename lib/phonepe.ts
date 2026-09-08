@@ -150,7 +150,7 @@ export async function verifyPhonePeWebhook(rawBody: string, headers: Headers) {
   const env = getEnv()
   const secret = required(env.PHONEPE_WEBHOOK_SECRET, "PHONEPE_WEBHOOK_SECRET")
   const keyId = headers.get("x-phonepe-checksum-key-id")?.trim()
-  const signature = headers.get("phonepe-checksum-signature")?.trim()
+  const signature = (headers.get("phonepe-checksum-signature") ?? headers.get("x-phonepe-checksum-signature"))?.trim()
 
   if (!keyId || keyId !== PHONEPE_WEBHOOK_ID || !signature) return false
 
