@@ -70,23 +70,22 @@ export function CheckoutPage() {
     if (typeof window === "undefined") return false
 
     setCheckingConnection(true)
-    const navigatorOnline = navigator.onLine
-
-    if (!navigatorOnline) {
-      setIsOnline(false)
-      setCheckingConnection(false)
-      return false
-    }
 
     try {
       const controller = new AbortController()
-      const timeout = window.setTimeout(() => controller.abort(), 4500)
-      await fetch(`/?connectivity=${Date.now()}`, {
-        method: "HEAD",
+      const timeout = window.setTimeout(() => controller.abort(), 5000)
+      const response = await fetch(`/api/health?check=${Date.now()}`, {
+        method: "GET",
         cache: "no-store",
         signal: controller.signal,
+        headers: { Accept: "application/json" },
       })
       window.clearTimeout(timeout)
+
+      if (!response.ok) {
+        throw new Error(`Health check failed (${response.status}).`)
+      }
+
       setIsOnline(true)
       return true
     } catch {
@@ -98,14 +97,16 @@ export function CheckoutPage() {
   }, [])
 
   useEffect(() => {
-    const update = () => setIsOnline(navigator.onLine)
-    window.addEventListener("online", update)
-    window.addEventListener("offline", update)
+    const handleOnline = () => void checkConnection()
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener("online", handleOnline)
+    window.addEventListener("offline", handleOffline)
     void checkConnection()
 
     return () => {
-      window.removeEventListener("online", update)
-      window.removeEventListener("offline", update)
+      window.removeEventListener("online", handleOnline)
+      window.removeEventListener("offline", handleOffline)
     }
   }, [checkConnection])
 
@@ -321,7 +322,7 @@ export function CheckoutPage() {
               type="button"
               onClick={() => void checkConnection()}
               disabled={checkingConnection}
-              className="rounded-full border border-border/70 bg-background/50 px-3 py-2 text-xs font-bold text-foreground"
+              className="rounded-full border border-border/70 bg-background/50 px-3 py-2 text-xs font-bold text-foreground disabled:cursor-wait disabled:opacity-60"
             >
               {checkingConnection ? "Checking…" : "Retry"}
             </button>
