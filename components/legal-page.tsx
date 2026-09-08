@@ -1,4 +1,7 @@
-import Link from "next/link"
+"use client"
+
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 
 type LegalSection = {
@@ -17,17 +20,42 @@ export function LegalPage({
   sections: LegalSection[]
   updatedAt?: string
 }) {
+  const router = useRouter()
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("swadam_viewing_policy", "true")
+    } catch {
+      // Ignore
+    }
+  }, [])
+
+  const handleBack = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    try {
+      const fromHome = sessionStorage.getItem("swadam_from_home") === "true"
+      if (fromHome && window.history.length > 1) {
+        e.preventDefault()
+        sessionStorage.setItem("swadam_viewing_policy", "true")
+        router.back()
+        return
+      }
+    } catch {
+      // Fallback to normal anchor navigation to /#footer
+    }
+  }
+
   return (
     <main className="ambient-bg min-h-dvh py-8 sm:py-12">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <div className="glass-card rounded-[2.5rem] p-6 sm:p-10 shadow-xl border border-white/60 dark:border-white/10">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm font-bold text-muted-foreground transition-colors hover:text-primary"
+          <a
+            href="/#footer"
+            onClick={handleBack}
+            className="inline-flex items-center gap-2 text-sm font-bold text-muted-foreground transition-colors hover:text-primary cursor-pointer"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Back to home
-          </Link>
+          </a>
 
           <h1 className="mt-6 text-balance font-heading text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
             {title}
@@ -60,6 +88,24 @@ export function LegalPage({
                 ))}
               </section>
             ))}
+          </div>
+
+          <div className="mt-10 flex items-center justify-between border-t border-border/60 pt-6">
+            <a
+              href="/#footer"
+              onClick={handleBack}
+              className="inline-flex items-center gap-2 text-sm font-bold text-muted-foreground transition-colors hover:text-primary cursor-pointer"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              Back to home
+            </a>
+            <button
+              type="button"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              className="text-xs font-bold text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+            >
+              Back to top &uarr;
+            </button>
           </div>
         </div>
       </div>

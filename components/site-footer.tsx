@@ -1,3 +1,6 @@
+"use client"
+
+import { useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { MessageCircle, Phone, Mail, MapPin, ShieldCheck, CreditCard } from "lucide-react"
@@ -7,6 +10,85 @@ export function SiteFooter() {
   const waLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
     "Hello Swadam Foods! I'd like to know more about your products.",
   )}`
+
+  const handlePolicyClick = () => {
+    try {
+      sessionStorage.setItem("swadam_home_scroll", String(window.scrollY))
+      sessionStorage.setItem("swadam_viewing_policy", "true")
+      sessionStorage.setItem("swadam_from_home", "true")
+    } catch {
+      // Ignore
+    }
+  }
+
+  useEffect(() => {
+    const restore = () => {
+      try {
+        const viewingPolicy = sessionStorage.getItem("swadam_viewing_policy")
+        const savedScroll = sessionStorage.getItem("swadam_home_scroll")
+
+        if (viewingPolicy === "true") {
+          sessionStorage.removeItem("swadam_viewing_policy")
+
+          const targetY = savedScroll ? parseInt(savedScroll, 10) : NaN
+          const root = document.documentElement
+
+          const performScroll = () => {
+            if (!isNaN(targetY) && targetY > 0) {
+              const prevBehavior = root.style.scrollBehavior
+              root.style.scrollBehavior = "auto"
+              window.scrollTo({ top: targetY, left: 0, behavior: "instant" })
+              root.style.scrollBehavior = prevBehavior
+            } else {
+              const footerEl = document.getElementById("footer") || document.getElementById("contact")
+              if (footerEl) {
+                footerEl.scrollIntoView({ behavior: "instant" })
+              }
+            }
+          }
+
+          performScroll()
+          const r1 = requestAnimationFrame(performScroll)
+          const t1 = setTimeout(performScroll, 50)
+          const t2 = setTimeout(performScroll, 150)
+          const t3 = setTimeout(performScroll, 300)
+        }
+      } catch {
+        // Ignore
+      }
+    }
+
+    restore()
+
+    window.addEventListener("popstate", restore)
+    window.addEventListener("pageshow", restore)
+
+    let ticking = false
+    const handleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          try {
+            if (window.scrollY > 0) {
+              sessionStorage.setItem("swadam_home_scroll", String(window.scrollY))
+              sessionStorage.setItem("swadam_from_home", "true")
+            }
+          } catch {
+            // Ignore
+          }
+          ticking = false
+        })
+        ticking = true
+      }
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true })
+
+    return () => {
+      window.removeEventListener("popstate", restore)
+      window.removeEventListener("pageshow", restore)
+      window.removeEventListener("scroll", handleScroll)
+    }
+  }, [])
 
   const paymentMethods = [
     "PhonePe UPI",
@@ -199,20 +281,20 @@ export function SiteFooter() {
         </div>
 
         {/* Legal & Copyright */}
-        <div className="mt-14 border-t border-white/40 pt-6 dark:border-white/10">
+        <div id="footer" className="mt-14 border-t border-white/40 pt-6 dark:border-white/10 scroll-mt-10">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-center text-xs text-muted-foreground sm:text-left">
               <p>© {new Date().getFullYear()} {business.name}. All rights reserved. · Women-owned &amp; operated in Pune.</p>
               <p className="mt-0.5 text-[11px] text-muted-foreground/80">Proprietorship: DANDEKAR VIDYA AJIT</p>
             </div>
             <nav className="flex flex-wrap justify-center sm:justify-end gap-x-5 gap-y-2" aria-label="Legal navigation">
-              <Link href="/terms" className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Terms</Link>
-              <Link href="/privacy-policy" className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Privacy</Link>
-              <Link href="/payment-policy" className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Payments</Link>
-              <Link href="/refund-policy" className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Refunds</Link>
-              <Link href="/return-policy" className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Returns</Link>
-              <Link href="/shipping-policy" className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Shipping</Link>
-              <Link href="/cookie-policy" className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Cookies</Link>
+              <Link href="/terms" onClick={handlePolicyClick} className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Terms</Link>
+              <Link href="/privacy-policy" onClick={handlePolicyClick} className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Privacy</Link>
+              <Link href="/payment-policy" onClick={handlePolicyClick} className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Payments</Link>
+              <Link href="/refund-policy" onClick={handlePolicyClick} className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Refunds</Link>
+              <Link href="/return-policy" onClick={handlePolicyClick} className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Returns</Link>
+              <Link href="/shipping-policy" onClick={handlePolicyClick} className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Shipping</Link>
+              <Link href="/cookie-policy" onClick={handlePolicyClick} className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Cookies</Link>
             </nav>
           </div>
         </div>
