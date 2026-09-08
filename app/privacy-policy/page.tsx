@@ -4,72 +4,86 @@ import { business } from "@/lib/products"
 
 export const metadata: Metadata = {
   title: "Privacy Policy | Swadam Foods",
-  description: "Privacy Policy governing how Swadam Foods collects, uses, shares and protects personal data.",
+  description: "Privacy Policy governing how Swadam Foods collects, uses, stores and protects personal data under the Digital Personal Data Protection Act, 2023 and IT Act, 2000.",
 }
 
 export default function PrivacyPolicyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
+      updatedAt="9 September 2026"
+      intro={`This Privacy Policy describes how ${business.name} (Proprietorship: ${business.proprietor}), acting as a Data Fiduciary, collects, uses, shares, stores, and protects personal data obtained through our website https://swadamfoods.eu.cc (hereinafter referred to as the "Platform"). This document is prepared and published in strict compliance with the Digital Personal Data Protection Act, 2023 (DPDP Act 2023), Section 43A of the Information Technology Act, 2000, and the Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules, 2011.`}
       sections={[
         {
-          heading: "Introduction",
+          heading: "1. Data Fiduciary Information",
           paragraphs: [
-            `This Privacy Policy describes how ${business.name} ("we", "our", "us") collect, use, share, protect or otherwise process your information / personal data through our website https://swadamfoods.eu.cc (hereinafter referred to as the Platform). You may be able to browse certain sections of the Platform without registering with us. We do not offer any product/service under this Platform outside India and your personal data will primarily be stored and processed in India. By visiting this Platform, providing your information or availing any product/service offered on the Platform, you expressly agree to be bound by this Privacy Policy, the Terms of Use and the applicable service/product terms and conditions, and agree to be governed by the laws of India including applicable laws relating to data protection and privacy. If you do not agree, please do not use or access the Platform.`,
+            `The Data Fiduciary responsible for your personal data is ${business.name}, having its registered office at ${business.address}.`,
+            `Contact Email: ${business.email} | Customer Support & WhatsApp: ${business.phoneDisplay}.`,
+            "We provide products and services exclusively within the Republic of India. All personal data collected through this Platform is hosted, processed, and maintained on secure servers located within India.",
           ],
         },
         {
-          heading: "Collection",
+          heading: "2. Personal Data We Collect",
           paragraphs: [
-            `We collect your personal data when you use our Platform, services or otherwise interact with us during the course of our relationship. Some of the information that we may collect includes personal data / information provided to us during use of our Platform such as name, address, telephone/mobile number, email ID and information shared for order fulfilment. You always have the option not to provide information by choosing not to use a particular service or feature on the Platform. We may collect information related to your transactions on the Platform and third-party business partner platforms. When a third-party business partner collects your personal data directly from you, you will be governed by their privacy policies. We request you to read those policies before disclosing information. We will never ask you to disclose debit/credit card PINs, net-banking passwords or mobile-banking passwords through an unsolicited call, email or message. If you receive such a request claiming to be from Swadam Foods, do not provide the information and report it to the appropriate authority.`,
+            "We collect only the minimum personal data strictly necessary to provide our products and services. This includes:",
+            "• Identity & Contact Details: Full name, delivery address, city, state, postal pincode, landmark, and mobile/telephone number.",
+            "• Order & Transaction Details: Products purchased, pack sizes, item quantities, total transaction amount, unique Order ID, delivery preferences, and payment status receipts provided by payment gateways.",
+            "• Communications Data: Customer support queries, feedback, or delivery instructions submitted via WhatsApp, email, or telephone.",
+            "Financial Secrets Exclusion: Swadam Foods NEVER collects, stores, or has access to your full debit/credit card numbers, CVVs, expiry dates, UPI PINs, NetBanking passwords, or OTPs. All payment transactions are executed directly on encrypted, PCI-DSS compliant payment gateway environments licensed by the Reserve Bank of India (PhonePe / Razorpay).",
           ],
         },
         {
-          heading: "Usage",
+          heading: "3. Purpose and Legal Grounds for Processing",
           paragraphs: [
-            "We use personal data to provide the services you request, assist with handling and fulfilling orders, enhance customer experience, resolve disputes, troubleshoot problems, inform you about offers, products, services and updates, customise your experience, detect and protect against error, fraud and other criminal activity, enforce our terms and conditions, conduct marketing research, analysis and surveys, and as otherwise described to you at the time of collection of information.",
+            "In accordance with the DPDP Act 2023, we process your personal data solely for specified, lawful purposes:",
+            "• Contractual Fulfillment: To prepare fresh food items, pack orders, calculate shipping, coordinate doorstep delivery with logistics partners, and provide order status tracking via WhatsApp and SMS.",
+            "• Customer Support: To address order inquiries, process cancellations, investigate transit damages, and execute approved refunds.",
+            "• Statutory & Tax Compliance: To maintain accurate sales accounts, invoices, and audit registers in compliance with the Central Goods and Services Tax (CGST) Act, 2017 and Income Tax Act, 1961.",
+            "• Platform Security & Fraud Prevention: To detect and mitigate automated bot attacks, unauthorized API abuse, duplicate payment charges, and cyber threats.",
           ],
         },
         {
-          heading: "Sharing",
+          heading: "4. Data Sharing & Third-Party Service Providers",
           paragraphs: [
-            "We may disclose personal data to third parties such as logistics partners, payment service providers, technology providers and other service providers where required to provide our services. We may also disclose personal data to government agencies or authorised law enforcement agencies when required by law or where reasonably necessary to comply with legal process, enforce our terms, prevent fraud or protect the rights, property or personal safety of our users or the general public.",
+            "We do not sell, rent, trade, or monetize your personal data to any third-party marketing companies or data brokers. We disclose personal data only on a strict need-to-know basis to:",
+            "• Logistics & Delivery Partners (e.g., local delivery personnel, Porter, registered couriers, or Speed Post) exclusively to deliver your package to your specified address.",
+            "• RBI-Licensed Payment Aggregators (PhonePe / Razorpay) to verify and reconcile transaction amounts.",
+            "• Law Enforcement & Statutory Regulatory Bodies when required by a valid legal process, court order, or statutory obligation under Indian law.",
           ],
         },
         {
-          heading: "Security Precautions",
+          heading: "5. Your Rights as a Data Principal (DPDP Act, 2023)",
           paragraphs: [
-            "To protect your personal data from unauthorised access or disclosure, loss or misuse, we adopt reasonable security practices and procedures. However, transmission of information over the internet is not completely secure and users acknowledge the inherent risks of data transmission over the internet and World Wide Web.",
+            "Under Chapter III of the Digital Personal Data Protection Act, 2023, you possess the following statutory rights regarding your personal data:",
+            "• Right to Access (Section 11): You have the right to request a summary of the personal data we hold about you and the processing activities undertaken.",
+            "• Right to Correction & Erasure (Section 12): You have the right to request the correction of inaccurate data, completion of incomplete data, or erasure of personal data that is no longer necessary for the purpose for which it was collected (subject to statutory tax record retention requirements).",
+            "• Right of Grievance Redressal (Section 13): You have the right to readily available grievance redressal in respect of any act or omission by us regarding performance of our obligations under the DPDP Act.",
+            "• Right to Nominate (Section 14): You have the right to nominate any other individual to exercise your rights under the DPDP Act in the event of death or incapacity.",
+            "• Right to Withdraw Consent: Where processing is based on consent, you may withdraw your consent at any time by writing to our Grievance Officer at swadamfoodsindia@gmail.com. Withdrawal of consent does not affect the lawfulness of processing undertaken prior to such withdrawal.",
           ],
         },
         {
-          heading: "Data Deletion and Retention",
+          heading: "6. Data Security Practices & Procedures",
           paragraphs: [
-            `You may write to us at ${business.email} to request assistance with deletion or other data-related requests. We may refuse or delay deletion where there are pending grievances, claims, pending shipments or other legitimate reasons. We retain personal data for no longer than required for the purpose for which it was collected or as required under applicable law. We may retain data where necessary to prevent fraud or future abuse or for other legitimate purposes and may continue to retain anonymised data for analytical and research purposes.`,
+            "In compliance with Section 43A of the IT Act, 2000 and the IT (Reasonable Security Practices) Rules, 2011, we implement comprehensive administrative, physical, and technical safeguards:",
+            "• TLS 1.3 / HTTPS encryption for all browser and server data transfers.",
+            "• Enterprise edge rate-limiting and DDoS shield to prevent unauthorized data scraping.",
+            "• Content Security Policy (CSP) headers preventing unauthorized script injection or cross-site clickjacking.",
+            "• Strict access controls restricting customer order databases exclusively to authorized fulfillment personnel.",
           ],
         },
         {
-          heading: "Your Rights",
+          heading: "7. Data Retention Policy",
           paragraphs: [
-            "You may request access to, rectification of, or updates to your personal data by contacting us using the contact details below, subject to applicable law.",
+            "We retain personal data only for as long as necessary to fulfill the operational purpose of fulfilling your order, handling warranty/grievance claims, and satisfying mandatory statutory requirements under Indian taxation laws (typically 6 to 8 years for tax invoices and financial transaction ledgers). Once the statutory retention period expires, customer data is securely deleted or irreversibly anonymized.",
           ],
         },
         {
-          heading: "Consent",
+          heading: "8. Data Protection Grievance Officer",
           paragraphs: [
-            `By visiting our Platform or providing your information, you consent to the collection, use, storage, disclosure and otherwise processing of your information on the Platform in accordance with this Privacy Policy. You may withdraw consent by writing to us at ${business.email}. Please note that withdrawal of consent will not be retrospective and may restrict or prevent us from providing services for which the information is necessary.`,
-          ],
-        },
-        {
-          heading: "Changes to this Privacy Policy",
-          paragraphs: [
-            "Please check this Privacy Policy periodically for changes. We may update this Privacy Policy to reflect changes to our information practices and may notify you about significant changes in the manner required by applicable laws.",
-          ],
-        },
-        {
-          heading: "Grievance Officer",
-          paragraphs: [
-            `${business.name}\n${business.address}\nEmail: ${business.email}\nPhone: ${business.phoneDisplay}\nTime: Monday - Friday (9:00 - 18:00)`,
+            `In accordance with Rule 4(4) of the Consumer Protection (E-Commerce) Rules, 2020 and Section 13 of the Digital Personal Data Protection Act, 2023, our designated Grievance Officer details are:`,
+            `Name & Designation: ${business.grievanceOfficer}, Grievance Officer\nEntity: ${business.name} (Proprietorship: ${business.proprietor})\nRegistered Office: ${business.address}\nEmail: ${business.email}\nPhone: ${business.phoneDisplay}\nWorking Hours: Monday to Saturday, 09:30 AM to 06:30 PM IST`,
+            "The Grievance Officer will acknowledge receipt of your data privacy complaint within forty-eight (48) hours and resolve the grievance within thirty (30) days from the date of receipt.",
           ],
         },
       ]}

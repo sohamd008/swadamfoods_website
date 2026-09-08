@@ -4,45 +4,64 @@ import { business } from "@/lib/products"
 
 export const metadata: Metadata = {
   title: "Refund & Cancellation Policy | Swadam Foods",
-  description: "Cancellation and refund policy for Swadam Foods orders.",
+  description: "Cancellation, return-free refund, and replacement policy for Swadam Foods orders under the Consumer Protection (E-Commerce) Rules, 2020.",
 }
 
 export default function RefundPolicyPage() {
   return (
     <LegalPage
       title="Refund & Cancellation Policy"
-      intro="This refund and cancellation policy outlines how you can cancel or seek a refund for a product or service that you have purchased through the Platform. All cancellation, refund and replacement requests are subject to review and approval by Swadam Foods."
+      updatedAt="9 September 2026"
+      intro={`At ${business.name}, we are committed to delivering authentic, freshly prepared, and hygienically packed snacks and instant premixes. This policy outlines how order cancellations, replacements, and refunds are handled in accordance with the Consumer Protection Act, 2019 and the Consumer Protection (E-Commerce) Rules, 2020.`}
       sections={[
         {
-          heading: "Cancellation",
+          heading: "1. Order Cancellation by Customer",
           paragraphs: [
-            "Cancellations will only be considered if the request is made within 7 days of placing the order and will be subject to approval by Swadam Foods. However, cancellation requests may not be entertained if the order has been communicated for shipping, the shipping process has been initiated, or the product is out for delivery. In such an event, you may choose to reject the product at the doorstep, subject to applicable policy and delivery conditions.",
-            `${business.name} does not accept cancellation requests for perishable items like eatables. However, a refund or replacement may be considered if the customer establishes that the quality of the product delivered is not good, and any refund or replacement will be subject to approval by ${business.name}.`,
+            "• Cancellation Window: You may request cancellation of your order free of charge before the order is dispatched or marked for preparation in our kitchen (typically within two (2) hours of placing your order).",
+            "• Post-Dispatch Orders: Once an order has been prepared, packed, or dispatched with our courier/delivery partners, cancellation requests cannot be accepted because fresh, packaged food items cannot be reused or restocked once dispatched.",
+            "• To cancel an eligible order, please message us immediately on WhatsApp (+91 88888 51522) or email swadamfoodsindia@gmail.com with your unique Order ID. If the order has not been dispatched, we will cancel the order and initiate a 100% refund immediately.",
           ],
         },
         {
-          heading: "Damaged or Defective Products",
+          heading: "2. Order Cancellation by Swadam Foods",
           paragraphs: [
-            "In case of receipt of damaged or defective items, please report the issue to our customer service team. The request will be entertained once the product has been checked and the same is determined by us. Any refund, replacement or exchange arising from such a request will be subject to approval by Swadam Foods. This should be reported within 7 days of receipt of products.",
-            "If you feel that the product received is not as shown on the site or is not as per your expectations, you must bring it to the notice of our customer service within 7 days of receiving the product. Our customer service team, after looking into your complaint, will take an appropriate decision. Any refund, replacement or exchange will be subject to approval by Swadam Foods.",
+            "We reserve the right to cancel an order under exceptional circumstances, such as: (a) your delivery address is in an unserviceable area or non-deliverable pincode; (b) unforeseen ingredient stock shortages; (c) Force Majeure events affecting operations; or (d) suspected fraudulent payment activity.",
+            "If an order is cancelled by Swadam Foods, you will be notified immediately via WhatsApp/SMS/Email, and a 100% full refund of the amount paid will be issued back to your original payment instrument without any deduction or cancellation fee.",
           ],
         },
         {
-          heading: "Manufacturer Warranty",
+          heading: "3. Refund & Replacement Eligibility for Food Products",
           paragraphs: [
-            "In case of complaints regarding products that come with a warranty from the manufacturers, please refer the issue to the manufacturer concerned.",
+            "Under Indian food safety standards (FSSAI) and consumer protection norms, packaged food items cannot be returned once delivered and accepted. However, we provide an immediate 100% full refund or free replacement in any of the following verified instances:",
+            "• Damaged in Transit: The outer parcel or product packaging is visibly broken, punctured, torn, or crushed upon arrival.",
+            "• Tampered Seal: The security or tamper-evident seal on the food pack is broken upon delivery.",
+            "• Defective Quality / Spoilage: The product does not meet our freshness and quality standards upon opening.",
+            "• Past Expiry: The product delivered is past its printed \"Best Before\" or manufacturing shelf-life date.",
+            "• Incorrect or Missing Item: You received a different product variant, wrong item, or missing packet from what was ordered.",
           ],
         },
         {
-          heading: "Refund Processing",
+          heading: "4. How to Claim a Refund or Replacement",
           paragraphs: [
-            "No refund is automatic or guaranteed merely because a request is submitted. In case any refund is approved by Swadam Foods following review of the request, it will take 5 days for the refund to be processed.",
+            "1. Reporting Timeframe: Please notify us within forty-eight (48) hours of delivery.",
+            "2. Supporting Proof: Send a message to our customer care team via WhatsApp at +91 88888 51522 or email swadamfoodsindia@gmail.com with your Order ID, a brief description of the issue, and clear photographs or an unboxing video showing the damaged packet, packaging, and batch number.",
+            "3. Resolution: Our quality team will review your report within twenty-four (24) hours. Upon verification, you may choose between: (a) an immediate free priority replacement dispatched at zero cost to you; or (b) a 100% refund credited to your original payment method.",
+            "Note: Because our products are consumable food items, you are NOT required to ship back damaged or spoiled food packets.",
           ],
         },
         {
-          heading: "Contact Information",
+          heading: "5. Refund Method & Processing Timelines",
           paragraphs: [
-            `For cancellation or refund requests, please contact ${business.name} at ${business.email} / ${business.phoneDisplay}.`,
+            "• Source Instrument Credit: In compliance with Reserve Bank of India (RBI) regulations, approved refunds for online payments are credited exclusively back to the original payment source (UPI account, Debit Card, Credit Card, or NetBanking) used at the time of purchase.",
+            "• Processing Timeline: Once approved by our team, the refund transaction is initiated through our payment gateway (PhonePe / Razorpay) within twenty-four (24) to forty-eight (48) hours.",
+            "• Bank Credit Timeline: The refunded amount typically reflects in your bank account or card balance within five (5) to seven (7) business days, depending on your bank's clearance cycles.",
+          ],
+        },
+        {
+          heading: "6. Grievance & Escalation",
+          paragraphs: [
+            `If your refund or replacement request has not been addressed within the committed timeframe, you may escalate the issue directly to our Grievance Officer:`,
+            `Name: ${business.grievanceOfficer}\nEntity: ${business.name} (Proprietorship: ${business.proprietor})\nAddress: ${business.address}\nEmail: ${business.email}\nPhone / WhatsApp: ${business.phoneDisplay}\nWorking Hours: Monday to Saturday, 09:30 AM to 06:30 PM IST`,
           ],
         },
       ]}

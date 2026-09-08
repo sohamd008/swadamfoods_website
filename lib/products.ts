@@ -15,13 +15,15 @@ export const WHATSAPP_NUMBER = "918888851522"
 
 export const business = {
   name: "Swadam Foods",
+  proprietor: "DANDEKAR VIDYA AJIT",
   phoneDisplay: "+91 88888 51522",
   email: "swadamfoodsindia@gmail.com",
-  address: "Lane No. 30/31 B, Ganesh Nagar, Dhayari, Pune",
+  address: "Lane No. 30/31 B, Ganesh Nagar, Dhayari, Pune, Maharashtra - 411041, India",
   fssai: "21526080002094",
   udyam: "UDYAM-MH-26-1188295",
   legalEmail: "swadamfoodsindia@gmail.com",
-  legalPhone: "8888851522",
+  legalPhone: "+91 88888 51522",
+  grievanceOfficer: "Vidya Ajit Dandekar",
 } as const
 
 export const products: Product[] = [
