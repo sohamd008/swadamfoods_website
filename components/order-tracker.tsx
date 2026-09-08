@@ -2,23 +2,27 @@
 
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import {
   CheckCircle2,
   Clock,
-  Package,
   Truck,
   ChefHat,
-  Box,
+  PackageCheck,
   MessageSquare,
   MapPin,
-  Phone,
   RefreshCw,
   ShoppingBag,
   ExternalLink,
   AlertCircle,
   ArrowLeft,
   Sparkles,
+  Copy,
+  Check,
+  PhoneCall,
+  ShieldCheck,
 } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 type OrderItem = {
   productName: string
@@ -49,41 +53,87 @@ type OrderDetails = {
 const MERCHANT_WHATSAPP = "8888851522"
 
 const STAGES = [
-  { id: "received", label: "Order Received", icon: Clock, desc: "Order details received" },
-  { id: "paid", label: "Payment Confirmed", icon: CheckCircle2, desc: "Secure payment verified" },
-  { id: "preparing", label: "Preparing Fresh", icon: ChefHat, desc: "Delicacies being handcrafted" },
-  { id: "packed", label: "Packed", icon: Box, desc: "Sealed & ready for dispatch" },
-  { id: "shipped", label: "Out for Delivery", icon: Truck, desc: "Delivery partner on the way" },
-  { id: "delivered", label: "Delivered", icon: Sparkles, desc: "Enjoy your Swadam Foods!" },
+  {
+    id: "received",
+    label: "Order Received",
+    subtitle: "Received & logged into system",
+    icon: Clock,
+  },
+  {
+    id: "paid",
+    label: "Payment Confirmed",
+    subtitle: "Payment verified via PhonePe",
+    icon: ShieldCheck,
+  },
+  {
+    id: "preparing",
+    label: "Kitchen Preparation",
+    subtitle: "Freshly handcrafting delicacies",
+    icon: ChefHat,
+  },
+  {
+    id: "packed",
+    label: "Packed & Sealed",
+    subtitle: "Sealed & ready for dispatch",
+    icon: PackageCheck,
+  },
+  {
+    id: "shipped",
+    label: "Out for Delivery",
+    subtitle: "Delivery partner on the way",
+    icon: Truck,
+  },
+  {
+    id: "delivered",
+    label: "Delivered",
+    subtitle: "Delivered to your doorstep!",
+    icon: Sparkles,
+  },
 ]
 
 export function OrderTracker({ orderId }: { orderId: string }) {
   const [order, setOrder] = useState<OrderDetails | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>("")
+  const [copied, setCopied] = useState<boolean>(false)
+  const [refreshing, setRefreshing] = useState<boolean>(false)
 
-  const fetchOrder = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/orders/${orderId}`)
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || "Order not found.")
-        return
+  const fetchOrder = useCallback(
+    async (isManualRefresh = false) => {
+      if (isManualRefresh) setRefreshing(true)
+      try {
+        const res = await fetch(`/api/orders/${orderId}`)
+        const data = await res.json()
+        if (!res.ok) {
+          setError(data.error || "Order not found.")
+          return
+        }
+        setOrder(data.order)
+        setError("")
+      } catch {
+        setError("Failed to connect to server.")
+      } finally {
+        setLoading(false)
+        if (isManualRefresh) {
+          setTimeout(() => setRefreshing(false), 600)
+        }
       }
-      setOrder(data.order)
-      setError("")
-    } catch {
-      setError("Failed to connect to server.")
-    } finally {
-      setLoading(false)
-    }
-  }, [orderId])
+    },
+    [orderId],
+  )
 
   useEffect(() => {
     fetchOrder()
-    const interval = setInterval(fetchOrder, 15000)
+    const interval = setInterval(() => fetchOrder(false), 10000)
     return () => clearInterval(interval)
   }, [fetchOrder])
+
+  const copyOrderId = () => {
+    if (!order) return
+    navigator.clipboard.writeText(order.id)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const getStageIndex = (orderStatus: string, paymentStatus: string) => {
     if (orderStatus === "delivered") return 5
@@ -96,10 +146,13 @@ export function OrderTracker({ orderId }: { orderId: string }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0503] text-amber-50 flex items-center justify-center p-4">
-        <div className="flex flex-col items-center space-y-3 text-amber-300">
-          <RefreshCw className="w-8 h-8 animate-spin" />
-          <span className="text-sm font-medium">Loading live order status...</span>
+      <div className="ambient-bg flex min-h-screen items-center justify-center p-4">
+        <div className="glass-card flex flex-col items-center space-y-4 rounded-3xl p-8 text-center shadow-xl">
+          <RefreshCw className="h-10 w-10 animate-spin text-amber-600 dark:text-amber-400" />
+          <div className="space-y-1">
+            <h3 className="font-heading text-lg font-bold text-foreground">Fetching Live Status...</h3>
+            <p className="text-xs text-muted-foreground">Connecting to Swadam Foods order system</p>
+          </div>
         </div>
       </div>
     )
@@ -107,17 +160,21 @@ export function OrderTracker({ orderId }: { orderId: string }) {
 
   if (error || !order) {
     return (
-      <div className="min-h-screen bg-[#0a0503] text-amber-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-[#140b07] border border-amber-900/40 rounded-3xl p-8 text-center space-y-4">
-          <AlertCircle className="w-12 h-12 text-rose-400 mx-auto" />
-          <h2 className="text-xl font-bold text-amber-100">Order Not Found</h2>
-          <p className="text-xs text-amber-300/70">{error || "Please check your order ID and try again."}</p>
+      <div className="ambient-bg flex min-h-screen items-center justify-center p-4">
+        <div className="glass-card w-full max-w-md space-y-6 rounded-3xl p-8 text-center shadow-xl">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500">
+            <AlertCircle className="h-8 w-8" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="font-heading text-xl font-bold text-foreground">Order Not Found</h2>
+            <p className="text-xs text-muted-foreground">{error || "Please check your order ID and try again."}</p>
+          </div>
           <Link
             href="/"
-            className="inline-flex items-center space-x-2 bg-amber-500 hover:bg-amber-400 text-amber-950 px-6 py-2.5 rounded-xl text-xs font-bold transition"
+            className="inline-flex items-center space-x-2 rounded-2xl bg-primary px-6 py-3 text-xs font-bold text-primary-foreground shadow-md transition-transform hover:scale-[1.02] active:scale-95"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Return to Swadam Foods</span>
+            <ArrowLeft className="h-4 w-4" />
+            <span>Return to Swadam Foods Store</span>
           </Link>
         </div>
       </div>
@@ -132,94 +189,161 @@ export function OrderTracker({ orderId }: { orderId: string }) {
   )
 
   return (
-    <div className="min-h-screen bg-[#0a0503] text-amber-50 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-3xl mx-auto space-y-6">
-        
-        {/* Navigation Bar */}
-        <div className="flex items-center justify-between">
+    <div className="ambient-bg min-h-screen pb-16 pt-4">
+      {/* Top Header Bar */}
+      <header className="sticky top-3 z-40 mx-auto max-w-4xl px-4 sm:px-6">
+        <div className="glass-header flex h-16 items-center justify-between gap-4 rounded-full px-4 sm:px-6">
           <Link
             href="/"
-            className="inline-flex items-center space-x-2 text-xs font-semibold text-amber-400/80 hover:text-amber-300 bg-amber-900/20 hover:bg-amber-900/40 border border-amber-800/30 px-3.5 py-2 rounded-xl transition"
+            className="flex items-center gap-2.5 transition-transform hover:scale-[1.02] active:scale-95"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Shop</span>
-          </Link>
-
-          <span className="text-xs font-mono text-amber-500/60">
-            Updated: {new Date(order.updatedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-          </span>
-        </div>
-
-        {/* Order Header Card */}
-        <div className="bg-[#140b07]/90 backdrop-blur-xl border border-amber-900/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden space-y-4">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-amber-900/30">
-            <div>
-              <span className="text-[10px] text-amber-500/70 uppercase tracking-widest font-semibold block mb-1">
+            <span className="flex items-center justify-center overflow-hidden rounded-2xl bg-[#f7f2e7]/90 p-1 shadow-xs ring-1 ring-white/60">
+              <Image
+                src="/images/swadam-logo.webp"
+                alt="Swadam Foods logo"
+                width={112}
+                height={36}
+                sizes="56px"
+                className="h-8 w-auto shrink-0"
+              />
+            </span>
+            <span className="flex flex-col leading-none">
+              <span className="font-heading text-base font-extrabold tracking-tight text-foreground">
+                Swadam Foods
+              </span>
+              <span className="text-[10px] font-semibold tracking-wider text-muted-foreground">
                 Live Order Tracker
               </span>
-              <h1 className="text-xl sm:text-2xl font-bold font-mono text-amber-100">{order.id}</h1>
-              <p className="text-xs text-amber-300/60 mt-0.5">
-                Placed on {new Date(order.createdAt).toLocaleDateString("en-IN", { month: "long", day: "numeric", year: "numeric" })}
+            </span>
+          </Link>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => fetchOrder(true)}
+              className="flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-3 py-1.5 text-xs font-bold text-foreground backdrop-blur-md transition-all hover:bg-background active:scale-95"
+              title="Refresh order status"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin text-amber-600" : ""}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+            <ThemeToggle />
+            <Link
+              href="/"
+              className="flex items-center gap-1 rounded-full bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground transition-all hover:opacity-90 active:scale-95"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Shop</span>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="mx-auto max-w-4xl px-4 pt-6 sm:px-6 space-y-6">
+        {/* Order Status Banner */}
+        <div className="glass-card relative overflow-hidden rounded-3xl p-6 sm:p-8 shadow-xl border border-white/60 dark:border-white/10">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between border-b border-border/60 pb-6">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-3 w-3">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500"></span>
+                </span>
+                <span className="text-xs font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
+                  Live Status Active
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <h1 className="font-heading text-2xl font-black tracking-tight text-foreground sm:text-3xl">
+                  {order.id}
+                </h1>
+                <button
+                  onClick={copyOrderId}
+                  className="rounded-xl border border-border p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition"
+                  title="Copy Order ID"
+                >
+                  {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                </button>
+              </div>
+
+              <p className="text-xs font-medium text-muted-foreground">
+                Placed on {new Date(order.createdAt).toLocaleDateString("en-IN", { month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
               </p>
             </div>
 
-            <div className="flex flex-col items-start sm:items-end">
-              <span className="text-xs text-amber-300/70">Total Amount</span>
-              <span className="text-2xl font-bold text-emerald-400 font-mono">₹{order.total}</span>
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border mt-1 ${
+            <div className="flex items-center justify-between gap-4 md:flex-col md:items-end">
+              <div className="text-left md:text-right">
+                <span className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Order Total
+                </span>
+                <span className="font-heading text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                  ₹{order.total}
+                </span>
+              </div>
+
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-bold border ${
                 order.paymentStatus === "paid"
-                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                  : "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                  ? "bg-emerald-500/15 text-emerald-800 border-emerald-500/30 dark:text-emerald-300"
+                  : "bg-amber-500/15 text-amber-800 border-amber-500/30 dark:text-amber-300"
               }`}>
-                {order.paymentStatus === "paid" ? "Payment Confirmed" : "Payment Pending"}
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>{order.paymentStatus === "paid" ? "Payment Confirmed" : "Payment Pending"}</span>
               </span>
             </div>
           </div>
 
-          {/* Visual Progress Timeline */}
-          <div className="pt-2">
+          {/* Progress Tracker Bar */}
+          <div className="pt-6">
             {isCancelled ? (
-              <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-center text-rose-300 text-sm">
-                This order has been cancelled. If you have questions, please chat with us on WhatsApp.
+              <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 text-center text-rose-700 dark:text-rose-300">
+                <h4 className="font-bold text-sm">This order has been cancelled</h4>
+                <p className="text-xs mt-1">If you have any questions, please contact our support team below.</p>
               </div>
             ) : (
               <div className="space-y-6">
-                <h3 className="text-xs font-semibold text-amber-200/80 uppercase tracking-wider">
-                  Live Order Progress
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-heading text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Progress Timeline
+                  </h3>
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400">
+                    Current Stage: {STAGES[currentStageIdx]?.label}
+                  </span>
+                </div>
 
-                <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-amber-900/40">
+                {/* Progress Steps Grid / List */}
+                <div className="relative space-y-6 pl-4 sm:pl-6 before:absolute before:left-7 sm:before:left-9 before:top-3 before:bottom-3 before:w-1 before:bg-border/60">
                   {STAGES.map((stage, idx) => {
                     const isPassed = idx <= currentStageIdx
                     const isCurrent = idx === currentStageIdx
                     const Icon = stage.icon
 
                     return (
-                      <div key={stage.id} className="relative flex items-start space-x-4">
+                      <div key={stage.id} className="relative flex items-start gap-4">
+                        {/* Icon Node */}
                         <div
-                          className={`absolute -left-6 w-5 h-5 rounded-full flex items-center justify-center border transition-all duration-300 ${
+                          className={`relative z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border-2 transition-all duration-300 ${
                             isPassed
-                              ? "bg-emerald-500 border-emerald-400 text-amber-950 shadow-md shadow-emerald-500/30"
-                              : "bg-[#140b07] border-amber-900/60 text-amber-900"
-                          }`}
+                              ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-600/20"
+                              : "bg-card border-border text-muted-foreground"
+                          } ${isCurrent ? "ring-4 ring-emerald-500/30 scale-110" : ""}`}
                         >
-                          <Icon className={`w-3 h-3 ${isPassed ? "text-amber-950 font-bold" : "text-amber-700"}`} />
+                          <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </div>
 
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <span className={`text-sm font-bold ${isPassed ? "text-amber-100" : "text-amber-600"}`}>
+                        {/* Step Label & Subtitle */}
+                        <div className="min-w-0 flex-1 pt-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className={`font-heading text-sm font-bold ${isPassed ? "text-foreground" : "text-muted-foreground"}`}>
                               {stage.label}
                             </span>
                             {isCurrent && (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse">
-                                In Progress
+                              <span className="inline-flex items-center rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 animate-pulse">
+                                Live Now
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-amber-400/60 mt-0.5">{stage.desc}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{stage.subtitle}</p>
                         </div>
                       </div>
                     )
@@ -230,55 +354,95 @@ export function OrderTracker({ orderId }: { orderId: string }) {
           </div>
         </div>
 
-        {/* Customer & Items Card */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Delivery Details */}
-          <div className="bg-[#140b07]/80 backdrop-blur-md border border-amber-900/30 rounded-3xl p-5 space-y-3">
-            <h3 className="text-xs font-bold text-amber-200 uppercase tracking-wider flex items-center space-x-2">
-              <MapPin className="w-4 h-4 text-amber-400" />
-              <span>Delivery Details</span>
-            </h3>
-            <div className="text-xs space-y-1.5 text-amber-300/80">
-              <p><strong className="text-amber-100">{order.customerName}</strong></p>
-              <p>{order.customerPhoneMasked}</p>
-              <p className="text-amber-300/70">{order.customerAddress} - <strong className="text-amber-200">{order.pincode}</strong></p>
-              <p className="pt-2 text-[11px] text-amber-400 font-medium">
-                Delivery Method: <span className="uppercase font-bold text-amber-200">{order.deliveryMethod}</span>
-              </p>
+        {/* Order Details Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Delivery Details Card */}
+          <div className="glass-card rounded-3xl p-6 space-y-4 shadow-lg border border-white/60 dark:border-white/10">
+            <div className="flex items-center gap-2 border-b border-border/50 pb-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-400">
+                <MapPin className="h-4 w-4" />
+              </div>
+              <h3 className="font-heading text-sm font-bold text-foreground">Delivery Destination</h3>
+            </div>
+
+            <div className="space-y-2 text-xs text-foreground">
+              <div>
+                <span className="text-[11px] font-semibold text-muted-foreground block">Customer Name</span>
+                <span className="font-bold text-sm">{order.customerName}</span>
+              </div>
+              <div>
+                <span className="text-[11px] font-semibold text-muted-foreground block">Phone</span>
+                <span className="font-mono text-muted-foreground">{order.customerPhoneMasked}</span>
+              </div>
+              <div>
+                <span className="text-[11px] font-semibold text-muted-foreground block">Delivery Address</span>
+                <p className="font-medium text-foreground leading-relaxed">
+                  {order.customerAddress}
+                  <span className="block font-bold text-amber-700 dark:text-amber-400 mt-0.5">Pincode: {order.pincode}</span>
+                </p>
+              </div>
+              <div className="pt-2">
+                <span className="text-[11px] font-semibold text-muted-foreground block">Fulfillment Method</span>
+                <span className="inline-block rounded-xl bg-accent/80 border border-border px-3 py-1 text-xs font-bold uppercase tracking-wider text-foreground mt-1">
+                  {order.deliveryMethod === "pune" ? "🚚 Pune Local Delivery" : "📦 Porter Express Delivery"}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Items Summary */}
-          <div className="bg-[#140b07]/80 backdrop-blur-md border border-amber-900/30 rounded-3xl p-5 space-y-3">
-            <h3 className="text-xs font-bold text-amber-200 uppercase tracking-wider flex items-center space-x-2">
-              <ShoppingBag className="w-4 h-4 text-amber-400" />
-              <span>Items in Order</span>
-            </h3>
-            <div className="space-y-2 max-h-40 overflow-y-auto text-xs pr-1">
+          {/* Items Summary Card */}
+          <div className="glass-card rounded-3xl p-6 space-y-4 shadow-lg border border-white/60 dark:border-white/10">
+            <div className="flex items-center gap-2 border-b border-border/50 pb-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-400">
+                <ShoppingBag className="h-4 w-4" />
+              </div>
+              <h3 className="font-heading text-sm font-bold text-foreground">Order Items ({order.items.length})</h3>
+            </div>
+
+            <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
               {order.items.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between text-amber-200/90 py-1 border-b border-amber-900/20 last:border-0">
+                <div key={idx} className="flex items-center justify-between text-xs py-1.5 border-b border-border/40 last:border-0">
                   <div>
-                    <span className="font-medium">{item.productName}</span>
-                    <span className="text-[10px] text-amber-500/70 ml-1.5">({item.weight})</span>
+                    <span className="font-bold text-foreground">{item.productName}</span>
+                    <span className="block text-[10px] text-muted-foreground">Pack: {item.weight}</span>
                   </div>
-                  <div className="font-mono text-amber-200">
-                    {item.quantity} x ₹{item.unitPrice}
+                  <div className="text-right">
+                    <span className="font-mono font-bold text-foreground">₹{item.lineTotal}</span>
+                    <span className="block text-[10px] text-muted-foreground">{item.quantity} × ₹{item.unitPrice}</span>
                   </div>
                 </div>
               ))}
             </div>
+
+            <div className="border-t border-border/60 pt-3 text-xs space-y-1.5">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Subtotal</span>
+                <span className="font-mono">₹{order.subtotal}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Delivery Fee</span>
+                <span className="font-mono text-emerald-600 font-bold">FREE</span>
+              </div>
+              <div className="flex justify-between font-bold text-sm text-foreground pt-1.5 border-t border-border/60">
+                <span>Grand Total</span>
+                <span className="font-mono text-emerald-600 dark:text-emerald-400 font-black">₹{order.total}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* WhatsApp Customer Action Bar */}
-        <div className="bg-gradient-to-r from-emerald-950/40 via-emerald-900/30 to-emerald-950/40 border border-emerald-800/40 rounded-3xl p-6 text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto">
-            <MessageSquare className="w-6 h-6" />
+        {/* WhatsApp Business Direct Contact Section */}
+        <div className="glass-card rounded-3xl p-6 sm:p-8 text-center space-y-4 border border-emerald-500/30 bg-emerald-500/5 shadow-xl">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-600/30">
+            <MessageSquare className="h-7 w-7" />
           </div>
-          <div>
-            <h3 className="text-base font-bold text-emerald-200">Have questions about your order?</h3>
-            <p className="text-xs text-emerald-300/70 mt-1 max-w-md mx-auto">
-              Our team at Swadam Foods is ready to help you directly on WhatsApp Business.
+
+          <div className="space-y-1">
+            <h3 className="font-heading text-lg font-extrabold text-foreground">
+              Need Help With Your Order?
+            </h3>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto">
+              Connect directly with our Swadam Foods team on WhatsApp for instant updates, special instructions, or assistance.
             </p>
           </div>
 
@@ -286,14 +450,14 @@ export function OrderTracker({ orderId }: { orderId: string }) {
             href={`https://wa.me/91${MERCHANT_WHATSAPP}?text=${whatsappMessage}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-emerald-500/25 transition"
+            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 px-6 py-3.5 text-xs font-bold text-white shadow-lg shadow-emerald-600/25 transition-all hover:scale-[1.02] active:scale-95"
           >
+            <PhoneCall className="h-4 w-4" />
             <span>Chat on WhatsApp (+91 {MERCHANT_WHATSAPP})</span>
-            <ExternalLink className="w-4 h-4" />
+            <ExternalLink className="h-4 w-4 ml-1 opacity-80" />
           </a>
         </div>
-
-      </div>
+      </main>
     </div>
   )
 }
