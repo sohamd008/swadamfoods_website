@@ -96,6 +96,7 @@ export function CheckoutPage() {
   const [paymentState, setPaymentState] = useState<PaymentState>("idle")
   const [error, setError] = useState("")
   const [paymentMessage, setPaymentMessage] = useState("")
+  const [showCancelledModal, setShowCancelledModal] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [order, setOrder] = useState<OrderResponse | null>(null)
 
@@ -148,9 +149,10 @@ export function CheckoutPage() {
         return "paid" as const
       }
 
-      if (status.paymentStatus === "failed" || status.paymentStatus === "expired" || status.state === "FAILED" || status.state === "EXPIRED") {
+      if (status.paymentStatus === "failed" || status.paymentStatus === "expired" || status.state === "FAILED" || status.state === "EXPIRED" || status.state === "USER_CANCEL") {
         setPaymentState("failed")
         setPaymentMessage("The payment was not completed. Your order is still safe, and you can try again.")
+        setShowCancelledModal(true)
         return "failed" as const
       }
 
@@ -168,6 +170,7 @@ export function CheckoutPage() {
     if (!redirectUrl) {
       setPaymentState("failed")
       setPaymentMessage("Secure payment could not be started. Please try again.")
+      setShowCancelledModal(true)
       return
     }
 
@@ -179,6 +182,7 @@ export function CheckoutPage() {
     if (!window.PhonePeCheckout?.transact) {
       setPaymentState("failed")
       setPaymentMessage("Secure payment could not be loaded. Please refresh the page and try again.")
+      setShowCancelledModal(true)
       return
     }
 
@@ -194,6 +198,7 @@ export function CheckoutPage() {
           if (response === "USER_CANCEL") {
             setPaymentState("idle")
             setPaymentMessage("Payment cancelled. Your order is still here whenever you're ready.")
+            setShowCancelledModal(true)
             return
           }
 
@@ -436,7 +441,7 @@ export function CheckoutPage() {
   }
 
   return (
-    <main className="min-h-screen px-4 py-5 sm:px-6 sm:py-8">
+    <main className="checkout-shell min-h-screen px-4 py-5 sm:px-6 sm:py-8">
       <Script
         src="https://mercury.phonepe.com/web/bundle/checkout.js"
         strategy="afterInteractive"
@@ -531,6 +536,49 @@ export function CheckoutPage() {
           </aside>
         </div>
       </div>
+
+      {showCancelledModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cancelled-dialog-title"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-in fade-in duration-200"
+        >
+          <div className="w-full max-w-md overflow-hidden rounded-[2rem] border border-white/70 bg-white/95 p-6 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-zinc-900/95 sm:p-8">
+            <div className="flex flex-col items-center text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                <CircleAlert className="h-7 w-7" aria-hidden="true" />
+              </div>
+              <h3 id="cancelled-dialog-title" className="mt-4 font-heading text-2xl font-bold text-foreground">
+                Payment Cancelled
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {paymentMessage || "Your payment process was cancelled. Your order and cart items remain saved so you can try again whenever you are ready."}
+              </p>
+              <div className="mt-6 flex w-full flex-col gap-2.5 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCancelledModal(false)
+                    void submitOrder()
+                  }}
+                  className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-lg shadow-primary/20 transition-transform hover:-translate-y-0.5 active:scale-[0.99]"
+                >
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                  Try Payment Again
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCancelledModal(false)}
+                  className="flex min-h-12 flex-1 items-center justify-center rounded-2xl border border-border bg-secondary/50 px-4 py-3 text-sm font-bold text-foreground transition-colors hover:bg-secondary"
+                >
+                  Review Order
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
