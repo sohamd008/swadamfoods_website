@@ -1,14 +1,14 @@
 import Script from 'next/script'
-import { Cormorant_Garamond } from 'next/font/google'
+import { Manrope } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
 import { CartProvider } from '@/lib/cart-context'
 import { ThemeProvider } from '@/components/theme-provider'
 import { business, products } from '@/lib/products'
 import './globals.css'
 
-const cormorant = Cormorant_Garamond({
+const manrope = Manrope({
   subsets: ['latin'],
-  variable: '--font-cormorant',
+  variable: '--font-manrope',
   display: 'swap',
 })
 
@@ -69,7 +69,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`bg-background ${cormorant.variable}`}
+      className={`bg-background ${manrope.variable}`}
     >
       <body className="font-sans antialiased">
         <Script
