@@ -2,6 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
+import Script from "next/script"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   ArrowLeft,
@@ -20,12 +21,27 @@ import {
   Truck,
   Wifi,
   WifiOff,
+  X,
 } from "lucide-react"
 import { useCart } from "@/lib/cart-context"
 import { trackEvent } from "@/lib/analytics"
 
+declare global {
+  interface Window {
+    PhonePeCheckout?: {
+      transact: (options: {
+        tokenUrl: string
+        callback?: (response: "USER_CANCEL" | "CONCLUDED") => void
+        type?: "IFRAME"
+      }) => void
+      closePage?: () => void
+    }
+  }
+}
+
 type DeliveryMethod = "pune" | "porter"
 type SubmitState = "idle" | "submitting" | "success" | "error"
+type PaymentState = "idle" | "opening" | "paying" | "paid" | "failed"
 
 type OrderResponse = {
   orderId: string
@@ -35,6 +51,21 @@ type OrderResponse = {
   total: number
   paymentStatus: string
   orderStatus: string
+}
+
+type PaymentResponse = {
+  orderId: string
+  gateway: "phonepe"
+  redirectUrl: string
+  expiresAt: number
+}
+
+type PaymentStatusResponse = {
+  orderId: string
+  state: string
+  paymentStatus: string
+  transactionId?: string | null
+  paymentMode?: string | null
 }
 
 function normalizePhone(value: string) {
@@ -50,7 +81,9 @@ function friendlyError(error: unknown) {
     return "We couldn't reach Swadam Foods. Check your connection and try again."
   }
 
-  return "Something went wrong while creating your order. Please try again."
+  return error instanceof Error && error.message
+    ? error.message
+    : "Something went wrong. Please try again."
 }
 
 export function CheckoutPage() {
@@ -62,8 +95,11 @@ export function CheckoutPage() {
   const [delivery, setDelivery] = useState<DeliveryMethod>("pune")
   const [isOnline, setIsOnline] = useState(true)
   const [checkingConnection, setCheckingConnection] = useState(false)
+  const [phonePeReady, setPhonePeReady] = useState(false)
   const [submitState, setSubmitState] = useState<SubmitState>("idle")
+  const [paymentState, setPaymentState] = useState<PaymentState>("idle")
   const [error, setError] = useState("")
+  const [paymentMessage, setPaymentMessage] = useState("")
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [order, setOrder] = useState<OrderResponse | null>(null)
 
@@ -83,9 +119,7 @@ export function CheckoutPage() {
       })
       window.clearTimeout(timeout)
 
-      if (!response.ok) {
-        throw new Error(`Health check failed (${response.status}).`)
-      }
+      if (!response.ok) throw new Error(`Health check failed (${response.status}).`)
 
       setIsOnline(true)
       return true
@@ -96,6 +130,79 @@ export function CheckoutPage() {
       setCheckingConnection(false)
     }
   }, [])
+
+  const refreshPaymentStatus = useCallback(async (orderId: string) => {
+    try {
+      const response = await fetch(`/api/payments/phonepe/status?orderId=${encodeURIComponent(orderId)}`, {
+        method: "GET",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      })
+      const payload = (await response.json().catch(() => null)) as PaymentStatusResponse | { error?: string } | null
+
+      if (!response.ok) {
+        throw new Error(payload && "error" in payload ? payload.error || "Payment status check failed." : "Payment status check failed.")
+      }
+
+      const status = payload as PaymentStatusResponse
+      if (status.paymentStatus === "paid" || status.state === "COMPLETED") {
+        setPaymentState("paid")
+        setSubmitState("success")
+        clear()
+        return "paid" as const
+      }
+
+      if (status.paymentStatus === "failed" || status.paymentStatus === "expired" || status.state === "FAILED" || status.state === "EXPIRED") {
+        setPaymentState("failed")
+        setPaymentMessage("The payment was not completed. Your order is still safe, and you can try again.")
+        return "failed" as const
+      }
+
+      return "pending" as const
+    } catch (statusError) {
+      console.error("PhonePe status check failed:", statusError)
+      return "unknown" as const
+    }
+  }, [clear])
+
+  const openPhonePePayment = useCallback(async (redirectUrl: string, orderId: string) => {
+    setPaymentState("opening")
+    setPaymentMessage("")
+
+    const startedAt = Date.now()
+    while (!window.PhonePeCheckout?.transact && Date.now() - startedAt < 7000) {
+      await new Promise((resolve) => window.setTimeout(resolve, 100))
+    }
+
+    const transact = window.PhonePeCheckout?.transact
+    if (!transact) {
+      setPaymentState("failed")
+      setPaymentMessage("Secure payment could not be loaded. Please refresh the page and try again.")
+      return
+    }
+
+    setPaymentState("paying")
+    transact({
+      tokenUrl: redirectUrl,
+      type: "IFRAME",
+      callback: async (response) => {
+        if (response === "USER_CANCEL") {
+          setPaymentState("idle")
+          setPaymentMessage("Payment cancelled. Your order is still here whenever you're ready.")
+          return
+        }
+
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+          const result = await refreshPaymentStatus(orderId)
+          if (result === "paid" || result === "failed") return
+          await new Promise((resolve) => window.setTimeout(resolve, 1500))
+        }
+
+        setPaymentState("idle")
+        setPaymentMessage("We're still confirming the payment. Please wait a moment and check the order status again.")
+      },
+    })
+  }, [refreshPaymentStatus])
 
   useEffect(() => {
     const handleOnline = () => void checkConnection()
@@ -110,6 +217,15 @@ export function CheckoutPage() {
       window.removeEventListener("offline", handleOffline)
     }
   }, [checkConnection])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const callbackOrderId = params.get("orderId")
+    const payment = params.get("payment")
+    if (payment === "phonepe" && callbackOrderId) {
+      void refreshPaymentStatus(callbackOrderId)
+    }
+  }, [refreshPaymentStatus])
 
   const subtotal = useMemo(() => totalPrice, [totalPrice])
   const deliveryFee = 0
@@ -145,25 +261,63 @@ export function CheckoutPage() {
     const cleanPincode = pincode.trim()
 
     if (items.length === 0) nextErrors.items = "Your cart is empty."
-    if (cleanName.length < 2 || cleanName.length > 80) {
-      nextErrors.name = "Enter your name (2–80 characters)."
-    }
-    if (!/^[0-9+()\-\s]{10,20}$/.test(cleanPhone)) {
-      nextErrors.phone = "Enter a valid phone number."
-    }
-    if (cleanAddress.length < 8 || cleanAddress.length > 240) {
-      nextErrors.address = "Enter a complete delivery address."
-    }
-    if (!/^\d{6}$/.test(cleanPincode)) {
-      nextErrors.pincode = "Enter a valid 6-digit pincode."
-    }
+    if (cleanName.length < 2 || cleanName.length > 80) nextErrors.name = "Enter your name (2–80 characters)."
+    if (!/^[0-9+()\-\s]{10,20}$/.test(cleanPhone)) nextErrors.phone = "Enter a valid phone number."
+    if (cleanAddress.length < 8 || cleanAddress.length > 240) nextErrors.address = "Enter a complete delivery address."
+    if (!/^\d{6}$/.test(cleanPincode)) nextErrors.pincode = "Enter a valid 6-digit pincode."
 
     setFieldErrors(nextErrors)
     return Object.keys(nextErrors).length === 0
   }
 
+  async function startPhonePePayment(orderId: string) {
+    setError("")
+
+    if (!isOnline) {
+      setError("Please reconnect before starting the payment.")
+      return
+    }
+
+    setPaymentState("opening")
+    setSubmitState("submitting")
+
+    try {
+      const controller = new AbortController()
+      const timeout = window.setTimeout(() => controller.abort(), 15000)
+      const response = await fetch("/api/payments/phonepe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        signal: controller.signal,
+        body: JSON.stringify({ orderId }),
+      })
+      window.clearTimeout(timeout)
+
+      const payload = (await response.json().catch(() => null)) as PaymentResponse | { error?: string } | null
+      if (!response.ok) {
+        throw new Error(payload && "error" in payload ? payload.error || "Unable to start payment." : "Unable to start payment.")
+      }
+
+      const payment = payload as PaymentResponse
+      setSubmitState("idle")
+      await openPhonePePayment(payment.redirectUrl, orderId)
+    } catch (requestError) {
+      console.error("PhonePe initiation failed:", requestError)
+      setSubmitState("idle")
+      setPaymentState("failed")
+      setPaymentMessage(friendlyError(requestError))
+    }
+  }
+
   async function submitOrder() {
     setError("")
+    setPaymentMessage("")
+
+    if (order) {
+      await startPhonePePayment(order.orderId)
+      return
+    }
+
     if (!validate()) {
       setSubmitState("error")
       return
@@ -177,20 +331,17 @@ export function CheckoutPage() {
     }
 
     setSubmitState("submitting")
-    const controller = new AbortController()
-    const timeout = window.setTimeout(() => controller.abort(), 12000)
 
     try {
+      const controller = new AbortController()
+      const timeout = window.setTimeout(() => controller.abort(), 12000)
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
         signal: controller.signal,
         body: JSON.stringify({
-          items: items.map((item) => ({
-            productId: item.product.id,
-            quantity: item.quantity,
-          })),
+          items: items.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
           customer: {
             name: name.trim(),
             phone: phone.trim(),
@@ -200,20 +351,15 @@ export function CheckoutPage() {
           delivery,
         }),
       })
+      window.clearTimeout(timeout)
 
-      const payload = (await response.json().catch(() => null)) as
-        | OrderResponse
-        | { error?: string }
-        | null
-
+      const payload = (await response.json().catch(() => null)) as (OrderResponse & { items?: unknown[] }) | { error?: string } | null
       if (!response.ok) {
-        const serverMessage = payload && "error" in payload ? payload.error : undefined
-        throw new Error(serverMessage || `Request failed (${response.status}).`)
+        throw new Error(payload && "error" in payload ? payload.error || `Request failed (${response.status}).` : `Request failed (${response.status}).`)
       }
 
       const createdOrder = payload as OrderResponse
       setOrder(createdOrder)
-      setSubmitState("success")
       trackEvent("begin_checkout", {
         currency: createdOrder.currency,
         value: createdOrder.total,
@@ -224,16 +370,12 @@ export function CheckoutPage() {
           quantity: item.quantity,
         })),
       })
+
+      await startPhonePePayment(createdOrder.orderId)
     } catch (requestError) {
       console.error("Checkout submission failed:", requestError)
       setSubmitState("error")
-      setError(
-        requestError instanceof Error && requestError.message
-          ? requestError.message
-          : friendlyError(requestError),
-      )
-    } finally {
-      window.clearTimeout(timeout)
+      setError(friendlyError(requestError))
     }
   }
 
@@ -246,35 +388,21 @@ export function CheckoutPage() {
               <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-accent/30 bg-accent/15 text-accent shadow-inner">
                 <Check className="h-8 w-8" aria-hidden="true" />
               </div>
-              <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-accent">Order received</p>
-              <h1 className="mt-2 font-heading text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-                Your snacks are officially on the list. ✨
-              </h1>
+              <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-accent">Payment confirmed</p>
+              <h1 className="mt-2 font-heading text-4xl font-bold tracking-tight text-foreground sm:text-5xl">The good stuff is officially on its way. ✨</h1>
               <p className="mt-4 text-sm leading-6 text-muted-foreground sm:text-base">
-                Order <span className="font-semibold text-foreground">{order.orderId}</span> has been created for ₹{order.total.toLocaleString("en-IN")}.
+                Order <span className="font-semibold text-foreground">{order.orderId}</span> has been paid successfully for ₹{order.total.toLocaleString("en-IN")}.
               </p>
               <div className="mt-8 grid w-full gap-3 sm:grid-cols-3">
-                <div className="glass-panel rounded-2xl p-4 text-left">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</p>
-                  <p className="mt-1 text-sm font-bold text-foreground">Payment pending</p>
-                </div>
-                <div className="glass-panel rounded-2xl p-4 text-left">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Items</p>
-                  <p className="mt-1 text-sm font-bold text-foreground">{totalItems}</p>
-                </div>
-                <div className="glass-panel rounded-2xl p-4 text-left">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total</p>
-                  <p className="mt-1 text-sm font-bold text-foreground">₹{order.total.toLocaleString("en-IN")}</p>
-                </div>
+                <div className="glass-panel rounded-2xl p-4 text-left"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</p><p className="mt-1 text-sm font-bold text-foreground">Paid</p></div>
+                <div className="glass-panel rounded-2xl p-4 text-left"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Items</p><p className="mt-1 text-sm font-bold text-foreground">{totalItems}</p></div>
+                <div className="glass-panel rounded-2xl p-4 text-left"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total</p><p className="mt-1 text-sm font-bold text-foreground">₹{order.total.toLocaleString("en-IN")}</p></div>
               </div>
               <div className="mt-8 flex w-full flex-col gap-3 sm:flex-row">
                 <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-accent/30 bg-accent/90 px-5 py-3 text-sm font-bold text-accent-foreground shadow-lg shadow-accent/15 transition-transform hover:-translate-y-0.5 active:scale-[0.99]">
-                  Confirm on WhatsApp
-                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                  Message us on WhatsApp<ChevronRight className="h-4 w-4" aria-hidden="true" />
                 </a>
-                <Link href="/" onClick={() => clear()} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-white/70 bg-white/35 px-5 py-3 text-sm font-bold text-foreground backdrop-blur-xl transition-colors hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10">
-                  Back to Swadam Foods
-                </Link>
+                <Link href="/" className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-white/70 bg-white/35 px-5 py-3 text-sm font-bold text-foreground backdrop-blur-xl transition-colors hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10">Back to Swadam Foods</Link>
               </div>
             </div>
           </section>
@@ -285,11 +413,16 @@ export function CheckoutPage() {
 
   return (
     <main className="min-h-screen px-4 py-5 sm:px-6 sm:py-8">
+      <Script
+        src="https://mercury.phonepe.com/web/bundle/checkout.js"
+        strategy="afterInteractive"
+        onLoad={() => setPhonePeReady(true)}
+        onError={() => setPhonePeReady(false)}
+      />
       <div className="mx-auto max-w-6xl">
         <div className="mb-5 flex items-center justify-between gap-4">
           <Link href="/" className="group inline-flex min-h-11 items-center gap-2 rounded-full border border-white/70 bg-white/35 px-4 text-sm font-semibold text-foreground shadow-sm backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10">
-            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" aria-hidden="true" />
-            Back to shop
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" aria-hidden="true" /> Back to shop
           </Link>
           <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
             {isOnline ? <Wifi className="h-4 w-4 text-accent" aria-hidden="true" /> : <WifiOff className="h-4 w-4 text-destructive" aria-hidden="true" />}
@@ -300,13 +433,8 @@ export function CheckoutPage() {
         {!isOnline && (
           <div role="alert" className="mb-5 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm text-foreground backdrop-blur-xl">
             <WifiOff className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
-            <div className="flex-1">
-              <p className="font-bold">Looks like you lost your connection.</p>
-              <p className="mt-0.5 text-muted-foreground">No worries — your cart is safe on this device. Reconnect before placing the order.</p>
-            </div>
-            <button type="button" onClick={() => void checkConnection()} disabled={checkingConnection} className="rounded-full border border-border/70 bg-background/50 px-3 py-2 text-xs font-bold text-foreground disabled:cursor-wait disabled:opacity-60">
-              {checkingConnection ? "Checking…" : "Retry"}
-            </button>
+            <div className="flex-1"><p className="font-bold">Looks like you lost your connection.</p><p className="mt-0.5 text-muted-foreground">No worries — your cart is safe on this device. Reconnect before placing the order.</p></div>
+            <button type="button" onClick={() => void checkConnection()} disabled={checkingConnection} className="rounded-full border border-border/70 bg-background/50 px-3 py-2 text-xs font-bold text-foreground disabled:cursor-wait disabled:opacity-60">{checkingConnection ? "Checking…" : "Retry"}</button>
           </div>
         )}
 
@@ -314,159 +442,68 @@ export function CheckoutPage() {
           <section className="rounded-[2rem] border border-white/70 bg-white/50 p-5 shadow-[0_24px_70px_rgba(67,48,22,0.10)] backdrop-blur-2xl dark:border-white/10 dark:bg-black/20 sm:p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Swadam Foods</p>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
-                    <Sparkles className="h-3 w-3" aria-hidden="true" /> Almost there
-                  </span>
-                </div>
+                <div className="flex flex-wrap items-center gap-2"><p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Swadam Foods</p><span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-primary"><Sparkles className="h-3 w-3" aria-hidden="true" /> Almost there</span></div>
                 <h1 className="mt-1 font-heading text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Checkout</h1>
-                <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-                  One calm final step between you and the good stuff.
-                </p>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">One calm final step between you and the good stuff.</p>
               </div>
-              <div className="hidden h-12 w-12 items-center justify-center rounded-2xl border border-white/70 bg-white/45 shadow-inner backdrop-blur-xl dark:border-white/10 dark:bg-white/5 sm:flex">
-                <LockKeyhole className="h-5 w-5 text-primary" aria-hidden="true" />
-              </div>
+              <div className="hidden h-12 w-12 items-center justify-center rounded-2xl border border-white/70 bg-white/45 shadow-inner backdrop-blur-xl dark:border-white/10 dark:bg-white/5 sm:flex"><LockKeyhole className="h-5 w-5 text-primary" aria-hidden="true" /></div>
             </div>
 
             <div className="mt-7 grid gap-4 sm:grid-cols-2">
               <Field label="Full name" value={name} onChange={setName} placeholder="Your name" error={fieldErrors.name} autoComplete="name" />
               <Field label="Phone number" value={phone} onChange={setPhone} placeholder="98765 43210" error={fieldErrors.phone} autoComplete="tel" inputMode="tel" />
             </div>
-
             <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_150px]">
               <Field label="Delivery address" value={address} onChange={setAddress} placeholder="House / street, area, city" error={fieldErrors.address} autoComplete="street-address" multiline />
               <Field label="Pincode" value={pincode} onChange={(value) => setPincode(value.replace(/\D/g, "").slice(0, 6))} placeholder="411041" error={fieldErrors.pincode} autoComplete="postal-code" inputMode="numeric" />
             </div>
 
-            <div className="mt-8">
-              <div className="mb-3 flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-primary" aria-hidden="true" />
-                <h2 className="text-sm font-bold text-foreground">Delivery</h2>
-              </div>
+            <div className="mt-8"><div className="mb-3 flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" aria-hidden="true" /><h2 className="text-sm font-bold text-foreground">Delivery</h2></div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <DeliveryCard selected={delivery === "pune"} icon={<Package className="h-5 w-5" aria-hidden="true" />} title="Home delivery in Pune" detail="FREE" note="From our kitchen to your doorstep. 🍽️" onClick={() => setDelivery("pune")} />
                 <DeliveryCard selected={delivery === "porter"} icon={<Truck className="h-5 w-5" aria-hidden="true" />} title="Outside Pune" detail="Porter" note="Delivery charge is confirmed before dispatch." onClick={() => setDelivery("porter")} />
               </div>
             </div>
 
-            <div className="mt-8">
-              <div className="mb-3 flex items-center gap-2">
-                <Smartphone className="h-4 w-4 text-primary" aria-hidden="true" />
-                <h2 className="text-sm font-bold text-foreground">Secure payment</h2>
-              </div>
+            <div className="mt-8"><div className="mb-3 flex items-center gap-2"><Smartphone className="h-4 w-4 text-primary" aria-hidden="true" /><h2 className="text-sm font-bold text-foreground">Secure payment</h2></div>
               <div className="rounded-3xl border border-primary/20 bg-white/30 p-4 backdrop-blur-xl dark:bg-white/[0.04]">
-                <div className="flex items-start gap-4">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/15">
-                    <LockKeyhole className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-bold text-foreground">Encrypted payment checkout</p>
-                        <p className="mt-0.5 text-xs leading-5 text-muted-foreground">Your payment details are entered securely with the payment provider.</p>
-                      </div>
-                      <span className="rounded-full bg-accent/12 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-accent">Secure</span>
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-muted-foreground">
-                      <span className="rounded-full bg-white/55 px-2.5 py-1 dark:bg-white/5">PhonePe</span>
-                      <span className="rounded-full bg-white/55 px-2.5 py-1 dark:bg-white/5">Razorpay backup</span>
-                      <span className="rounded-full bg-white/55 px-2.5 py-1 dark:bg-white/5">No payment passwords shared with us</span>
-                    </div>
+                <div className="flex items-start gap-4"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/15"><LockKeyhole className="h-5 w-5" aria-hidden="true" /></span>
+                  <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-bold text-foreground">Encrypted payment checkout</p><p className="mt-0.5 text-xs leading-5 text-muted-foreground">Your payment details are entered securely with the payment provider.</p></div><span className="rounded-full bg-accent/12 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-accent">Secure</span></div>
+                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-muted-foreground"><span className="rounded-full bg-white/55 px-2.5 py-1 dark:bg-white/5">PhonePe</span><span className="rounded-full bg-white/55 px-2.5 py-1 dark:bg-white/5">Razorpay backup</span><span className="rounded-full bg-white/55 px-2.5 py-1 dark:bg-white/5">No payment passwords shared with us</span></div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {error && (
-              <div role="alert" className="mt-5 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm">
-                <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
-                <div className="flex-1">
-                  <p className="font-bold text-foreground">We couldn't complete that</p>
-                  <p className="mt-0.5 text-muted-foreground">{error}</p>
-                </div>
-                <button type="button" onClick={() => setError("")} className="text-xs font-bold text-muted-foreground hover:text-foreground">Dismiss</button>
+            {paymentMessage && (
+              <div role="status" className={`mt-5 flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm ${paymentState === "failed" ? "border-destructive/20 bg-destructive/8" : "border-primary/15 bg-primary/5"}`}>
+                {paymentState === "failed" ? <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" /> : <RefreshCw className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />}
+                <p className="flex-1 leading-5 text-muted-foreground">{paymentMessage}</p>
+                <button type="button" onClick={() => setPaymentMessage("")} className="rounded-full p-1 text-muted-foreground hover:bg-secondary hover:text-foreground" aria-label="Dismiss message"><X className="h-4 w-4" aria-hidden="true" /></button>
               </div>
             )}
 
+            {error && (<div role="alert" className="mt-5 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm"><CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" /><div className="flex-1"><p className="font-bold text-foreground">We couldn't complete that</p><p className="mt-0.5 text-muted-foreground">{error}</p></div><button type="button" onClick={() => setError("")} className="text-xs font-bold text-muted-foreground hover:text-foreground">Dismiss</button></div>)}
+
             <div className="mt-7 flex flex-col gap-4">
-              <div className="flex items-center gap-3 rounded-2xl border border-accent/15 bg-accent/7 px-4 py-3">
-                <ShieldCheck className="h-5 w-5 shrink-0 text-accent" aria-hidden="true" />
-                <p className="text-xs leading-5 text-foreground"><span className="font-bold">Your payment is protected.</span> We never need your UPI PIN, OTP, CVV or banking password.</p>
-              </div>
+              <div className="flex items-center gap-3 rounded-2xl border border-accent/15 bg-accent/7 px-4 py-3"><ShieldCheck className="h-5 w-5 shrink-0 text-accent" aria-hidden="true" /><p className="text-xs leading-5 text-foreground"><span className="font-bold">Your payment is protected.</span> We never need your UPI PIN, OTP, CVV or banking password.</p></div>
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex max-w-md items-start gap-2 text-xs leading-5 text-muted-foreground">
-                  <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-                  <p>Fill in your details, take one secure payment step, then get back to the important business: eating.</p>
-                </div>
-                <button type="button" onClick={() => void submitOrder()} disabled={submitState === "submitting" || !isOnline || items.length === 0} className="inline-flex min-h-13 items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary px-6 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0">
-                  {submitState === "submitting" ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-                      Creating order…
-                    </>
-                  ) : (
-                    <>
-                      Place order · ₹{total.toLocaleString("en-IN")}
-                      <ChevronRight className="h-5 w-5" aria-hidden="true" />
-                    </>
-                  )}
+                <div className="flex max-w-md items-start gap-2 text-xs leading-5 text-muted-foreground"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" /><p>Fill in your details, take one secure payment step, then get back to the important business: eating.</p></div>
+                <button type="button" onClick={() => void submitOrder()} disabled={submitState === "submitting" || paymentState === "opening" || paymentState === "paying" || !isOnline || items.length === 0} className="inline-flex min-h-13 items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary px-6 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0">
+                  {submitState === "submitting" || paymentState === "opening" || paymentState === "paying" ? <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />{paymentState === "paying" ? "Payment open…" : "Preparing secure payment…"}</> : <>{order ? "Pay securely" : `Pay securely · ₹${total.toLocaleString("en-IN")}`}<ChevronRight className="h-5 w-5" aria-hidden="true" /></>}
                 </button>
               </div>
             </div>
           </section>
 
           <aside className="h-fit rounded-[2rem] border border-white/70 bg-white/45 p-5 shadow-[0_24px_70px_rgba(67,48,22,0.10)] backdrop-blur-2xl dark:border-white/10 dark:bg-black/20 lg:sticky lg:top-5">
-            <div className="flex items-center gap-2">
-              <ShoppingBag className="h-5 w-5 text-primary" aria-hidden="true" />
-              <h2 className="font-heading text-xl font-bold text-foreground">Your order</h2>
-              <span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-bold text-muted-foreground">{totalItems}</span>
-            </div>
-
-            {items.length === 0 ? (
-              <div className="mt-6 rounded-2xl border border-dashed border-border/80 p-6 text-center">
-                <p className="text-sm font-bold text-foreground">Your cart is empty</p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">Add something delicious before checking out.</p>
-                <Link href="/#products" className="mt-4 inline-flex rounded-full bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground">Browse products</Link>
-              </div>
-            ) : (
-              <>
-                <ul className="mt-5 space-y-3">
-                  {items.map((item) => (
-                    <li key={item.product.id} className="glass-panel rounded-2xl p-3">
-                      <div className="flex gap-3">
-                        <Image src={item.product.image || "/placeholder.svg"} alt={item.product.name} width={64} height={64} sizes="64px" className="h-16 w-16 shrink-0 rounded-xl object-cover" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-bold leading-tight text-foreground">{item.product.name}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">{item.product.weight} · ₹{item.product.price}</p>
-                          <div className="mt-2 flex items-center justify-between gap-3">
-                            <div className="flex items-center rounded-full border border-border/70 bg-background/30 p-0.5">
-                              <button type="button" onClick={() => setQuantity(item.product.id, item.quantity - 1)} className="h-8 w-8 rounded-full text-base font-bold text-foreground hover:bg-secondary" aria-label={`Decrease ${item.product.name} quantity`}>−</button>
-                              <span className="min-w-7 text-center text-xs font-bold text-foreground">{item.quantity}</span>
-                              <button type="button" onClick={() => setQuantity(item.product.id, Math.min(item.quantity + 1, 99))} className="h-8 w-8 rounded-full text-base font-bold text-foreground hover:bg-secondary" aria-label={`Increase ${item.product.name} quantity`}>+</button>
-                            </div>
-                            <button type="button" onClick={() => removeItem(item.product.id)} className="text-[11px] font-bold text-muted-foreground hover:text-destructive">Remove</button>
-                          </div>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="mt-5 space-y-2 border-t border-border/60 pt-4 text-sm">
-                  <div className="flex items-center justify-between text-muted-foreground"><span>Subtotal</span><span className="font-semibold text-foreground">₹{subtotal.toLocaleString("en-IN")}</span></div>
-                  <div className="flex items-center justify-between text-muted-foreground"><span>Delivery</span><span className="font-semibold text-foreground">{delivery === "pune" ? "Free" : "Added later"}</span></div>
-                  <div className="flex items-end justify-between border-t border-border/60 pt-3"><span className="text-sm font-bold text-foreground">Total</span><span className="font-heading text-3xl font-extrabold text-foreground">₹{total.toLocaleString("en-IN")}</span></div>
-                </div>
-
-                <div className="mt-5 space-y-2 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-2"><LockKeyhole className="h-4 w-4 text-accent" aria-hidden="true" /> Secure encrypted payment</div>
-                  <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-accent" aria-hidden="true" /> Trusted payment providers</div>
-                  <div className="flex items-center gap-2"><RefreshCw className="h-4 w-4 text-accent" aria-hidden="true" /> Help available if a payment gets stuck</div>
-                </div>
-              </>
-            )}
+            <div className="flex items-center gap-2"><ShoppingBag className="h-5 w-5 text-primary" aria-hidden="true" /><h2 className="font-heading text-xl font-bold text-foreground">Your order</h2><span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-bold text-muted-foreground">{totalItems}</span></div>
+            {items.length === 0 ? <div className="mt-6 rounded-2xl border border-dashed border-border/80 p-6 text-center"><p className="text-sm font-bold text-foreground">Your cart is empty</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Add something delicious before checking out.</p><Link href="/#products" className="mt-4 inline-flex rounded-full bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground">Browse products</Link></div> : <>
+              <ul className="mt-5 space-y-3">{items.map((item) => <li key={item.product.id} className="glass-panel rounded-2xl p-3"><div className="flex gap-3"><Image src={item.product.image || "/placeholder.svg"} alt={item.product.name} width={64} height={64} sizes="64px" className="h-16 w-16 shrink-0 rounded-xl object-cover" /><div className="min-w-0 flex-1"><p className="text-sm font-bold leading-tight text-foreground">{item.product.name}</p><p className="mt-1 text-xs text-muted-foreground">{item.product.weight} · ₹{item.product.price}</p><div className="mt-2 flex items-center justify-between gap-3"><div className="flex items-center rounded-full border border-border/70 bg-background/30 p-0.5"><button type="button" onClick={() => setQuantity(item.product.id, item.quantity - 1)} className="h-8 w-8 rounded-full text-base font-bold text-foreground hover:bg-secondary" aria-label={`Decrease ${item.product.name} quantity`}>−</button><span className="min-w-7 text-center text-xs font-bold text-foreground">{item.quantity}</span><button type="button" onClick={() => setQuantity(item.product.id, Math.min(item.quantity + 1, 99))} className="h-8 w-8 rounded-full text-base font-bold text-foreground hover:bg-secondary" aria-label={`Increase ${item.product.name} quantity`}>+</button></div><button type="button" onClick={() => removeItem(item.product.id)} className="text-[11px] font-bold text-muted-foreground hover:text-destructive">Remove</button></div></div></div></li>)}</ul>
+              <div className="mt-5 space-y-2 border-t border-border/60 pt-4 text-sm"><div className="flex items-center justify-between text-muted-foreground"><span>Subtotal</span><span className="font-semibold text-foreground">₹{subtotal.toLocaleString("en-IN")}</span></div><div className="flex items-center justify-between text-muted-foreground"><span>Delivery</span><span className="font-semibold text-foreground">{delivery === "pune" ? "Free" : "Added later"}</span></div><div className="flex items-end justify-between border-t border-border/60 pt-3"><span className="text-sm font-bold text-foreground">Total</span><span className="font-heading text-3xl font-extrabold text-foreground">₹{total.toLocaleString("en-IN")}</span></div></div>
+              <div className="mt-5 space-y-2 text-xs text-muted-foreground"><div className="flex items-center gap-2"><LockKeyhole className="h-4 w-4 text-accent" aria-hidden="true" /> Secure encrypted payment</div><div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-accent" aria-hidden="true" /> Trusted payment providers</div><div className="flex items-center gap-2"><RefreshCw className="h-4 w-4 text-accent" aria-hidden="true" /> Payment confirmation handled securely</div></div>
+              {order && <div className="mt-4 rounded-2xl border border-primary/15 bg-primary/5 px-3 py-2.5 text-xs"><p className="font-bold text-foreground">Order {order.orderId}</p><p className="mt-0.5 text-muted-foreground">Your order is ready for secure payment.</p></div>}
+            </>}
           </aside>
         </div>
       </div>
@@ -474,52 +511,11 @@ export function CheckoutPage() {
   )
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-  error,
-  autoComplete,
-  inputMode,
-  multiline = false,
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  placeholder: string
-  error?: string
-  autoComplete?: string
-  inputMode?: "text" | "tel" | "numeric"
-  multiline?: boolean
-}) {
+function Field({ label, value, onChange, placeholder, error, autoComplete, inputMode, multiline = false }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; error?: string; autoComplete?: string; inputMode?: "text" | "tel" | "numeric"; multiline?: boolean }) {
   const id = `checkout-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`
-  return (
-    <label htmlFor={id} className="flex flex-col gap-1.5">
-      <span className="text-sm font-bold text-foreground">{label}</span>
-      {multiline ? (
-        <textarea id={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} autoComplete={autoComplete} rows={3} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} className={`min-h-24 resize-none rounded-2xl border bg-white/45 px-4 py-3.5 text-sm text-foreground shadow-inner outline-none backdrop-blur-xl placeholder:text-muted-foreground/70 dark:bg-white/5 ${error ? "border-destructive/45" : "border-white/70 focus:border-primary/50"}`} />
-      ) : (
-        <input id={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} autoComplete={autoComplete} inputMode={inputMode} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} className={`min-h-13 rounded-2xl border bg-white/45 px-4 py-3.5 text-sm text-foreground shadow-inner outline-none backdrop-blur-xl placeholder:text-muted-foreground/70 dark:bg-white/5 ${error ? "border-destructive/45" : "border-white/70 focus:border-primary/50"}`} />
-      )}
-      {error && <span id={`${id}-error`} className="text-xs font-semibold text-destructive">{error}</span>}
-    </label>
-  )
+  return <label htmlFor={id} className="flex flex-col gap-1.5"><span className="text-sm font-bold text-foreground">{label}</span>{multiline ? <textarea id={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} autoComplete={autoComplete} rows={3} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} className={`min-h-24 resize-none rounded-2xl border bg-white/45 px-4 py-3.5 text-sm text-foreground shadow-inner outline-none backdrop-blur-xl placeholder:text-muted-foreground/70 dark:bg-white/5 ${error ? "border-destructive/45" : "border-white/70 focus:border-primary/50"}`} /> : <input id={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} autoComplete={autoComplete} inputMode={inputMode} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} className={`min-h-13 rounded-2xl border bg-white/45 px-4 py-3.5 text-sm text-foreground shadow-inner outline-none backdrop-blur-xl placeholder:text-muted-foreground/70 dark:bg-white/5 ${error ? "border-destructive/45" : "border-white/70 focus:border-primary/50"}`} />}{error && <span id={`${id}-error`} className="text-xs font-semibold text-destructive">{error}</span>}</label>
 }
 
 function DeliveryCard({ selected, icon, title, detail, note, onClick }: { selected: boolean; icon: React.ReactNode; title: string; detail: string; note: string; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} aria-pressed={selected} className={`rounded-3xl border p-4 text-left transition-all ${selected ? "border-primary/40 bg-primary/10 shadow-lg shadow-primary/10" : "border-white/70 bg-white/30 hover:bg-white/50 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"}`}>
-      <div className="flex items-start gap-3">
-        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${selected ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{icon}</span>
-        <span className="min-w-0 flex-1">
-          <span className="flex items-center justify-between gap-2">
-            <span className="text-sm font-bold text-foreground">{title}</span>
-            <span className={`text-[11px] font-extrabold uppercase tracking-wide ${selected ? "text-primary" : "text-muted-foreground"}`}>{detail}</span>
-          </span>
-          <span className="mt-1 block text-xs leading-5 text-muted-foreground">{note}</span>
-        </span>
-      </div>
-    </button>
-  )
+  return <button type="button" onClick={onClick} aria-pressed={selected} className={`rounded-3xl border p-4 text-left transition-all ${selected ? "border-primary/40 bg-primary/10 shadow-lg shadow-primary/10" : "border-white/70 bg-white/30 hover:bg-white/50 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"}`}><div className="flex items-start gap-3"><span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${selected ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{icon}</span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><span className="text-sm font-bold text-foreground">{title}</span><span className={`text-[11px] font-extrabold uppercase tracking-wide ${selected ? "text-primary" : "text-muted-foreground"}`}>{detail}</span></span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{note}</span></span></div></button>
 }
