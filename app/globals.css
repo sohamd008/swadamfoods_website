@@ -21,8 +21,6 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --color-foreground: var(--foreground);
   --color-background: var(--background);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -141,5 +139,47 @@
       radial-gradient(circle at 15% 12%, oklch(0.86 0.08 72 / 0.45), transparent 28%),
       radial-gradient(circle at 85% 18%, oklch(0.78 0.08 155 / 0.24), transparent 26%),
       radial-gradient(circle at 55% 80%, oklch(0.92 0.04 30 / 0.55), transparent 32%);
+  }
+}
+
+/* Checkout feedback stays in the customer's immediate line of sight. */
+.checkout-shell [role="status"],
+.checkout-shell [role="alert"] {
+  position: fixed !important;
+  z-index: 1000 !important;
+  top: max(1rem, env(safe-area-inset-top)) !important;
+  left: 50% !important;
+  width: min(92vw, 520px) !important;
+  max-width: calc(100vw - 2rem) !important;
+  margin: 0 !important;
+  transform: translateX(-50%) !important;
+  box-shadow: 0 20px 60px rgba(67, 48, 22, 0.18) !important;
+  backdrop-filter: blur(22px) !important;
+  -webkit-backdrop-filter: blur(22px) !important;
+  animation: checkout-toast-in 180ms ease-out both;
+}
+
+.checkout-shell [role="status"] button,
+.checkout-shell [role="alert"] button {
+  pointer-events: auto;
+}
+
+@keyframes checkout-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .checkout-shell [role="status"],
+  .checkout-shell [role="alert"] {
+    top: max(0.75rem, env(safe-area-inset-top)) !important;
+    width: calc(100vw - 1.5rem) !important;
+    max-width: calc(100vw - 1.5rem) !important;
   }
 }
