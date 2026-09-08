@@ -6,6 +6,11 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { business, products } from '@/lib/products'
 import './globals.css'
 
+const cormorant = Cormorant_Garamond({
+  subsets: ['latin'],
+  variable: '--font-cormorant',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://swadamfoods.eu.cc'),
@@ -64,7 +69,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`bg-background ${cormorant.variable}`)
+      className={`bg-background ${cormorant.variable}`}
     >
       <body className="font-sans antialiased">
         <Script
