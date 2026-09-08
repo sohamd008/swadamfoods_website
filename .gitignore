@@ -7,6 +7,8 @@ node_modules/
 .DS_Store
 .env
 .env*.local
+.dev.vars*
+.wrangler/
 
 # Legacy v0/Vercel tooling (kept ignored if recreated locally)
 .vercel/
