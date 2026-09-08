@@ -11,24 +11,43 @@ export default function ShippingPolicyPage() {
   return (
     <LegalPage
       title="Shipping Policy"
+      intro="This policy explains how Swadam Foods handles delivery of food products ordered through our website. Delivery availability, timing and charges can depend on destination and the delivery provider available for the order."
       sections={[
         {
-          heading: "Shipping & Delivery",
+          heading: "Pune Home Delivery",
           paragraphs: [
-            `Orders are shipped through registered domestic courier companies and/or Speed Post where applicable. Orders are shipped within 5 days from the date of the order and/or payment, or as per the delivery date agreed at the time of order confirmation, subject to courier company / post office norms. ${business.name} shall not be liable for delays caused by the courier company or postal authority.`,
-            "Delivery will be made to the address provided by the buyer at the time of purchase. If any shipping costs are levied by Swadam Foods or the delivery provider, such shipping costs are not refundable unless otherwise required by applicable law.",
+            "For eligible Pune addresses, home delivery may be offered free of charge as shown at checkout. The actual service area may depend on operational availability at the time of the order.",
           ],
         },
         {
-          heading: "Delivery Information",
+          heading: "Outside Pune",
           paragraphs: [
-            "Please provide a complete and accurate delivery address when placing your order. Delivery timelines may vary depending on the destination, courier availability and other circumstances outside our control.",
+            "For addresses outside Pune, we may arrange delivery through a third-party logistics provider such as Porter where service is available. Delivery availability and applicable charges will be confirmed before dispatch where an additional charge applies. We will not silently add an undisclosed delivery fee to the checkout total.",
+          ],
+        },
+        {
+          heading: "Dispatch & Delivery Timelines",
+          paragraphs: [
+            "We will communicate the expected dispatch or delivery timeline during order confirmation where reasonably possible. Timelines are estimates and may vary due to destination, logistics capacity, weather, traffic, holidays, service interruptions or other events outside our reasonable control.",
+            "Delivery is made to the address supplied by the customer. Incorrect or incomplete address details can cause delay, failed delivery or additional logistics costs for which the customer may be responsible where permitted by applicable law and after reasonable notice.",
+          ],
+        },
+        {
+          heading: "Delivery Attempts & Receipt",
+          paragraphs: [
+            "Please ensure someone is available to receive the order when a delivery is scheduled. Customers should inspect the outer packaging at delivery where practical and contact us promptly if the package appears visibly damaged, tampered with or otherwise unsafe.",
+          ],
+        },
+        {
+          heading: "Third-Party Delivery Providers",
+          paragraphs: [
+            "Where a third-party logistics provider is used, its applicable delivery terms may also apply. We will reasonably assist with delivery issues that are reported to us, but we cannot guarantee a delivery time controlled by an independent provider.",
           ],
         },
         {
           heading: "Contact Information",
           paragraphs: [
-            `For questions regarding shipping or delivery, please contact ${business.name} at ${business.email} / ${business.phoneDisplay}.`,
+            `For shipping and delivery questions, contact ${business.name} at ${business.email} or ${business.phoneDisplay}. Please include your order ID and delivery pincode.`,
           ],
         },
       ]}
