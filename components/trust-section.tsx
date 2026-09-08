@@ -1,52 +1,30 @@
+import Image from "next/image"
 import { CheckCircle2 } from "lucide-react"
 import { business } from "@/lib/products"
 
 function FssaiLogo() {
   return (
-    <svg viewBox="0 0 280 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-12 w-auto" aria-label="FSSAI Official Logo">
-      {/* Official FSSAI 3-color flame/swoosh */}
-      <path d="M48 24C48 14 58 6 72 6C86 6 94 14 94 24C84 20 74 22 66 24C58 26 52 26 48 24Z" fill="#F37021" />
-      <path d="M56 20C66 12 76 8 90 10C82 17 72 21 62 23C58 23 56 22 56 20Z" fill="#3BB54A" />
-      <path d="M44 28C48 19 55 14 66 12C57 19 51 24 46 28H44Z" fill="#00AEEF" />
-      
-      {/* Wordmark fssai */}
-      <text x="36" y="56" fontFamily="system-ui, -apple-system, BlinkMacSystemFont, sans-serif" fontWeight="900" fontSize="36" letterSpacing="-1.5" fill="#1C355E" className="dark:fill-white">
-        fssai
-      </text>
-
-      {/* Official Government of India banner */}
-      <rect x="0" y="64" width="280" height="12" rx="3" fill="#1C355E" className="dark:fill-slate-800" />
-      <text x="140" y="72.5" textAnchor="middle" fontFamily="system-ui, -apple-system, BlinkMacSystemFont, sans-serif" fontWeight="700" fontSize="6.2" letterSpacing="0.8" fill="#FFFFFF">
-        FOOD SAFETY AND STANDARDS AUTHORITY OF INDIA
-      </text>
-    </svg>
+    <Image
+      src="/images/fssai-logo.webp"
+      alt="FSSAI Official Logo"
+      width={180}
+      height={89}
+      sizes="180px"
+      className="h-12 w-auto object-contain"
+    />
   )
 }
 
 function MsmeLogo() {
   return (
-    <svg viewBox="0 0 280 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-12 w-auto" aria-label="Ministry of MSME Official Logo">
-      {/* Emblem Chakra & Floral Tri-color Motif */}
-      <g transform="translate(10, 8)">
-        <circle cx="32" cy="32" r="28" fill="#F47920" fillOpacity="0.12" stroke="#F47920" strokeWidth="2" />
-        <circle cx="32" cy="32" r="20" stroke="#003366" strokeWidth="1.5" strokeDasharray="3 2" className="dark:stroke-sky-400" />
-        <circle cx="32" cy="32" r="4" fill="#003366" className="dark:fill-sky-400" />
-        <path d="M32 16v32M16 32h32M21 21l22 22M21 43l22-22" stroke="#003366" strokeWidth="1.2" strokeLinecap="round" className="dark:stroke-sky-400" />
-        <path d="M32 14c-4 5-4 10 0 14 4-4 4-9 0-14z" fill="#F47920" />
-        <path d="M32 36c-4 5-4 10 0 14 4-4 4-9 0-14z" fill="#138808" />
-      </g>
-      
-      {/* Official MSME Typography */}
-      <text x="82" y="32" fontFamily="system-ui, -apple-system, BlinkMacSystemFont, sans-serif" fontWeight="900" fontSize="22" letterSpacing="1" fill="#003366" className="dark:fill-white">
-        MSME
-      </text>
-      <text x="82" y="46" fontFamily="system-ui, -apple-system, BlinkMacSystemFont, sans-serif" fontWeight="800" fontSize="10.5" letterSpacing="0.4" fill="#F47920">
-        सूक्ष्म, लघु एवं मध्यम उद्यम
-      </text>
-      <text x="82" y="58" fontFamily="system-ui, -apple-system, BlinkMacSystemFont, sans-serif" fontWeight="700" fontSize="8" letterSpacing="0.6" fill="#475569" className="dark:fill-slate-300">
-        UDYAM · GOVERNMENT OF INDIA
-      </text>
-    </svg>
+    <Image
+      src="/images/msme-logo.webp"
+      alt="Ministry of MSME Government of India Official Logo"
+      width={150}
+      height={173}
+      sizes="150px"
+      className="h-14 w-auto object-contain"
+    />
   )
 }
 
@@ -130,7 +108,7 @@ export function TrustSection() {
             >
               <div>
                 <div className="flex items-start justify-between gap-4 border-b border-border/40 pb-4">
-                  <div className="overflow-hidden rounded-2xl bg-white/60 p-2 shadow-xs backdrop-blur-md dark:bg-white/10">
+                  <div className="flex h-16 w-36 items-center justify-center overflow-hidden rounded-2xl bg-white p-2 shadow-xs border border-slate-100 dark:border-white/20">
                     {logo}
                   </div>
                   <span className="glass-pill rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-accent shrink-0">

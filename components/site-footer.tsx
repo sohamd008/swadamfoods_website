@@ -134,21 +134,44 @@ export function SiteFooter() {
               Official Accreditations
             </span>
             <div className="flex flex-col gap-2.5">
-              <div className="glass-pill rounded-2xl px-4 py-2.5">
-                <span className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground block">
-                  FSSAI License No.
-                </span>
-                <span className="font-mono text-xs font-black text-foreground select-all">
-                  {business.fssai}
-                </span>
+              <div className="glass-pill flex items-center gap-3 rounded-2xl p-2.5">
+                <div className="flex h-9 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-xs border border-slate-100">
+                  <Image
+                    src="/images/fssai-logo.webp"
+                    alt="FSSAI Logo"
+                    width={56}
+                    height={28}
+                    className="h-6 w-auto object-contain"
+                  />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground block">
+                    FSSAI License No.
+                  </span>
+                  <span className="font-mono text-xs font-black text-foreground select-all truncate">
+                    {business.fssai}
+                  </span>
+                </div>
               </div>
-              <div className="glass-pill rounded-2xl px-4 py-2.5">
-                <span className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground block">
-                  UDYAM Registration No.
-                </span>
-                <span className="font-mono text-xs font-black text-foreground select-all">
-                  {business.udyam}
-                </span>
+
+              <div className="glass-pill flex items-center gap-3 rounded-2xl p-2.5">
+                <div className="flex h-9 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-xs border border-slate-100">
+                  <Image
+                    src="/images/msme-logo.webp"
+                    alt="MSME Logo"
+                    width={56}
+                    height={28}
+                    className="h-7 w-auto object-contain"
+                  />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground block">
+                    UDYAM Reg. No.
+                  </span>
+                  <span className="font-mono text-xs font-black text-foreground select-all truncate">
+                    {business.udyam}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
