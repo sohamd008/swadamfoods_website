@@ -1,0 +1,28 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "Swadam Foods",
+    "identifier": "swadamfoods.eu.cc",
+    "documentationUrl": "https://swadamfoods.eu.cc/.well-known/service-doc",
+    "logoUrl": "https://swadamfoods.eu.cc/images/swadam-logo.webp"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:swadamfoods.eu.cc:api:products",
+      "displayName": "Swadam Foods Product Catalog API",
+      "type": "application/openapi+json",
+      "url": "https://swadamfoods.eu.cc/.well-known/service-desc",
+      "description": "Public read-only product catalog with product names, pack sizes, prices, availability and preparation information.",
+      "tags": ["products", "food", "snacks", "premixes", "catalog"],
+      "capabilities": ["ProductCatalog", "ProductDiscovery"],
+      "representativeQueries": [
+        "What products does Swadam Foods sell?",
+        "What is the price and pack size of the Swadam Foods products?",
+        "How do I prepare the Instant Kanda Poha Premix?",
+        "How do I prepare the Instant Upma Premix?"
+      ],
+      "version": "1.0.0",
+      "updatedAt": "2026-09-06T00:00:00Z"
+    }
+  ]
+}
