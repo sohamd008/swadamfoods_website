@@ -4,38 +4,45 @@ import { business } from "@/lib/products"
 
 export const metadata: Metadata = {
   title: "Return Policy | Swadam Foods",
-  description: "Return and exchange policy for Swadam Foods orders.",
+  description: "Return, replacement and exchange policy for Swadam Foods food products.",
 }
 
 export default function ReturnPolicyPage() {
   return (
     <LegalPage
       title="Return Policy"
-      intro="All return, exchange, replacement and refund requests are subject to review and approval by Swadam Foods. Submission of a request does not create an automatic right to a return, exchange, replacement or refund."
+      intro="Because our products are packaged food items, ordinary change-of-mind returns are generally not accepted after delivery. We do, however, want to resolve genuine cases involving damaged, tampered, incorrect or qualifying quality issues."
       sections={[
         {
-          heading: "Return & Exchange Eligibility",
+          heading: "When You Should Contact Us",
           paragraphs: [
-            "We may offer a refund / exchange within the first 2 days from the date of purchase, subject to review and approval by Swadam Foods. If 2 days have passed since your purchase, you will not be offered a return, exchange or refund of any kind.",
-            "To be considered for a return or an exchange, the purchased item should be unused and in the same condition as you received it, and the item must have its original packaging. Items purchased on sale may not be eligible for a return / exchange. Only items found defective or damaged may be replaced based on an exchange request approved by Swadam Foods.",
+            `Please contact ${business.name} within 48 hours of delivery if you receive an incorrect, visibly damaged, tampered, leaking, materially incomplete, or otherwise qualifying product issue. Contact us at ${business.email} or ${business.phoneDisplay} and mention the order ID.`,
+            "For quality concerns, describe the issue clearly and, where reasonably possible, retain the product, packaging and batch information until we finish our review.",
           ],
         },
         {
-          heading: "Exempt Products",
+          heading: "Food-Safety & Change-of-Mind Returns",
           paragraphs: [
-            "There may be certain categories of products / items that are exempted from returns or refunds. Such categories will be identified to you at the time of purchase. Any applicable return, exchange, replacement or refund remains subject to approval by Swadam Foods.",
+            "Opened or used food products are generally not eligible for return or exchange because of hygiene and food-safety considerations. Change-of-mind, taste preference or failure to read the product information before purchase generally does not qualify for a return or refund, subject to applicable law.",
           ],
         },
         {
-          heading: "Inspection & Processing",
+          heading: "Eligibility for Replacement or Refund",
           paragraphs: [
-            "For an accepted exchange / return request, once the returned product / item is received and inspected by us, we will notify you about receipt of the returned / exchanged product. If the request is approved after our quality check, the return or exchange will be processed in accordance with our policies. Approval of the request is at the discretion of Swadam Foods, subject to applicable law.",
+            "After reviewing the complaint, Swadam Foods may offer an appropriate remedy such as replacement, refund or another resolution where the issue is verified and the remedy is appropriate. The exact remedy may depend on the nature of the problem, product availability and applicable law.",
+            "If the issue concerns damage caused during delivery, we may request photographs or other reasonable evidence so that we can investigate with the delivery provider.",
+          ],
+        },
+        {
+          heading: "Inspection",
+          paragraphs: [
+            "Where a return is exceptionally approved, we may arrange collection or provide return instructions. Any returned product must be handled safely and retained as instructed until the review is complete. We may decline a return where the product has been opened, altered, stored improperly, or otherwise cannot be reasonably inspected, subject to applicable law.",
           ],
         },
         {
           heading: "Contact Information",
           paragraphs: [
-            `For return or exchange requests, please contact ${business.name} at ${business.email} / ${business.phoneDisplay}.`,
+            `For return, replacement or quality complaints, contact ${business.name} at ${business.email} or ${business.phoneDisplay}. Please include the order ID and a description of the issue.`,
           ],
         },
       ]}
