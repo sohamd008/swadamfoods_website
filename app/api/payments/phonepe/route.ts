@@ -3,6 +3,7 @@ import type { D1Database } from "@cloudflare/workers-types"
 import {
   PAYMENT_EXPIRY_SECONDS,
   createPhonePePayment,
+  getPhonePeOrderStatus,
 } from "@/lib/phonepe"
 
 export const dynamic = "force-dynamic"
@@ -25,6 +26,11 @@ function sameOrigin(request: Request) {
   } catch {
     return false
   }
+}
+
+function generatePaymentMerchantOrderId(orderId: string) {
+  const suffix = crypto.randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase()
+  return `${orderId}-P${suffix}`
 }
 
 export async function POST(request: Request) {
@@ -74,15 +80,18 @@ export async function POST(request: Request) {
 
     if (!result) return json({ error: "Order not found." }, 404)
     if (result.currency !== "INR") return json({ error: "Unsupported order currency." }, 400)
-    if (result.payment_status === "paid") {
-      return json({ error: "This order has already been paid." }, 409)
+    if (result.payment_status === "paid") return json({ error: "This order has already been paid." }, 409)
+
+    if (result.payment_gateway && result.payment_gateway !== "phonepe") {
+      return json({ error: "This order is assigned to another payment provider." }, 409)
     }
 
     const now = Date.now()
+
     if (
       result.payment_gateway === "phonepe" &&
-      result.payment_checkout_url &&
       result.gateway_order_id &&
+      result.payment_checkout_url &&
       result.payment_expires_at &&
       result.payment_expires_at > now &&
       result.payment_status === "processing"
@@ -95,12 +104,42 @@ export async function POST(request: Request) {
       })
     }
 
-    if (result.payment_gateway && result.payment_gateway !== "phonepe") {
-      return json({ error: "This order is assigned to another payment provider." }, 409)
+    if (result.payment_gateway === "phonepe" && result.gateway_order_id && result.payment_status === "processing") {
+      const status = await getPhonePeOrderStatus(result.gateway_order_id)
+
+      if (status.amount !== undefined && status.amount !== result.total * 100) {
+        console.error("PhonePe amount mismatch", { orderId, expected: result.total * 100, received: status.amount })
+        return json({ error: "Payment verification failed." }, 502)
+      }
+
+      if (status.state === "COMPLETED") {
+        await db
+          .prepare(
+            `UPDATE orders SET payment_status = 'paid', updated_at = datetime('now') WHERE id = ?`,
+          )
+          .bind(orderId)
+          .run()
+        return json({ orderId, gateway: "phonepe", alreadyPaid: true })
+      }
+
+      if (status.state !== "FAILED" && status.state !== "EXPIRED") {
+        return json({
+          error: "Your previous payment is still being confirmed. Please wait a moment before trying again.",
+          pending: true,
+        }, 409)
+      }
+
+      await db
+        .prepare(
+          `UPDATE orders SET payment_status = ?, updated_at = datetime('now') WHERE id = ? AND payment_status = 'processing'`,
+        )
+        .bind(status.state === "EXPIRED" ? "expired" : "failed", orderId)
+        .run()
     }
 
+    const paymentMerchantOrderId = generatePaymentMerchantOrderId(orderId)
     const payment = await createPhonePePayment({
-      merchantOrderId: orderId,
+      merchantOrderId: paymentMerchantOrderId,
       amountInRupees: result.total,
       phone: result.customer_phone,
     })
@@ -124,9 +163,9 @@ export async function POST(request: Request) {
              payment_status = 'processing',
              updated_at = datetime('now')
          WHERE id = ?
-           AND payment_status IN ('pending', 'processing')`,
+           AND payment_status IN ('pending', 'failed', 'expired', 'processing')`,
       )
-      .bind(payment.orderId ?? orderId, payment.redirectUrl, expiresAt, orderId)
+      .bind(paymentMerchantOrderId, payment.redirectUrl, expiresAt, orderId)
       .run()
 
     return json({
