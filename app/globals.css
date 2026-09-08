@@ -20,8 +20,6 @@
   --color-primary: var(--primary);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
   --radius-sm: calc(var(--radius) * 0.6);
@@ -126,5 +124,20 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply border border-white/65 bg-white/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045];
+  }
+}
+
+@layer utilities {
+  .checkout-shell {
+    background:
+      radial-gradient(circle at 15% 12%, oklch(0.86 0.08 72 / 0.45), transparent 28%),
+      radial-gradient(circle at 85% 18%, oklch(0.78 0.08 155 / 0.24), transparent 26%),
+      radial-gradient(circle at 55% 80%, oklch(0.92 0.04 30 / 0.55), transparent 32%);
   }
 }
