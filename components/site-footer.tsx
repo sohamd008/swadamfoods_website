@@ -64,8 +64,8 @@ export function SiteFooter() {
               <Image
                 src="/images/swadam-logo.webp"
                 alt="Swadam Foods logo"
-                width={160}
-                height={80}
+                width={448}
+                height={244}
                 sizes="80px"
                 className="h-12 w-auto"
               />
@@ -139,8 +139,8 @@ export function SiteFooter() {
                   <Image
                     src="/images/fssai-logo.webp"
                     alt="FSSAI Logo"
-                    width={56}
-                    height={28}
+                    width={240}
+                    height={119}
                     className="h-6 w-auto object-contain"
                   />
                 </div>
@@ -159,8 +159,8 @@ export function SiteFooter() {
                   <Image
                     src="/images/msme-logo.webp"
                     alt="MSME Logo"
-                    width={56}
-                    height={28}
+                    width={240}
+                    height={278}
                     className="h-7 w-auto object-contain"
                   />
                 </div>

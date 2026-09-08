@@ -80,8 +80,8 @@ export function Hero() {
             <Image
               src="/images/hero-chivda.webp"
               alt="A rustic bowl of handcrafted Patal Poha Chivda garnished with roasted peanuts and fresh curry leaves"
-              width={1200}
-              height={1200}
+              width={640}
+              height={640}
               sizes="(max-width: 767px) calc(100vw - 2rem), 50vw"
               priority
               fetchPriority="high"

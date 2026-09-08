@@ -20,9 +20,10 @@ export function SiteHeader() {
             <Image
               src="/images/swadam-logo.webp"
               alt="Swadam Foods logo"
-              width={112}
-              height={36}
-              sizes="56px"
+              width={448}
+              height={244}
+              sizes="59px"
+              priority
               className="h-8 w-auto shrink-0"
             />
           </span>

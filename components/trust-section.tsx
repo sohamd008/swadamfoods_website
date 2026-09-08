@@ -7,8 +7,8 @@ function FssaiLogo() {
     <Image
       src="/images/fssai-logo.webp"
       alt="FSSAI Official Logo"
-      width={180}
-      height={89}
+      width={240}
+      height={119}
       sizes="180px"
       className="h-12 w-auto object-contain"
     />
@@ -20,8 +20,8 @@ function MsmeLogo() {
     <Image
       src="/images/msme-logo.webp"
       alt="Ministry of MSME Government of India Official Logo"
-      width={150}
-      height={173}
+      width={240}
+      height={278}
       sizes="150px"
       className="h-14 w-auto object-contain"
     />

@@ -89,6 +89,14 @@ export function middleware(request: NextRequest) {
   // Attach RFC 8288 Link headers to HTML and general responses
   response.headers.set("Link", LINK_HEADERS)
 
+  // Attach production security headers
+  response.headers.set("X-Content-Type-Options", "nosniff")
+  response.headers.set("X-Frame-Options", "SAMEORIGIN")
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+  response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+  response.headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups")
+
   // Attach CORS for agent discovery surfaces
   if (pathname.startsWith("/.well-known") || pathname === "/openapi.json" || pathname === "/auth.md") {
     response.headers.set("Access-Control-Allow-Origin", "*")
