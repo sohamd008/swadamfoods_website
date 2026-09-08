@@ -1,6 +1,7 @@
 import { SiteHeader } from "@/components/site-header"
 import { Hero } from "@/components/hero"
 import { ProductsSection } from "@/components/products-section"
+import { ReviewsSection } from "@/components/reviews-section"
 import { AboutSection } from "@/components/about-section"
 import { TrustSection } from "@/components/trust-section"
 import { FaqSection } from "@/components/faq-section"
@@ -20,6 +21,7 @@ export default function Page() {
       <main id="main-content">
         <Hero />
         <ProductsSection />
+        <ReviewsSection />
         <AboutSection />
         <TrustSection />
         <FaqSection />
