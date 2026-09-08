@@ -55,7 +55,13 @@ export async function GET(request: Request) {
     }
 
     if (order.payment_status === "paid") {
-      return json({ orderId, state: "COMPLETED", paymentStatus: "paid" })
+      return json({
+        orderId,
+        state: "COMPLETED",
+        paymentStatus: "paid",
+        total: order.total,
+        currency: order.currency,
+      })
     }
 
     const status = await getPhonePeOrderStatus(order.gateway_order_id)
@@ -76,9 +82,7 @@ export async function GET(request: Request) {
 
     if (paymentStatus !== order.payment_status) {
       await db
-        .prepare(
-          `UPDATE orders SET payment_status = ?, updated_at = datetime('now') WHERE id = ?`,
-        )
+        .prepare(`UPDATE orders SET payment_status = ?, updated_at = datetime('now') WHERE id = ?`)
         .bind(paymentStatus, orderId)
         .run()
     }
@@ -90,6 +94,8 @@ export async function GET(request: Request) {
       orderId,
       state: status.state ?? "PENDING",
       paymentStatus,
+      total: order.total,
+      currency: order.currency,
       transactionId: transaction?.transactionId ?? null,
       paymentMode: transaction?.paymentMode ?? null,
     })
