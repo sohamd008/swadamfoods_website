@@ -10,10 +10,12 @@ export function LegalPage({
   title,
   intro,
   sections,
+  updatedAt = "8 September 2026",
 }: {
   title: string
   intro?: string
   sections: LegalSection[]
+  updatedAt?: string
 }) {
   return (
     <main className="min-h-dvh bg-background">
@@ -29,6 +31,9 @@ export function LegalPage({
         <h1 className="mt-8 text-balance font-heading text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
           {title}
         </h1>
+        <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          Last updated: {updatedAt}
+        </p>
 
         {intro ? (
           <p className="mt-4 text-pretty leading-relaxed text-muted-foreground">
@@ -47,7 +52,7 @@ export function LegalPage({
               {section.paragraphs.map((p, j) => (
                 <p
                   key={j}
-                  className="text-pretty leading-relaxed text-muted-foreground"
+                  className="whitespace-pre-line text-pretty leading-relaxed text-muted-foreground"
                 >
                   {p}
                 </p>
