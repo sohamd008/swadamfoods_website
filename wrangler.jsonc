@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "swadamfoods-website",
+  "compatibility_date": "2026-09-07",
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "swadam_orders",
+      "database_id": "3a85f3b3-3e22-4042-acea-3486e333b3dd"
+    }
+  ]
+}
