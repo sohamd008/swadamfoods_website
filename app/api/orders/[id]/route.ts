@@ -38,6 +38,16 @@ type OrderItemRow = {
   line_total: number
 }
 
+function getCF() {
+  try {
+    const { env } = getCloudflareContext()
+    const db = (env as unknown as { DB?: D1Database })?.DB
+    return { db }
+  } catch {
+    return { db: undefined }
+  }
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -47,8 +57,10 @@ export async function GET(
     return json({ error: "Invalid order ID format." }, 400)
   }
 
-  const { env } = getCloudflareContext()
-  const db = (env as unknown as { DB: D1Database }).DB
+  const { db } = getCF()
+  if (!db || typeof db.prepare !== "function") {
+    return json({ error: "Order details currently unavailable." }, 503)
+  }
 
   try {
     const order = await db

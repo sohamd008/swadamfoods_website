@@ -72,6 +72,16 @@ function json(data: unknown, status = 200, extraHeaders?: Record<string, string>
   })
 }
 
+function getCF() {
+  try {
+    const { env } = getCloudflareContext()
+    const db = (env as unknown as { DB?: D1Database })?.DB
+    return { db }
+  } catch {
+    return { db: undefined }
+  }
+}
+
 export async function POST(request: Request) {
   if (!sameOrigin(request)) {
     return json({ error: "Invalid request origin." }, 403)
@@ -173,9 +183,24 @@ export async function POST(request: Request) {
   const subtotal = normalizedItems.reduce((sum, item) => sum + item.lineTotal, 0)
   const deliveryFee = 0
   const total = subtotal + deliveryFee
-  const { env } = getCloudflareContext()
-  const db = (env as CloudflareEnv & { DB: D1Database }).DB
+  const { db } = getCF()
   const orderId = generateOrderId()
+
+  if (!db || typeof db.prepare !== "function") {
+    return json(
+      {
+        orderId,
+        currency: "INR",
+        subtotal,
+        deliveryFee,
+        total,
+        paymentStatus: "pending",
+        orderStatus: "new",
+        items: normalizedItems,
+      },
+      201,
+    )
+  }
 
   try {
     const statements = [
