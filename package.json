@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npx @opennextjs/cloudflare build"
+    "build": "npm install @opennextjs/cloudflare@1.20.6 --no-save --package-lock=false && npx @opennextjs/cloudflare build"
   },
   "dependencies": {
     "lucide-react": "latest",
