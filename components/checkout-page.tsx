@@ -1,0 +1,666 @@
+"use client"
+
+import Image from "next/image"
+import Link from "next/link"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import {
+  ArrowLeft,
+  Check,
+  ChevronRight,
+  CircleAlert,
+  Loader2,
+  LockKeyhole,
+  MapPin,
+  Package,
+  RefreshCw,
+  ShieldCheck,
+  ShoppingBag,
+  Smartphone,
+  Truck,
+  Wifi,
+  WifiOff,
+} from "lucide-react"
+import { useCart } from "@/lib/cart-context"
+import { trackEvent } from "@/lib/analytics"
+
+type DeliveryMethod = "pune" | "porter"
+type SubmitState = "idle" | "submitting" | "success" | "error"
+
+type OrderResponse = {
+  orderId: string
+  currency: string
+  subtotal: number
+  deliveryFee: number
+  total: number
+  paymentStatus: string
+  orderStatus: string
+}
+
+function normalizePhone(value: string) {
+  return value.replace(/[^0-9+]/g, "").trim()
+}
+
+function friendlyError(error: unknown) {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return "The request took too long. Please check your connection and try again."
+  }
+
+  if (error instanceof TypeError) {
+    return "We couldn't reach Swadam Foods. Check your internet connection and try again."
+  }
+
+  return "Something went wrong while creating your order. Please try again."
+}
+
+export function CheckoutPage() {
+  const { items, totalItems, totalPrice, setQuantity, removeItem, clear } = useCart()
+  const [name, setName] = useState("")
+  const [phone, setPhone] = useState("")
+  const [address, setAddress] = useState("")
+  const [pincode, setPincode] = useState("")
+  const [delivery, setDelivery] = useState<DeliveryMethod>("pune")
+  const [isOnline, setIsOnline] = useState(true)
+  const [checkingConnection, setCheckingConnection] = useState(false)
+  const [submitState, setSubmitState] = useState<SubmitState>("idle")
+  const [error, setError] = useState("")
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [order, setOrder] = useState<OrderResponse | null>(null)
+
+  const checkConnection = useCallback(async () => {
+    if (typeof window === "undefined") return false
+
+    setCheckingConnection(true)
+    const navigatorOnline = navigator.onLine
+
+    if (!navigatorOnline) {
+      setIsOnline(false)
+      setCheckingConnection(false)
+      return false
+    }
+
+    try {
+      const controller = new AbortController()
+      const timeout = window.setTimeout(() => controller.abort(), 4500)
+      await fetch(`/?connectivity=${Date.now()}`, {
+        method: "HEAD",
+        cache: "no-store",
+        signal: controller.signal,
+      })
+      window.clearTimeout(timeout)
+      setIsOnline(true)
+      return true
+    } catch {
+      setIsOnline(false)
+      return false
+    } finally {
+      setCheckingConnection(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const update = () => setIsOnline(navigator.onLine)
+    window.addEventListener("online", update)
+    window.addEventListener("offline", update)
+    void checkConnection()
+
+    return () => {
+      window.removeEventListener("online", update)
+      window.removeEventListener("offline", update)
+    }
+  }, [checkConnection])
+
+  const subtotal = useMemo(() => totalPrice, [totalPrice])
+  const deliveryFee = 0
+  const total = subtotal + deliveryFee
+
+  const whatsappHref = useMemo(() => {
+    const lines = [
+      "Hello Swadam Foods! I'd like to confirm my order:",
+      "",
+      ...items.map(
+        (item, index) =>
+          `${index + 1}. ${item.product.name} (${item.product.weight}) x${item.quantity} — ₹${item.product.price * item.quantity}`,
+      ),
+      "",
+      `Subtotal: ₹${subtotal}`,
+      delivery === "pune"
+        ? "Delivery: Home delivery in Pune (FREE)"
+        : "Delivery: Outside Pune via Porter (charges to be confirmed)",
+      `Name: ${name.trim()}`,
+      `Phone: ${phone.trim()}`,
+      `Address: ${address.trim()}, ${pincode.trim()}`,
+      order ? `Order ID: ${order.orderId}` : "",
+    ].filter(Boolean)
+
+    return `https://wa.me/918888851522?text=${encodeURIComponent(lines.join("\n"))}`
+  }, [address, delivery, items, name, order, phone, pincode, subtotal])
+
+  function validate() {
+    const nextErrors: Record<string, string> = {}
+    const cleanName = name.trim()
+    const cleanPhone = normalizePhone(phone)
+    const cleanAddress = address.trim()
+    const cleanPincode = pincode.trim()
+
+    if (items.length === 0) nextErrors.items = "Your cart is empty."
+    if (cleanName.length < 2 || cleanName.length > 80) {
+      nextErrors.name = "Enter your name (2–80 characters)."
+    }
+    if (!/^[0-9+()\-\s]{10,20}$/.test(cleanPhone)) {
+      nextErrors.phone = "Enter a valid phone number."
+    }
+    if (cleanAddress.length < 8 || cleanAddress.length > 240) {
+      nextErrors.address = "Enter a complete delivery address."
+    }
+    if (!/^\d{6}$/.test(cleanPincode)) {
+      nextErrors.pincode = "Enter a valid 6-digit pincode."
+    }
+
+    setFieldErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
+  }
+
+  async function submitOrder() {
+    setError("")
+    if (!validate()) {
+      setSubmitState("error")
+      return
+    }
+
+    const connected = await checkConnection()
+    if (!connected) {
+      setError("You're offline or Swadam Foods could not be reached. Please reconnect and try again.")
+      setSubmitState("error")
+      return
+    }
+
+    setSubmitState("submitting")
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 12000)
+
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        signal: controller.signal,
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            productId: item.product.id,
+            quantity: item.quantity,
+          })),
+          customer: {
+            name: name.trim(),
+            phone: phone.trim(),
+            address: address.trim(),
+            pincode: pincode.trim(),
+          },
+          delivery,
+        }),
+      })
+
+      const payload = (await response.json().catch(() => null)) as
+        | OrderResponse
+        | { error?: string }
+        | null
+
+      if (!response.ok) {
+        const serverMessage = payload && "error" in payload ? payload.error : undefined
+        throw new Error(serverMessage || `Request failed (${response.status}).`)
+      }
+
+      const createdOrder = payload as OrderResponse
+      setOrder(createdOrder)
+      setSubmitState("success")
+      trackEvent("begin_checkout", {
+        currency: createdOrder.currency,
+        value: createdOrder.total,
+        items: items.map((item) => ({
+          item_id: item.product.id,
+          item_name: item.product.name,
+          price: item.product.price,
+          quantity: item.quantity,
+        })),
+      })
+    } catch (requestError) {
+      console.error("Checkout submission failed:", requestError)
+      setSubmitState("error")
+      setError(requestError instanceof Error && requestError.message
+        ? requestError.message
+        : friendlyError(requestError))
+    } finally {
+      window.clearTimeout(timeout)
+    }
+  }
+
+  if (submitState === "success" && order) {
+    return (
+      <main className="min-h-screen px-4 py-6 sm:px-6 sm:py-10">
+        <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-3xl items-center justify-center">
+          <section className="w-full overflow-hidden rounded-[2rem] border border-white/70 bg-white/55 p-6 shadow-[0_30px_90px_rgba(67,48,22,0.15)] backdrop-blur-2xl dark:border-white/10 dark:bg-black/20 sm:p-10">
+            <div className="mx-auto flex max-w-xl flex-col items-center text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-accent/30 bg-accent/15 text-accent shadow-inner">
+                <Check className="h-8 w-8" aria-hidden="true" />
+              </div>
+              <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-accent">
+                Order created
+              </p>
+              <h1 className="mt-2 font-heading text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+                Your order is safely in our system.
+              </h1>
+              <p className="mt-4 text-sm leading-6 text-muted-foreground sm:text-base">
+                Order <span className="font-semibold text-foreground">{order.orderId}</span> has been created for ₹{order.total.toLocaleString("en-IN")}.
+                Online payment is the next step of this checkout rollout.
+              </p>
+
+              <div className="mt-8 grid w-full gap-3 sm:grid-cols-3">
+                <div className="glass-panel rounded-2xl p-4 text-left">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</p>
+                  <p className="mt-1 text-sm font-bold text-foreground">Pending payment</p>
+                </div>
+                <div className="glass-panel rounded-2xl p-4 text-left">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Items</p>
+                  <p className="mt-1 text-sm font-bold text-foreground">{totalItems}</p>
+                </div>
+                <div className="glass-panel rounded-2xl p-4 text-left">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total</p>
+                  <p className="mt-1 text-sm font-bold text-foreground">₹{order.total.toLocaleString("en-IN")}</p>
+                </div>
+              </div>
+
+              <div className="mt-8 flex w-full flex-col gap-3 sm:flex-row">
+                <a
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-accent/30 bg-accent/90 px-5 py-3 text-sm font-bold text-accent-foreground shadow-lg shadow-accent/15 transition-transform hover:-translate-y-0.5 active:scale-[0.99]"
+                >
+                  Confirm on WhatsApp
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </a>
+                <Link
+                  href="/"
+                  onClick={() => clear()}
+                  className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-white/70 bg-white/35 px-5 py-3 text-sm font-bold text-foreground backdrop-blur-xl transition-colors hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+                >
+                  Back to Swadam Foods
+                </Link>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    )
+  }
+
+  return (
+    <main className="min-h-screen px-4 py-5 sm:px-6 sm:py-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <Link
+            href="/"
+            className="group inline-flex min-h-11 items-center gap-2 rounded-full border border-white/70 bg-white/35 px-4 text-sm font-semibold text-foreground shadow-sm backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+          >
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" aria-hidden="true" />
+            Back to shop
+          </Link>
+          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+            {isOnline ? <Wifi className="h-4 w-4 text-accent" aria-hidden="true" /> : <WifiOff className="h-4 w-4 text-destructive" aria-hidden="true" />}
+            <span>{isOnline ? "Connected" : "Offline"}</span>
+          </div>
+        </div>
+
+        {!isOnline && (
+          <div role="alert" className="mb-5 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm text-foreground backdrop-blur-xl">
+            <WifiOff className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
+            <div className="flex-1">
+              <p className="font-bold">You appear to be offline.</p>
+              <p className="mt-0.5 text-muted-foreground">Your cart is safe on this device. Reconnect before placing the order.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void checkConnection()}
+              disabled={checkingConnection}
+              className="rounded-full border border-border/70 bg-background/50 px-3 py-2 text-xs font-bold text-foreground"
+            >
+              {checkingConnection ? "Checking…" : "Retry"}
+            </button>
+          </div>
+        )}
+
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <section className="rounded-[2rem] border border-white/70 bg-white/50 p-5 shadow-[0_24px_70px_rgba(67,48,22,0.10)] backdrop-blur-2xl dark:border-white/10 dark:bg-black/20 sm:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Swadam Foods</p>
+                <h1 className="mt-1 font-heading text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Checkout</h1>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+                  A calm, one-page checkout. Your payment details will never be stored by this page.
+                </p>
+              </div>
+              <div className="hidden h-12 w-12 items-center justify-center rounded-2xl border border-white/70 bg-white/45 shadow-inner backdrop-blur-xl dark:border-white/10 dark:bg-white/5 sm:flex">
+                <LockKeyhole className="h-5 w-5 text-primary" aria-hidden="true" />
+              </div>
+            </div>
+
+            <div className="mt-7 grid gap-4 sm:grid-cols-2">
+              <Field
+                label="Full name"
+                value={name}
+                onChange={setName}
+                placeholder="Your name"
+                error={fieldErrors.name}
+                autoComplete="name"
+              />
+              <Field
+                label="Phone number"
+                value={phone}
+                onChange={setPhone}
+                placeholder="98765 43210"
+                error={fieldErrors.phone}
+                autoComplete="tel"
+                inputMode="tel"
+              />
+            </div>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_150px]">
+              <Field
+                label="Delivery address"
+                value={address}
+                onChange={setAddress}
+                placeholder="House / street, area, city"
+                error={fieldErrors.address}
+                autoComplete="street-address"
+                multiline
+              />
+              <Field
+                label="Pincode"
+                value={pincode}
+                onChange={(value) => setPincode(value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="411041"
+                error={fieldErrors.pincode}
+                autoComplete="postal-code"
+                inputMode="numeric"
+              />
+            </div>
+
+            <div className="mt-8">
+              <div className="mb-3 flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" aria-hidden="true" />
+                <h2 className="text-sm font-bold text-foreground">Delivery</h2>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <DeliveryCard
+                  selected={delivery === "pune"}
+                  icon={<Package className="h-5 w-5" aria-hidden="true" />}
+                  title="Home delivery in Pune"
+                  detail="FREE"
+                  note="Doorstep delivery across Pune."
+                  onClick={() => setDelivery("pune")}
+                />
+                <DeliveryCard
+                  selected={delivery === "porter"}
+                  icon={<Truck className="h-5 w-5" aria-hidden="true" />}
+                  title="Outside Pune"
+                  detail="Porter"
+                  note="Delivery fee is confirmed before dispatch."
+                  onClick={() => setDelivery("porter")}
+                />
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <div className="mb-3 flex items-center gap-2">
+                <Smartphone className="h-4 w-4 text-primary" aria-hidden="true" />
+                <h2 className="text-sm font-bold text-foreground">Payment</h2>
+              </div>
+              <div className="rounded-3xl border border-primary/25 bg-primary/8 p-4 backdrop-blur-xl">
+                <div className="flex items-start gap-4">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/15">
+                    <Smartphone className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-foreground">PhonePe secure checkout</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">You will be redirected to PhonePe to complete payment.</p>
+                      </div>
+                      <span className="rounded-full bg-accent/15 px-2.5 py-1 text-[11px] font-bold text-accent">PLANNED</span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-muted-foreground">
+                      <span className="rounded-full bg-white/45 px-2.5 py-1 dark:bg-white/5">Encrypted</span>
+                      <span className="rounded-full bg-white/45 px-2.5 py-1 dark:bg-white/5">No card data stored</span>
+                      <span className="rounded-full bg-white/45 px-2.5 py-1 dark:bg-white/5">Payment status verified server-side</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <div role="alert" className="mt-5 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm">
+                <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
+                <div className="flex-1">
+                  <p className="font-bold text-foreground">We couldn't complete that</p>
+                  <p className="mt-0.5 text-muted-foreground">{error}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setError("")}
+                  className="text-xs font-bold text-muted-foreground hover:text-foreground"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="max-w-md text-xs leading-5 text-muted-foreground">
+                By placing the order, you confirm the details above are correct. We verify all prices again on the server.
+              </p>
+              <button
+                type="button"
+                onClick={() => void submitOrder()}
+                disabled={submitState === "submitting" || !isOnline || items.length === 0}
+                className="inline-flex min-h-13 items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary px-6 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0"
+              >
+                {submitState === "submitting" ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                    Creating order…
+                  </>
+                ) : (
+                  <>
+                    Place order · ₹{total.toLocaleString("en-IN")}
+                    <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                  </>
+                )}
+              </button>
+            </div>
+          </section>
+
+          <aside className="h-fit rounded-[2rem] border border-white/70 bg-white/45 p-5 shadow-[0_24px_70px_rgba(67,48,22,0.10)] backdrop-blur-2xl dark:border-white/10 dark:bg-black/20 lg:sticky lg:top-5">
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="h-5 w-5 text-primary" aria-hidden="true" />
+              <h2 className="font-heading text-xl font-bold text-foreground">Your order</h2>
+              <span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
+                {totalItems}
+              </span>
+            </div>
+
+            {items.length === 0 ? (
+              <div className="mt-6 rounded-2xl border border-dashed border-border/80 p-6 text-center">
+                <p className="text-sm font-bold text-foreground">Your cart is empty</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">Add something delicious before checking out.</p>
+                <Link href="/#products" className="mt-4 inline-flex rounded-full bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground">
+                  Browse products
+                </Link>
+              </div>
+            ) : (
+              <>
+                <ul className="mt-5 space-y-3">
+                  {items.map((item) => (
+                    <li key={item.product.id} className="glass-panel rounded-2xl p-3">
+                      <div className="flex gap-3">
+                        <Image
+                          src={item.product.image || "/placeholder.svg"}
+                          alt={item.product.name}
+                          width={64}
+                          height={64}
+                          sizes="64px"
+                          className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold leading-tight text-foreground">{item.product.name}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{item.product.weight} · ₹{item.product.price}</p>
+                          <div className="mt-2 flex items-center justify-between gap-3">
+                            <div className="flex items-center rounded-full border border-border/70 bg-background/30 p-0.5">
+                              <button
+                                type="button"
+                                onClick={() => setQuantity(item.product.id, item.quantity - 1)}
+                                className="h-8 w-8 rounded-full text-base font-bold text-foreground hover:bg-secondary"
+                                aria-label={`Decrease ${item.product.name} quantity`}
+                              >
+                                −
+                              </button>
+                              <span className="min-w-7 text-center text-xs font-bold text-foreground">{item.quantity}</span>
+                              <button
+                                type="button"
+                                onClick={() => setQuantity(item.product.id, Math.min(item.quantity + 1, 99))}
+                                className="h-8 w-8 rounded-full text-base font-bold text-foreground hover:bg-secondary"
+                                aria-label={`Increase ${item.product.name} quantity`}
+                              >
+                                +
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeItem(item.product.id)}
+                              className="text-[11px] font-bold text-muted-foreground hover:text-destructive"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-5 space-y-2 border-t border-border/60 pt-4 text-sm">
+                  <div className="flex items-center justify-between text-muted-foreground">
+                    <span>Subtotal</span><span className="font-semibold text-foreground">₹{subtotal.toLocaleString("en-IN")}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-muted-foreground">
+                    <span>Delivery</span><span className="font-semibold text-foreground">{delivery === "pune" ? "Free" : "Added later"}</span>
+                  </div>
+                  <div className="flex items-end justify-between border-t border-border/60 pt-3">
+                    <span className="text-sm font-bold text-foreground">Total</span>
+                    <span className="font-heading text-3xl font-extrabold text-foreground">₹{total.toLocaleString("en-IN")}</span>
+                  </div>
+                </div>
+
+                <div className="mt-5 space-y-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-accent" aria-hidden="true" /> Server-side price verification</div>
+                  <div className="flex items-center gap-2"><LockKeyhole className="h-4 w-4 text-accent" aria-hidden="true" /> Payment secrets stay off the browser</div>
+                  <div className="flex items-center gap-2"><RefreshCw className="h-4 w-4 text-accent" aria-hidden="true" /> Safe retry messaging for network failures</div>
+                </div>
+              </>
+            )}
+          </aside>
+        </div>
+      </div>
+    </main>
+  )
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  error,
+  autoComplete,
+  inputMode,
+  multiline = false,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+  error?: string
+  autoComplete?: string
+  inputMode?: "text" | "tel" | "numeric"
+  multiline?: boolean
+}) {
+  const id = `checkout-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`
+  return (
+    <label htmlFor={id} className="flex flex-col gap-1.5">
+      <span className="text-sm font-bold text-foreground">{label}</span>
+      {multiline ? (
+        <textarea
+          id={id}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          rows={3}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${id}-error` : undefined}
+          className={`min-h-24 resize-none rounded-2xl border bg-white/45 px-4 py-3.5 text-sm text-foreground shadow-inner outline-none backdrop-blur-xl placeholder:text-muted-foreground/70 dark:bg-white/5 ${error ? "border-destructive/45" : "border-white/70 focus:border-primary/50"}`}
+        />
+      ) : (
+        <input
+          id={id}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          inputMode={inputMode}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${id}-error` : undefined}
+          className={`min-h-13 rounded-2xl border bg-white/45 px-4 py-3.5 text-sm text-foreground shadow-inner outline-none backdrop-blur-xl placeholder:text-muted-foreground/70 dark:bg-white/5 ${error ? "border-destructive/45" : "border-white/70 focus:border-primary/50"}`}
+        />
+      )}
+      {error && <span id={`${id}-error`} className="text-xs font-semibold text-destructive">{error}</span>}
+    </label>
+  )
+}
+
+function DeliveryCard({
+  selected,
+  icon,
+  title,
+  detail,
+  note,
+  onClick,
+}: {
+  selected: boolean
+  icon: React.ReactNode
+  title: string
+  detail: string
+  note: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`rounded-3xl border p-4 text-left transition-all ${selected ? "border-primary/40 bg-primary/10 shadow-lg shadow-primary/10" : "border-white/70 bg-white/30 hover:bg-white/50 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"}`}
+    >
+      <div className="flex items-start gap-3">
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${selected ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
+          {icon}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center justify-between gap-2">
+            <span className="text-sm font-bold text-foreground">{title}</span>
+            <span className={`text-[11px] font-extrabold uppercase tracking-wide ${selected ? "text-primary" : "text-muted-foreground"}`}>{detail}</span>
+          </span>
+          <span className="mt-1 block text-xs leading-5 text-muted-foreground">{note}</span>
+        </span>
+      </div>
+    </button>
+  )
+}
