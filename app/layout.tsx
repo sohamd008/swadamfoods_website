@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://swadamfoods.eu.cc'),
   title: 'Swadam Foods | Authentic Indian Snacks & Instant Premixes',
   description:
-    'Authentic Indian snacks — Patal Poha Chivda, instant Kanda Poha & Upma premixes. FSSAI registered. Order on WhatsApp.',
+    'Authentic Indian snacks — Patal Poha Chivda, instant Kanda Poha & Upma premixes. Secure online checkout with PhonePe and Razorpay.',
   alternates: {
     canonical: 'https://swadamfoods.eu.cc',
   },
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Swadam Foods | Authentic Indian Snacks',
     description:
-      'Handcrafted Patal Poha Chivda and instant Kanda Poha & Upma premixes. Order directly on WhatsApp.',
+      'Handcrafted Patal Poha Chivda and instant Kanda Poha & Upma premixes with secure online checkout.',
     type: 'website',
     url: 'https://swadamfoods.eu.cc',
     siteName: 'Swadam Foods',
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Swadam Foods | Authentic Indian Snacks',
     description:
-      'Handcrafted Patal Poha Chivda and instant Kanda Poha & Upma premixes.',
+      'Handcrafted Patal Poha Chivda and instant Kanda Poha & Upma premixes with secure online checkout.',
     images: ['/images/swadam-logo.webp'],
   },
 }
@@ -155,7 +155,7 @@ gtag('config', 'G-9MMSSWSXB0', { send_page_view: true });`}
                     { question: 'What products does Swadam Foods sell?', answer: 'We sell Patal Poha Chivda (200 g, ₹90), Instant Kanda Poha Premix (150 g, ₹70), and Instant Upma Premix (150 g, ₹70).' },
                     { question: 'How do I prepare the Instant Kanda Poha Premix?', answer: 'Empty the premix into a bowl, add hot boiling water equal to half the amount of premix (1 part water to 2 parts premix), cover and rest for 5 minutes.' },
                     { question: 'How do I prepare the Instant Upma Premix?', answer: 'Empty the premix into a bowl, add hot boiling water equal to the same amount as the premix (1:1 ratio), cover and rest for 5 minutes.' },
-                    { question: 'How do I order from Swadam Foods?', answer: 'Add products to the cart on our website, then check out via WhatsApp. We confirm the order and arrange delivery.' },
+                    { question: 'How do I order from Swadam Foods?', answer: 'Add products to the cart, complete the checkout form, and pay securely online. Payment is processed by PhonePe or, where used as an alternative, Razorpay. For help with an order, contact us on WhatsApp.' },
                     { question: 'Is Swadam Foods a registered business?', answer: 'Yes, we are FSSAI registered and UDYAM MSME registered. We are a women-owned business based in Pune, Maharashtra.' },
                   ].map((f) => ({
                     '@type': 'Question',
