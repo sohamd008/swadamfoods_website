@@ -257,10 +257,10 @@ export function CheckoutPage() {
       "",
       ...items.map(
         (item, index) =>
-          `${index + 1}. ${item.product.name} (${item.product.weight}) x${item.quantity} — ₹${item.product.price * item.quantity}`,
+          `${index + 1}. ${item.product.name} (${item.product.weight}) x${item.quantity} - Rs. ${item.product.price * item.quantity}`,
       ),
       "",
-      `Subtotal: ₹${subtotal}`,
+      `Subtotal: Rs. ${subtotal}`,
       delivery === "pune"
         ? "Delivery: Home delivery in Pune (FREE)"
         : "Delivery: Outside Pune via Porter (charges to be confirmed)",

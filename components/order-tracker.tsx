@@ -184,7 +184,7 @@ export function OrderTracker({ orderId }: { orderId: string }) {
   const isCancelled = order.orderStatus === "cancelled"
 
   const whatsappMessage = encodeURIComponent(
-    `Namaste Swadam Foods! 🙏 I have a question about my order *${order.id}* (Total: ₹${order.total}).`,
+    `Namaste Swadam Foods! I have a question about my order *${order.id}* (Total: Rs. ${order.total}).`,
   )
 
   return (

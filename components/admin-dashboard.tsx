@@ -73,11 +73,11 @@ function getWhatsAppMessage(order: Order, type: "accepted" | "preparing" | "pack
   const origin = typeof window !== "undefined" ? window.location.origin : "https://swadamfoods.eu.cc"
   const url = `${origin}/order/${order.id}`
   const msgs = {
-    accepted:  `Namaste ${order.customerName}! 🙏 Your Swadam Foods order *${order.id}* (₹${order.total}) is confirmed! We're preparing your fresh items now.\n\nTrack here: ${url}`,
-    preparing: `Namaste ${order.customerName}! 👨‍🍳 Your order *${order.id}* is being freshly prepared in our kitchen.\n\nTrack here: ${url}`,
-    packed:    `Namaste ${order.customerName}! 📦 Your order *${order.id}* is packed & ready for dispatch!\n\nTrack here: ${url}`,
-    shipped:   `Namaste ${order.customerName}! 🚚 Your Swadam Foods order *${order.id}* is out for delivery!\n\nTrack live: ${url}`,
-    delivered: `Namaste ${order.customerName}! 🎉 Your order *${order.id}* has been delivered! Thank you for choosing Swadam Foods. Enjoy your authentic Maharashtrian delicacies! 🙏`,
+    accepted:  `Namaste ${order.customerName}! Your Swadam Foods order *${order.id}* (Rs. ${order.total}) is confirmed. We are preparing your fresh items now.\n\nTrack here: ${url}`,
+    preparing: `Namaste ${order.customerName}! Your order *${order.id}* is being freshly prepared in our kitchen.\n\nTrack here: ${url}`,
+    packed:    `Namaste ${order.customerName}! Your order *${order.id}* is packed and ready for dispatch.\n\nTrack here: ${url}`,
+    shipped:   `Namaste ${order.customerName}! Your Swadam Foods order *${order.id}* is out for delivery.\n\nTrack live: ${url}`,
+    delivered: `Namaste ${order.customerName}! Your order *${order.id}* has been delivered. Thank you for choosing Swadam Foods. Enjoy your authentic Maharashtrian delicacies!`,
   }
   return msgs[type]
 }
