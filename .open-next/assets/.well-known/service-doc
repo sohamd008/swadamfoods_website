@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Swadam Foods Product Catalog API</title></head>
+<body>
+<h1>Swadam Foods Product Catalog API</h1>
+<p>A public, read-only machine-readable catalog of Swadam Foods products.</p>
+<h2>Endpoints</h2>
+<ul>
+<li><code>GET /api/products</code> — product names, pack sizes, prices, availability and preparation information.</li>
+<li><code>GET /api/status</code> — catalog service health status.</li>
+</ul>
+<p>Orders are placed directly with Swadam Foods through WhatsApp at +91 88888 51522.</p>
+<p>OpenAPI description: <a href="https://swadamfoods.eu.cc/.well-known/service-desc">/.well-known/service-desc</a></p>
+</body>
+</html>

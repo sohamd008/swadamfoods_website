@@ -1,4 +1,5 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare"
+import type { D1Database } from "@cloudflare/workers-types"
 import { products } from "@/lib/products"
 
 export const dynamic = "force-dynamic"
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
   const total = subtotal + deliveryFee
 
   const { env } = getCloudflareContext()
-  const db = env.DB
+  const db = (env as CloudflareEnv & { DB: D1Database }).DB
   const orderId = generateOrderId()
 
   try {
