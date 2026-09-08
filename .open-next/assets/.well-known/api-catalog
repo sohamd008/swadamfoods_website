@@ -1,0 +1,25 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://swadamfoods.eu.cc/api/products",
+      "service-desc": [
+        {
+          "href": "https://swadamfoods.eu.cc/.well-known/service-desc",
+          "type": "application/json"
+        }
+      ],
+      "service-doc": [
+        {
+          "href": "https://swadamfoods.eu.cc/.well-known/service-doc",
+          "type": "text/html"
+        }
+      ],
+      "status": [
+        {
+          "href": "https://swadamfoods.eu.cc/api/status",
+          "type": "application/json"
+        }
+      ]
+    }
+  ]
+}
