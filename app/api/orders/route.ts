@@ -4,9 +4,13 @@ import { products } from "@/lib/products"
 
 export const dynamic = "force-dynamic"
 
-const MAX_BODY_BYTES = 32 * 1024
-const RATE_LIMIT_WINDOW_SECONDS = 60
-const RATE_LIMIT_MAX_REQUESTS = 10
+const MAX_BODY_BYTES = 24 * 1024
+const MAX_ITEMS = 20
+const MAX_QUANTITY_PER_LINE = 20
+const MAX_TOTAL_QUANTITY = 50
+const MAX_NAME_LENGTH = 80
+const MAX_ADDRESS_LENGTH = 240
+const MAX_PHONE_LENGTH = 20
 
 type OrderItemInput = {
   productId: string
@@ -52,62 +56,32 @@ async function sha256Hex(value: string): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")
 }
 
-function getClientKey(request: Request): string {
-  const cloudflareIp = request.headers.get("CF-Connecting-IP")?.trim()
-  if (cloudflareIp) return cloudflareIp.slice(0, 128)
-  return "unknown"
-}
+function sameOrigin(request: Request): boolean {
+  const origin = request.headers.get("Origin")
+  if (!origin) return true
 
-function responseHeaders() {
-  return {
-    "Cache-Control": "no-store",
-    "X-Content-Type-Options": "nosniff",
+  try {
+    return new URL(origin).origin === new URL(request.url).origin
+  } catch {
+    return false
   }
 }
 
-function json(data: unknown, status = 200) {
-  return Response.json(data, { status, headers: responseHeaders() })
-}
-
-async function consumeRateLimit(db: D1Database, clientKey: string): Promise<{ allowed: boolean; retryAfter: number }> {
-  const now = Math.floor(Date.now() / 1000)
-  const windowStart = Math.floor(now / RATE_LIMIT_WINDOW_SECONDS) * RATE_LIMIT_WINDOW_SECONDS
-  const bucketKey = `orders:${clientKey}`
-
-  await db
-    .prepare(
-      `INSERT INTO api_rate_limits (bucket_key, window_start, request_count)
-       VALUES (?, ?, 1)
-       ON CONFLICT(bucket_key) DO UPDATE SET
-         window_start = excluded.window_start,
-         request_count = CASE
-           WHEN api_rate_limits.window_start != excluded.window_start THEN 1
-           ELSE api_rate_limits.request_count + 1
-         END`,
-    )
-    .bind(bucketKey, windowStart)
-    .run()
-
-  const row = await db
-    .prepare(`SELECT window_start, request_count FROM api_rate_limits WHERE bucket_key = ?`)
-    .bind(bucketKey)
-    .first<{ window_start: number; request_count: number }>()
-
-  if (!row) return { allowed: true, retryAfter: RATE_LIMIT_WINDOW_SECONDS }
-
-  const nextWindow = row.window_start + RATE_LIMIT_WINDOW_SECONDS
-  const retryAfter = Math.max(1, nextWindow - now)
-
-  return {
-    allowed: row.request_count <= RATE_LIMIT_MAX_REQUESTS,
-    retryAfter,
-  }
+function json(data: unknown, status = 200, extraHeaders?: Record<string, string>): Response {
+  return Response.json(data, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      ...extraHeaders,
+    },
+  })
 }
 
 async function getExistingOrder(db: D1Database, idempotencyKey: string) {
   const order = await db
     .prepare(
-      `SELECT id, subtotal, delivery_fee, total, currency, payment_status, order_status
+      `SELECT id, subtotal, delivery_fee, total, currency, payment_status, order_status, request_hash
        FROM orders WHERE idempotency_key = ? LIMIT 1`,
     )
     .bind(idempotencyKey)
@@ -119,13 +93,15 @@ async function getExistingOrder(db: D1Database, idempotencyKey: string) {
       currency: string
       payment_status: string
       order_status: string
+      request_hash: string | null
     }>()
 
   if (!order) return null
 
   const items = await db
     .prepare(
-      `SELECT product_id, product_name, weight, quantity, unit_price, line_total
+      `SELECT product_id AS productId, product_name AS productName, weight, quantity,
+              unit_price AS unitPrice, line_total AS lineTotal
        FROM order_items WHERE order_id = ? ORDER BY id ASC`,
     )
     .bind(order.id)
@@ -139,11 +115,16 @@ async function getExistingOrder(db: D1Database, idempotencyKey: string) {
     total: order.total,
     paymentStatus: order.payment_status,
     orderStatus: order.order_status,
+    requestHash: order.request_hash,
     items: items.results,
   }
 }
 
 export async function POST(request: Request) {
+  if (!sameOrigin(request)) {
+    return json({ error: "Invalid request origin." }, 403)
+  }
+
   const contentType = request.headers.get("content-type")?.toLowerCase() ?? ""
   if (!contentType.startsWith("application/json")) {
     return json({ error: "Content-Type must be application/json." }, 415)
@@ -151,10 +132,7 @@ export async function POST(request: Request) {
 
   const idempotencyKey = text(request.headers.get("Idempotency-Key"))
   if (!/^[A-Za-z0-9._:-]{16,128}$/.test(idempotencyKey)) {
-    return json(
-      { error: "A valid Idempotency-Key is required. Please retry from checkout." },
-      400,
-    )
+    return json({ error: "A valid Idempotency-Key is required. Please retry from checkout." }, 400)
   }
 
   const declaredLength = Number(request.headers.get("content-length") ?? "0")
@@ -162,59 +140,42 @@ export async function POST(request: Request) {
     return json({ error: "Request is too large." }, 413)
   }
 
+  const rawBody = await request.text()
+  if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) {
+    return json({ error: "Request is too large." }, 413)
+  }
+
+  let body: CreateOrderBody
+  try {
+    body = JSON.parse(rawBody) as CreateOrderBody
+  } catch {
+    return json({ error: "Invalid JSON request." }, 400)
+  }
+
+  if (!body || typeof body !== "object") {
+    return json({ error: "Invalid order request." }, 400)
+  }
+
+  const requestHash = await sha256Hex(rawBody)
   const { env } = getCloudflareContext()
   const db = (env as CloudflareEnv & { DB: D1Database }).DB
 
   try {
-    const rate = await consumeRateLimit(db, getClientKey(request))
-    if (!rate.allowed) {
-      return new Response(JSON.stringify({ error: "Too many order requests. Please wait a moment and try again." }), {
-        status: 429,
-        headers: {
-          ...responseHeaders(),
-          "Retry-After": String(rate.retryAfter),
-        },
-      })
-    }
-
-    const rawBody = await request.text()
-    if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) {
-      return json({ error: "Request is too large." }, 413)
-    }
-
-    let body: CreateOrderBody
-    try {
-      body = JSON.parse(rawBody) as CreateOrderBody
-    } catch {
-      return json({ error: "Invalid JSON request." }, 400)
-    }
-
-    const requestHash = await sha256Hex(rawBody)
     const existing = await getExistingOrder(db, idempotencyKey)
-
     if (existing) {
-      const stored = await db
-        .prepare(`SELECT request_hash FROM orders WHERE idempotency_key = ? LIMIT 1`)
-        .bind(idempotencyKey)
-        .first<{ request_hash: string | null }>()
-
-      if (stored?.request_hash && stored.request_hash !== requestHash) {
-        return json({ error: "This checkout request key was already used for a different order." }, 409)
+      if (existing.requestHash !== requestHash) {
+        return json({ error: "This checkout request key was already used for different order data." }, 409)
       }
-
-      return json(existing, 200)
-    }
-
-    if (!body || typeof body !== "object") {
-      return json({ error: "Invalid order request." }, 400)
+      const { requestHash: _requestHash, ...safeExisting } = existing
+      return json({ ...safeExisting, replayed: true }, 200)
     }
 
     if (!Array.isArray(body.items) || body.items.length === 0) {
       return json({ error: "Your cart is empty." }, 400)
     }
 
-    if (body.items.length > 20) {
-      return json({ error: "Too many different products in one order." }, 400)
+    if (body.items.length > MAX_ITEMS) {
+      return json({ error: `Too many different products in one order. Maximum is ${MAX_ITEMS}.` }, 400)
     }
 
     const name = text(body.customer?.name)
@@ -223,22 +184,18 @@ export async function POST(request: Request) {
     const pincode = text(body.customer?.pincode)
     const delivery = body.delivery
 
-    if (name.length < 2 || name.length > 80) {
+    if (name.length < 2 || name.length > MAX_NAME_LENGTH) {
       return json({ error: "Please enter a valid name." }, 400)
     }
-
-    if (address.length < 8 || address.length > 240) {
+    if (address.length < 8 || address.length > MAX_ADDRESS_LENGTH) {
       return json({ error: "Please enter a complete delivery address." }, 400)
     }
-
-    if (!/^[0-9+()\-\s]{10,20}$/.test(phone)) {
+    if (phone.length > MAX_PHONE_LENGTH || !/^[0-9+()\-\s]{10,20}$/.test(phone)) {
       return json({ error: "Please enter a valid phone number." }, 400)
     }
-
     if (!/^\d{6}$/.test(pincode)) {
       return json({ error: "Please enter a valid 6-digit pincode." }, 400)
     }
-
     if (delivery !== "pune" && delivery !== "porter") {
       return json({ error: "Invalid delivery method." }, 400)
     }
@@ -250,17 +207,19 @@ export async function POST(request: Request) {
       if (
         !item ||
         typeof item.productId !== "string" ||
-        item.productId.length > 100 ||
+        item.productId.length === 0 ||
+        item.productId.length > 80 ||
+        !/^[a-z0-9-]+$/.test(item.productId) ||
         !Number.isInteger(item.quantity) ||
         item.quantity < 1 ||
-        item.quantity > 20
+        item.quantity > MAX_QUANTITY_PER_LINE
       ) {
         return json({ error: "Invalid cart item." }, 400)
       }
 
       totalQuantity += item.quantity
-      if (totalQuantity > 50) {
-        return json({ error: "The maximum quantity per order is 50 items." }, 400)
+      if (totalQuantity > MAX_TOTAL_QUANTITY) {
+        return json({ error: `The maximum quantity per order is ${MAX_TOTAL_QUANTITY} items.` }, 400)
       }
 
       const product = products.find((candidate) => candidate.id === item.productId)
@@ -287,46 +246,20 @@ export async function POST(request: Request) {
       db
         .prepare(
           `INSERT INTO orders (
-            id,
-            customer_name,
-            customer_phone,
-            customer_address,
-            pincode,
-            delivery_method,
-            subtotal,
-            delivery_fee,
-            total,
-            currency,
-            payment_status,
-            order_status,
-            idempotency_key,
-            request_hash
+            id, customer_name, customer_phone, customer_address, pincode,
+            delivery_method, subtotal, delivery_fee, total, currency,
+            payment_status, order_status, idempotency_key, request_hash
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'INR', 'pending', 'new', ?, ?)`,
         )
         .bind(
-          orderId,
-          name,
-          phone,
-          address,
-          pincode,
-          delivery,
-          subtotal,
-          deliveryFee,
-          total,
-          idempotencyKey,
-          requestHash,
+          orderId, name, phone, address, pincode, delivery,
+          subtotal, deliveryFee, total, idempotencyKey, requestHash,
         ),
       ...normalizedItems.map((item) =>
         db
           .prepare(
             `INSERT INTO order_items (
-              order_id,
-              product_id,
-              product_name,
-              weight,
-              quantity,
-              unit_price,
-              line_total
+              order_id, product_id, product_name, weight, quantity, unit_price, line_total
             ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
           )
           .bind(
@@ -353,15 +286,25 @@ export async function POST(request: Request) {
         paymentStatus: "pending",
         orderStatus: "new",
         items: normalizedItems,
+        replayed: false,
       },
       201,
     )
   } catch (error) {
-    console.error("Failed to create order:", error)
+    const message = error instanceof Error ? error.message : ""
 
-    return json(
-      { error: "We couldn't create your order right now. Please try again." },
-      500,
-    )
+    if (message.includes("UNIQUE constraint failed: orders.idempotency_key")) {
+      const existing = await getExistingOrder(db, idempotencyKey)
+      if (existing) {
+        if (existing.requestHash !== requestHash) {
+          return json({ error: "This checkout request key was already used for different order data." }, 409)
+        }
+        const { requestHash: _requestHash, ...safeExisting } = existing
+        return json({ ...safeExisting, replayed: true }, 200)
+      }
+    }
+
+    console.error("Failed to create order:", error)
+    return json({ error: "We couldn't create your order right now. Please try again." }, 500)
   }
 }
