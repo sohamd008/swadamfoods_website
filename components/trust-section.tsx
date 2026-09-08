@@ -27,13 +27,13 @@ const credentials = [
 
 export function TrustSection() {
   return (
-    <section id="trust" className="scroll-mt-20 bg-secondary/40 py-16 md:py-20">
+    <section id="trust" className="relative scroll-mt-20 py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="mx-auto mb-10 max-w-2xl text-center">
-          <span className="text-sm font-semibold uppercase tracking-widest text-primary">
+        <div className="mx-auto mb-12 max-w-2xl text-center">
+          <span className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary shadow-xs">
             Why Swadam
           </span>
-          <h2 className="mt-2 text-balance font-heading text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+          <h2 className="mt-4 text-balance font-heading text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
             Registered and ready to serve
           </h2>
           <p className="mt-3 text-pretty text-muted-foreground">
@@ -41,24 +41,24 @@ export function TrustSection() {
           </p>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {credentials.map(({ icon: Icon, title, description, reg }) => (
             <div
               key={title}
-              className="group flex flex-col overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-lg"
+              className="glass-card flex flex-col rounded-[2.2rem] p-7"
             >
               <div className="flex items-start justify-between gap-4">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/12 text-accent">
+                <span className="flex h-13 w-13 items-center justify-center rounded-2xl bg-accent/15 text-accent shadow-inner border border-accent/20">
                   <Icon className="h-6 w-6" aria-hidden="true" />
                 </span>
                 {reg && (
-                  <span className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
-                    Registered
+                  <span className="glass-pill rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-accent">
+                    Verified
                   </span>
                 )}
               </div>
 
-              <h3 className="mt-4 font-heading text-lg font-bold text-foreground">
+              <h3 className="mt-5 font-heading text-xl font-extrabold text-foreground">
                 {title}
               </h3>
               <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
@@ -66,11 +66,11 @@ export function TrustSection() {
               </p>
 
               {reg && (
-                <div className="mt-5 rounded-2xl border border-border bg-secondary/45 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    {reg.label} Registration No.
+                <div className="mt-6 glass-pill rounded-2xl p-4">
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">
+                    {reg.label} Reg No.
                   </p>
-                  <p className="mt-1 break-all font-mono text-sm font-semibold text-foreground">
+                  <p className="mt-1 break-all font-mono text-xs font-bold text-foreground">
                     {reg.value}
                   </p>
                 </div>

@@ -13,17 +13,17 @@ export const navLinks = [
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/95 supports-[backdrop-filter]:bg-background/85">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-        <a href="#top" className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-          <span className="flex items-center justify-center overflow-hidden rounded-xl bg-[#f7f2e7] p-1 ring-1 ring-border">
+    <header className="sticky top-3 z-50 mx-auto max-w-6xl px-4 sm:px-6">
+      <div className="glass-header flex h-16 items-center justify-between gap-4 rounded-full px-4 sm:px-6">
+        <a href="#top" className="flex min-w-0 items-center gap-2.5 sm:gap-3 transition-transform hover:scale-[1.02] active:scale-95">
+          <span className="flex items-center justify-center overflow-hidden rounded-2xl bg-[#f7f2e7]/90 p-1 shadow-sm ring-1 ring-white/60">
             <Image
               src="/images/swadam-logo.webp"
               alt="Swadam Foods logo"
               width={112}
               height={36}
               sizes="56px"
-              className="h-9 w-auto shrink-0"
+              className="h-8 w-auto shrink-0"
             />
           </span>
           <span className="flex min-w-0 flex-col leading-none">
@@ -36,12 +36,12 @@ export function SiteHeader() {
           </span>
         </a>
 
-        <nav className="hidden items-center gap-8 md:flex" aria-label="Main navigation">
+        <nav className="hidden items-center gap-1 rounded-full border border-white/40 bg-white/30 p-1 backdrop-blur-md dark:border-white/10 dark:bg-white/5 md:flex" aria-label="Main navigation">
           {navLinks.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-full px-4 py-1.5 text-xs font-bold text-muted-foreground transition-all hover:bg-white/60 hover:text-foreground hover:shadow-xs dark:hover:bg-white/10"
             >
               {link.label}
             </a>

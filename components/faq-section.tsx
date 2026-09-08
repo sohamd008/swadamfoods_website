@@ -37,18 +37,17 @@ export function FaqSection() {
   const waLink = `https://wa.me/${WHATSAPP_NUMBER}`
 
   return (
-    <section id="faq" className="scroll-mt-20 py-16 md:py-20">
+    <section id="faq" className="relative scroll-mt-20 py-16 md:py-24">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
-        <div className="mb-10 text-center">
-          <span className="text-sm font-semibold uppercase tracking-widest text-primary">
+        <div className="mb-12 text-center">
+          <span className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary shadow-xs">
             Questions & Answers
           </span>
-          <h2 className="mt-2 text-balance font-heading text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+          <h2 className="mt-4 text-balance font-heading text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
             Frequently asked questions
           </h2>
           <p className="mt-3 text-pretty text-muted-foreground">
-            Everything you need to know about our Indian snacks and instant
-            premixes.
+            Everything you need to know about our Indian snacks and instant premixes.
           </p>
         </div>
 
@@ -56,25 +55,25 @@ export function FaqSection() {
           {faqs.map((faq) => (
             <div
               key={faq.question}
-              className="rounded-2xl border border-border bg-card p-5 shadow-sm"
+              className="glass-card rounded-3xl p-6"
             >
-              <h3 className="font-heading text-base font-bold text-foreground">
+              <h3 className="font-heading text-lg font-extrabold text-foreground">
                 {faq.question}
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
                 {faq.answer}
               </p>
             </div>
           ))}
         </div>
 
-        <p className="mt-8 text-center text-sm text-muted-foreground">
+        <p className="mt-10 text-center text-sm text-muted-foreground">
           Still have questions?{" "}
           <a
             href={waLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-semibold text-primary transition-colors hover:text-accent"
+            className="font-bold text-primary transition-colors hover:text-accent underline underline-offset-4"
           >
             Message us on WhatsApp
           </a>{" "}
