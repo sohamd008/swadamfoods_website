@@ -18,7 +18,7 @@ export function SiteFooter() {
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <div className="flex flex-col items-center gap-6 rounded-3xl bg-primary px-6 py-12 text-center">
           <h2 className="text-balance font-heading text-3xl font-extrabold tracking-tight text-primary-foreground sm:text-4xl">Ready to order?</h2>
-          <p className="max-w-md text-pretty text-primary-foreground/80">Add your favourites to the cart and check out on WhatsApp, or message us directly — we&apos;re happy to help.</p>
+          <p className="max-w-md text-pretty text-primary-foreground/80">Add your favourites to the cart and pay securely online. Need help with an order? Message us directly on WhatsApp.</p>
           <a href={waLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full bg-background px-6 py-3 text-sm font-semibold text-foreground transition-transform hover:scale-[1.03] active:scale-95">
             <MessageCircle className="h-4 w-4" aria-hidden="true" /> Chat on WhatsApp
           </a>
@@ -40,7 +40,7 @@ export function SiteFooter() {
               <svg className="h-4 w-4 shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <rect width="20" height="20" x="2" y="2" rx="5" />
                 <circle cx="12" cy="12" r="4" />
-                <circle cx="17.5" cy="6.5" r="0.75" fill="currentColor" stroke="none" />
+                <circle cx="17.5" cy="6.5" cy="6.5" r="0.75" fill="currentColor" stroke="none" />
               </svg>
               @swadamfoodsindia
             </a>
@@ -62,9 +62,11 @@ export function SiteFooter() {
             <nav className="grid grid-cols-2 gap-x-6 gap-y-2 sm:flex sm:flex-wrap sm:justify-end sm:gap-5" aria-label="Legal">
               <Link href="/terms" className="text-xs font-medium text-muted-foreground transition-colors hover:text-primary">Terms &amp; Conditions</Link>
               <Link href="/privacy-policy" className="text-xs font-medium text-muted-foreground transition-colors hover:text-primary">Privacy Policy</Link>
+              <Link href="/payment-policy" className="text-xs font-medium text-muted-foreground transition-colors hover:text-primary">Payments &amp; Security</Link>
               <Link href="/refund-policy" className="text-xs font-medium text-muted-foreground transition-colors hover:text-primary">Refund &amp; Cancellation</Link>
               <Link href="/return-policy" className="text-xs font-medium text-muted-foreground transition-colors hover:text-primary">Return Policy</Link>
               <Link href="/shipping-policy" className="text-xs font-medium text-muted-foreground transition-colors hover:text-primary">Shipping Policy</Link>
+              <Link href="/cookie-policy" className="text-xs font-medium text-muted-foreground transition-colors hover:text-primary">Cookie &amp; Analytics</Link>
             </nav>
           </div>
         </div>
