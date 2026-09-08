@@ -1,10 +1,11 @@
 import { WHATSAPP_NUMBER } from "@/lib/products"
+import { HelpCircle, ChevronDown } from "lucide-react"
 
 const faqs = [
   {
     question: "What products does Swadam Foods sell?",
     answer:
-      "We sell three products: Patal Poha Chivda (200 g, ₹90), a ready-to-eat crunchy flattened rice snack; Instant Kanda Poha Premix (150 g, ₹70), ready in 5 minutes with hot water; and Instant Upma Premix (150 g, ₹70), also ready in 5 minutes with hot water.",
+      "We sell three handcrafted products: Patal Poha Chivda (200 g, ₹90), a ready-to-eat crunchy flattened rice snack; Instant Kanda Poha Premix (150 g, ₹70), ready in 5 minutes with hot water; and Instant Upma Premix (150 g, ₹70), also ready in 5 minutes with hot water.",
   },
   {
     question: "How do I prepare the Instant Kanda Poha Premix?",
@@ -19,7 +20,7 @@ const faqs = [
   {
     question: "How do I order from Swadam Foods?",
     answer:
-      "Add your favourite products to the cart on our website, then check out via WhatsApp. We confirm the order and arrange delivery. You can also message us directly on WhatsApp at +91 88888 51522.",
+      "Add your favourite products to the cart on our website, then proceed to checkout to enter your delivery address and pay securely online via PhonePe/UPI. You will receive live order tracking and live updates on WhatsApp.",
   },
   {
     question: "Is Swadam Foods a registered business?",
@@ -47,27 +48,29 @@ export function FaqSection() {
             Frequently asked questions
           </h2>
           <p className="mt-3 text-pretty text-muted-foreground">
-            Everything you need to know about our Indian snacks and instant premixes.
+            Everything you need to know about our Indian snacks, instant premixes, and ordering.
           </p>
         </div>
 
-        <div className="flex flex-col gap-4">
-          {faqs.map((faq) => (
+        {/* iOS Inset Grouped FAQ List */}
+        <div className="overflow-hidden rounded-[2.2rem] border border-white/70 bg-white/40 shadow-xl backdrop-blur-2xl divide-y divide-border/60 dark:border-white/10 dark:bg-white/5">
+          {faqs.map((faq, idx) => (
             <div
-              key={faq.question}
-              className="glass-card rounded-3xl p-6"
+              key={idx}
+              className="p-6 transition-colors hover:bg-white/30 dark:hover:bg-white/[0.03]"
             >
-              <h3 className="font-heading text-lg font-extrabold text-foreground">
-                {faq.question}
+              <h3 className="flex items-center gap-2.5 font-heading text-base font-bold text-foreground">
+                <HelpCircle className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                <span>{faq.question}</span>
               </h3>
-              <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
+              <p className="mt-2 pl-6.5 text-xs sm:text-sm leading-relaxed text-muted-foreground">
                 {faq.answer}
               </p>
             </div>
           ))}
         </div>
 
-        <p className="mt-10 text-center text-sm text-muted-foreground">
+        <p className="mt-10 text-center text-xs sm:text-sm text-muted-foreground">
           Still have questions?{" "}
           <a
             href={waLink}
@@ -75,7 +78,7 @@ export function FaqSection() {
             rel="noopener noreferrer"
             className="font-bold text-primary transition-colors hover:text-accent underline underline-offset-4"
           >
-            Message us on WhatsApp
+            Message us on WhatsApp (+91 88888 51522)
           </a>{" "}
           and we&apos;ll be happy to help.
         </p>
