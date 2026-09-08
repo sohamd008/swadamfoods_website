@@ -9,8 +9,15 @@ export function MobileMenu() {
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : ""
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false)
+    }
+    if (open) {
+      window.addEventListener("keydown", handleKeyDown)
+    }
     return () => {
       document.body.style.overflow = ""
+      window.removeEventListener("keydown", handleKeyDown)
     }
   }, [open])
 
@@ -35,6 +42,7 @@ export function MobileMenu() {
               type="button"
               onClick={() => setOpen(false)}
               className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-xl"
+              aria-label="Close navigation menu"
             >
               <X className="h-6 w-6" aria-hidden="true" />
             </button>

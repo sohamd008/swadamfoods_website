@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { WHATSAPP_NUMBER } from "@/lib/products"
 import {
   ChefHat,
   Truck,
@@ -47,9 +48,6 @@ type Order = {
   updatedAt: string
   items: OrderItem[]
 }
-
-const MERCHANT_WHATSAPP = "8888851522"
-const DEFAULT_ADMIN_KEY = "swadam8888851522"
 
 const STATUS = {
   new:       { label: "New Order",        dot: "#F59E0B", bg: "#FEF3C7", text: "#92400E", border: "#FCD34D" },
@@ -313,7 +311,11 @@ export function AdminDashboard() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
-    const key = inputKey.trim() || DEFAULT_ADMIN_KEY
+    const key = inputKey.trim()
+    if (!key) {
+      setAuthError("Please enter your admin passcode.")
+      return
+    }
     localStorage.setItem("swadam_admin_key", key)
     setAdminKey(key)
     fetchOrders(key)
@@ -400,7 +402,7 @@ export function AdminDashboard() {
               {loading ? "Verifying…" : "Open Dashboard"}
             </button>
           </form>
-          <p className="text-xs text-stone-300">WhatsApp Business · +91 {MERCHANT_WHATSAPP}</p>
+          <p className="text-xs text-stone-300">WhatsApp Business · +{WHATSAPP_NUMBER}</p>
         </div>
       </div>
     )
@@ -425,13 +427,13 @@ export function AdminDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowSearch(!showSearch)} className="w-12 h-12 rounded-2xl bg-stone-100 hover:bg-stone-200 flex items-center justify-center transition active:scale-95">
+            <button onClick={() => setShowSearch(!showSearch)} className="w-12 h-12 rounded-2xl bg-stone-100 hover:bg-stone-200 flex items-center justify-center transition active:scale-95" aria-label="Toggle search">
               <Search className="w-5 h-5 text-stone-500" />
             </button>
-            <button onClick={() => fetchOrders(adminKey)} className="w-12 h-12 rounded-2xl bg-stone-100 hover:bg-stone-200 flex items-center justify-center transition active:scale-95">
+            <button onClick={() => fetchOrders(adminKey)} className="w-12 h-12 rounded-2xl bg-stone-100 hover:bg-stone-200 flex items-center justify-center transition active:scale-95" aria-label="Refresh orders">
               <RotateCcw className={`w-5 h-5 text-stone-500 ${loading ? "animate-spin" : ""}`} />
             </button>
-            <button onClick={handleLogout} className="w-12 h-12 rounded-2xl bg-red-50 hover:bg-red-100 flex items-center justify-center transition active:scale-95">
+            <button onClick={handleLogout} className="w-12 h-12 rounded-2xl bg-red-50 hover:bg-red-100 flex items-center justify-center transition active:scale-95" aria-label="Log out">
               <LogOut className="w-5 h-5 text-red-400" />
             </button>
           </div>

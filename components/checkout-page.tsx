@@ -25,6 +25,7 @@ import {
 } from "lucide-react"
 import { useCart } from "@/lib/cart-context"
 import { trackEvent } from "@/lib/analytics"
+import { WHATSAPP_NUMBER } from "@/lib/products"
 
 declare global {
   interface Window {
@@ -247,6 +248,9 @@ export function CheckoutPage() {
   const deliveryFee = 0
   const total = subtotal + deliveryFee
 
+  const isSubmittingOrPaying = submitState === "submitting" || paymentState === "opening" || paymentState === "paying"
+  const canSubmitOrder = !isSubmittingOrPaying && isOnline && items.length > 0 && phonePeReady
+
   const whatsappHref = useMemo(() => {
     const lines = [
       "Hello Swadam Foods! I'd like to confirm my order:",
@@ -266,7 +270,7 @@ export function CheckoutPage() {
       order ? `Order ID: ${order.orderId}` : "",
     ].filter(Boolean)
 
-    return `https://wa.me/918888851522?text=${encodeURIComponent(lines.join("\n"))}`
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join("\n"))}`
   }, [address, delivery, items, name, order, phone, pincode, subtotal])
 
   function validate() {
@@ -583,8 +587,17 @@ export function CheckoutPage() {
               <div className="flex items-center gap-3 rounded-2xl border border-accent/15 bg-accent/7 px-4 py-3"><ShieldCheck className="h-5 w-5 shrink-0 text-accent" aria-hidden="true" /><p className="text-xs leading-5 text-foreground"><span className="font-bold">Your payment is protected.</span> We never need your UPI PIN, OTP, CVV or banking password.</p></div>
               <div className="hidden sm:flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex max-w-md items-start gap-2 text-xs leading-5 text-muted-foreground"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" /><p>Fill in your details, take one secure payment step, then get back to eating.</p></div>
-                <button type="button" onClick={() => void submitOrder()} disabled={submitState === "submitting" || paymentState === "opening" || paymentState === "paying" || !isOnline || items.length === 0 || !phonePeReady} className="inline-flex min-h-13 items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary px-6 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0">
-                  {submitState === "submitting" || paymentState === "opening" || paymentState === "paying" ? <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />{paymentState === "paying" ? "Payment open…" : "Preparing secure payment…"}</> : <>{order ? "Pay securely" : `Pay securely · ₹${total.toLocaleString("en-IN")}`}<ChevronRight className="h-5 w-5" aria-hidden="true" /></>}
+                <button
+                  type="button"
+                  onClick={() => void submitOrder()}
+                  disabled={!canSubmitOrder}
+                  className="inline-flex min-h-13 items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary px-6 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0"
+                >
+                  {isSubmittingOrPaying ? (
+                    <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />{paymentState === "paying" ? "Payment open…" : "Preparing secure payment…"}</>
+                  ) : (
+                    <>{order ? "Pay securely" : `Pay securely · ₹${total.toLocaleString("en-IN")}`}<ChevronRight className="h-5 w-5" aria-hidden="true" /></>
+                  )}
                 </button>
               </div>
             </div>
@@ -611,10 +624,10 @@ export function CheckoutPage() {
             <button
               type="button"
               onClick={() => void submitOrder()}
-              disabled={submitState === "submitting" || paymentState === "opening" || paymentState === "paying" || !isOnline || items.length === 0 || !phonePeReady}
+              disabled={!canSubmitOrder}
               className="flex min-h-13 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/25 transition-all active:scale-95 disabled:opacity-50"
             >
-              {submitState === "submitting" || paymentState === "opening" || paymentState === "paying" ? (
+              {isSubmittingOrPaying ? (
                 <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> {paymentState === "paying" ? "Opening..." : "Processing..."}</>
               ) : (
                 <>Pay securely <ChevronRight className="h-5 w-5" aria-hidden="true" /></>

@@ -1,6 +1,10 @@
 # Generated build output
 out/
 .next/
+.open-next/cache/
+.open-next/.build/
+*.tsbuildinfo
+tsconfig.tsbuildinfo
 
 # Local development
 node_modules/

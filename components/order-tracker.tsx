@@ -23,6 +23,7 @@ import {
   ShieldCheck,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { WHATSAPP_NUMBER } from "@/lib/products"
 
 type OrderItem = {
   productName: string
@@ -49,8 +50,6 @@ type OrderDetails = {
   updatedAt: string
   items: OrderItem[]
 }
-
-const MERCHANT_WHATSAPP = "8888851522"
 
 const STAGES = [
   {
@@ -262,6 +261,7 @@ export function OrderTracker({ orderId }: { orderId: string }) {
                   onClick={copyOrderId}
                   className="rounded-xl border border-border p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition"
                   title="Copy Order ID"
+                  aria-label="Copy Order ID"
                 >
                   {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
                 </button>
@@ -447,13 +447,13 @@ export function OrderTracker({ orderId }: { orderId: string }) {
           </div>
 
           <a
-            href={`https://wa.me/91${MERCHANT_WHATSAPP}?text=${whatsappMessage}`}
+            href={`https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappMessage}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 px-6 py-3.5 text-xs font-bold text-white shadow-lg shadow-emerald-600/25 transition-all hover:scale-[1.02] active:scale-95"
           >
             <PhoneCall className="h-4 w-4" />
-            <span>Chat on WhatsApp (+91 {MERCHANT_WHATSAPP})</span>
+            <span>Chat on WhatsApp (+{WHATSAPP_NUMBER})</span>
             <ExternalLink className="h-4 w-4 ml-1 opacity-80" />
           </a>
         </div>

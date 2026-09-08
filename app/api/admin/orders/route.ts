@@ -3,8 +3,6 @@ import type { D1Database } from "@cloudflare/workers-types"
 
 export const dynamic = "force-dynamic"
 
-const DEFAULT_ADMIN_KEY = "swadam8888851522"
-
 function json(data: unknown, status = 200) {
   return Response.json(data, {
     status,
@@ -16,7 +14,10 @@ function json(data: unknown, status = 200) {
 }
 
 function verifyAdminKey(request: Request, env: Record<string, string | undefined>): boolean {
-  const adminKey = env.ADMIN_SECRET_KEY || DEFAULT_ADMIN_KEY
+  const adminKey = env.ADMIN_SECRET_KEY || process.env.ADMIN_SECRET_KEY
+  if (!adminKey) {
+    return false
+  }
   const headerKey = request.headers.get("x-admin-key")?.trim()
   const authHeader = request.headers.get("authorization")?.replace("Bearer ", "").trim()
   const urlKey = new URL(request.url).searchParams.get("key")?.trim()
@@ -69,6 +70,34 @@ function getCF() {
   }
 }
 
+function filterOrders<T extends { id: string; customerName: string; customerPhone: string; pincode: string; orderStatus: string }>(
+  orders: T[],
+  statusFilter?: string | null,
+  searchQuery?: string | null,
+): T[] {
+  let result = orders
+  if (statusFilter && statusFilter !== "all") {
+    if (statusFilter === "active") {
+      result = result.filter((o) =>
+        ["new", "accepted", "preparing", "packed", "shipped"].includes(o.orderStatus),
+      )
+    } else {
+      result = result.filter((o) => o.orderStatus === statusFilter)
+    }
+  }
+
+  if (searchQuery) {
+    result = result.filter(
+      (o) =>
+        o.id.toLowerCase().includes(searchQuery) ||
+        o.customerName.toLowerCase().includes(searchQuery) ||
+        o.customerPhone.includes(searchQuery) ||
+        o.pincode.includes(searchQuery),
+    )
+  }
+  return result
+}
+
 let inMemoryOrders = [
   {
     id: "SWD-20260909-A1B2C3D4",
@@ -77,9 +106,9 @@ let inMemoryOrders = [
     customerAddress: "Flat 402, Sunshine Heights, FC Road, Pune",
     pincode: "411004",
     deliveryMethod: "pune",
-    subtotal: 750,
+    subtotal: 480,
     deliveryFee: 0,
-    total: 750,
+    total: 480,
     currency: "INR",
     paymentGateway: "phonepe",
     gatewayOrderId: "T260909010418",
@@ -88,8 +117,8 @@ let inMemoryOrders = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     items: [
-      { id: 1, product_name: "Maharashtrian Ukadiche Modak", weight: "6 pcs", quantity: 2, unit_price: 250, line_total: 500 },
-      { id: 2, product_name: "Puran Poli", weight: "5 pcs", quantity: 1, unit_price: 250, line_total: 250 },
+      { id: 1, product_name: "Patal Poha Chivda", weight: "500g", quantity: 2, unit_price: 160, line_total: 320 },
+      { id: 2, product_name: "Instant Kanda Poha Premix", weight: "250g", quantity: 2, unit_price: 80, line_total: 160 },
     ],
   },
   {
@@ -99,9 +128,9 @@ let inMemoryOrders = [
     customerAddress: "12, Garden View Apartments, Kothrud, Pune",
     pincode: "411038",
     deliveryMethod: "porter",
-    subtotal: 450,
-    deliveryFee: 50,
-    total: 500,
+    subtotal: 240,
+    deliveryFee: 0,
+    total: 240,
     currency: "INR",
     paymentGateway: null,
     gatewayOrderId: null,
@@ -110,8 +139,8 @@ let inMemoryOrders = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     items: [
-      { id: 3, product_name: "Special Chivda", weight: "500g", quantity: 1, unit_price: 200, line_total: 200 },
-      { id: 4, product_name: "Besan Ladoo", weight: "500g", quantity: 1, unit_price: 250, line_total: 250 },
+      { id: 3, product_name: "Patal Poha Chivda", weight: "500g", quantity: 1, unit_price: 160, line_total: 160 },
+      { id: 4, product_name: "Instant Upma Premix", weight: "250g", quantity: 1, unit_price: 80, line_total: 80 },
     ],
   },
 ]
@@ -127,29 +156,7 @@ export async function GET(request: Request) {
   const searchQuery = searchParams.get("search")?.trim().toLowerCase()
 
   if (!db || typeof db.prepare !== "function") {
-    let formattedOrders = [...inMemoryOrders]
-
-    if (statusFilter && statusFilter !== "all") {
-      if (statusFilter === "active") {
-        formattedOrders = formattedOrders.filter((o) =>
-          ["new", "accepted", "preparing", "packed", "shipped"].includes(o.orderStatus),
-        )
-      } else {
-        formattedOrders = formattedOrders.filter((o) => o.orderStatus === statusFilter)
-      }
-    }
-
-    if (searchQuery) {
-      formattedOrders = formattedOrders.filter(
-        (o) =>
-          o.id.toLowerCase().includes(searchQuery) ||
-          o.customerName.toLowerCase().includes(searchQuery) ||
-          o.customerPhone.includes(searchQuery) ||
-          o.pincode.includes(searchQuery),
-      )
-    }
-
-    return json({ orders: formattedOrders })
+    return json({ orders: filterOrders([...inMemoryOrders], statusFilter, searchQuery) })
   }
 
   try {
@@ -181,7 +188,7 @@ export async function GET(request: Request) {
       itemsMap.set(item.order_id, list)
     }
 
-    let formattedOrders = rawOrders.map((order) => ({
+    const formattedOrders = rawOrders.map((order) => ({
       id: order.id,
       customerName: order.customer_name,
       customerPhone: order.customer_phone,
@@ -201,49 +208,10 @@ export async function GET(request: Request) {
       items: itemsMap.get(order.id) ?? [],
     }))
 
-    if (statusFilter && statusFilter !== "all") {
-      if (statusFilter === "active") {
-        formattedOrders = formattedOrders.filter((o) =>
-          ["new", "accepted", "preparing", "packed", "shipped"].includes(o.orderStatus),
-        )
-      } else {
-        formattedOrders = formattedOrders.filter((o) => o.orderStatus === statusFilter)
-      }
-    }
-
-    if (searchQuery) {
-      formattedOrders = formattedOrders.filter(
-        (o) =>
-          o.id.toLowerCase().includes(searchQuery) ||
-          o.customerName.toLowerCase().includes(searchQuery) ||
-          o.customerPhone.includes(searchQuery) ||
-          o.pincode.includes(searchQuery),
-      )
-    }
-
-    return json({ orders: formattedOrders })
+    return json({ orders: filterOrders(formattedOrders, statusFilter, searchQuery) })
   } catch (error) {
     console.warn("Failed to fetch admin orders from DB, returning in-memory fallback:", error)
-    let formattedOrders = [...inMemoryOrders]
-    if (statusFilter && statusFilter !== "all") {
-      if (statusFilter === "active") {
-        formattedOrders = formattedOrders.filter((o) =>
-          ["new", "accepted", "preparing", "packed", "shipped"].includes(o.orderStatus),
-        )
-      } else {
-        formattedOrders = formattedOrders.filter((o) => o.orderStatus === statusFilter)
-      }
-    }
-    if (searchQuery) {
-      formattedOrders = formattedOrders.filter(
-        (o) =>
-          o.id.toLowerCase().includes(searchQuery) ||
-          o.customerName.toLowerCase().includes(searchQuery) ||
-          o.customerPhone.includes(searchQuery) ||
-          o.pincode.includes(searchQuery),
-      )
-    }
-    return json({ orders: formattedOrders })
+    return json({ orders: filterOrders([...inMemoryOrders], statusFilter, searchQuery) })
   }
 }
 
