@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { checkRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit"
 
 const SWADAM_MARKDOWN = `# Swadam Foods — Authentic Homemade Delicacies & Instant Premixes
 
@@ -59,6 +60,21 @@ const LINK_HEADERS = [
   '</auth.md>; rel="describedby"'
 ].join(", ")
 
+const CSP_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://mercury.phonepe.com https://www.googletagmanager.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: https: blob:",
+  "font-src 'self' data:",
+  "connect-src 'self' https://api.phonepe.com https://mercury.phonepe.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com",
+  "frame-src 'self' https://mercury.phonepe.com",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self' https://mercury.phonepe.com",
+  "upgrade-insecure-requests",
+].join("; ")
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || request.nextUrl.host
@@ -72,9 +88,38 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(destinationUrl.toString(), 301)
   }
 
+  // 2. Edge Rate Limiting on API endpoints (prevents abuse, high API consumption, and DDoS)
+  if (pathname.startsWith("/api") && !pathname.startsWith("/api/webhooks/phonepe")) {
+    let limit = 60
+    let windowMs = 60000
+    let action = "api_general"
+
+    if (pathname === "/api/orders" && request.method === "POST") {
+      limit = 5
+      action = "create_order"
+    } else if (pathname === "/api/payments/phonepe" && request.method === "POST") {
+      limit = 5
+      action = "init_payment"
+    } else if (pathname.startsWith("/api/payments/phonepe/status")) {
+      limit = 30
+      action = "payment_status"
+    } else if (pathname.startsWith("/api/admin")) {
+      limit = 10
+      action = "admin_access"
+    } else if (pathname.startsWith("/api/orders/")) {
+      limit = 20
+      action = "track_order"
+    }
+
+    const rateResult = checkRateLimit(request, { limit, windowMs, action })
+    if (!rateResult.success) {
+      return rateLimitExceededResponse(rateResult)
+    }
+  }
+
   const acceptHeader = request.headers.get("accept") || ""
 
-  // 2. Markdown for Agents Content Negotiation
+  // 3. Markdown for Agents Content Negotiation
   if (
     acceptHeader.includes("text/markdown") &&
     !pathname.startsWith("/api") &&
@@ -89,22 +134,24 @@ export function middleware(request: NextRequest) {
         "Cache-Control": "public, max-age=3600, s-maxage=86400",
         "x-markdown-tokens": tokenEstimate.toString(),
         "Link": LINK_HEADERS,
-        "Access-Control-Allow-Origin": "*"
-      }
+        "Access-Control-Allow-Origin": "*",
+        "X-Content-Type-Options": "nosniff",
+      },
     })
   }
 
-  // 3. Default request continuation with Link response headers for agent discovery
+  // 4. Default request continuation with Link response headers and hardened security
   const response = NextResponse.next()
 
   // Attach RFC 8288 Link headers to HTML and general responses
   response.headers.set("Link", LINK_HEADERS)
 
-  // Attach production security headers
+  // Attach enterprise production security headers
+  response.headers.set("Content-Security-Policy", CSP_POLICY)
   response.headers.set("X-Content-Type-Options", "nosniff")
-  response.headers.set("X-Frame-Options", "SAMEORIGIN")
+  response.headers.set("X-Frame-Options", "DENY")
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
-  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(self 'https://mercury.phonepe.com')")
   response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
   response.headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups")
 

@@ -1,5 +1,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare"
 import type { D1Database } from "@cloudflare/workers-types"
+import { checkRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit"
 
 export const dynamic = "force-dynamic"
 
@@ -49,9 +50,14 @@ function getCF() {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const rl = checkRateLimit(request, { limit: 20, windowMs: 60000, action: "track_order" })
+  if (!rl.success) {
+    return rateLimitExceededResponse(rl)
+  }
+
   const { id: orderId } = await params
   if (!orderId || !/^SWD-\d{8}-[A-Z0-9]{8}$/.test(orderId)) {
     return json({ error: "Invalid order ID format." }, 400)

@@ -11,11 +11,27 @@ const LINK_HEADERS = [
   '</auth.md>; rel="describedby"'
 ].join(", ")
 
+const CSP_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://mercury.phonepe.com https://www.googletagmanager.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: https: blob:",
+  "font-src 'self' data:",
+  "connect-src 'self' https://api.phonepe.com https://mercury.phonepe.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com",
+  "frame-src 'self' https://mercury.phonepe.com",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self' https://mercury.phonepe.com",
+  "upgrade-insecure-requests",
+].join("; ")
+
 const SECURITY_HEADERS = [
+  { key: "Content-Security-Policy", value: CSP_POLICY },
   { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(self 'https://mercury.phonepe.com')" },
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
 ]
@@ -24,6 +40,7 @@ const SECURITY_HEADERS = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  productionBrowserSourceMaps: false,
   compress: true,
   images: {
     unoptimized: true,

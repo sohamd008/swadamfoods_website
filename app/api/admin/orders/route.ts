@@ -1,5 +1,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare"
 import type { D1Database } from "@cloudflare/workers-types"
+import { checkRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit"
 
 export const dynamic = "force-dynamic"
 
@@ -13,6 +14,15 @@ function json(data: unknown, status = 200) {
   })
 }
 
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  let diff = 0
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  }
+  return diff === 0
+}
+
 function verifyAdminKey(request: Request, env: Record<string, string | undefined>): boolean {
   const adminKey = env.ADMIN_SECRET_KEY || process.env.ADMIN_SECRET_KEY
   if (!adminKey) {
@@ -23,9 +33,9 @@ function verifyAdminKey(request: Request, env: Record<string, string | undefined
   const urlKey = new URL(request.url).searchParams.get("key")?.trim()
 
   return (
-    headerKey === adminKey ||
-    authHeader === adminKey ||
-    urlKey === adminKey
+    (headerKey ? timingSafeEqual(headerKey, adminKey) : false) ||
+    (authHeader ? timingSafeEqual(authHeader, adminKey) : false) ||
+    (urlKey ? timingSafeEqual(urlKey, adminKey) : false)
   )
 }
 
@@ -146,6 +156,11 @@ let inMemoryOrders = [
 ]
 
 export async function GET(request: Request) {
+  const rl = checkRateLimit(request, { limit: 10, windowMs: 60000, action: "admin_orders" })
+  if (!rl.success) {
+    return rateLimitExceededResponse(rl)
+  }
+
   const { envMap, db } = getCF()
   if (!verifyAdminKey(request, envMap)) {
     return json({ error: "Unauthorized. Invalid Admin Key." }, 401)
@@ -216,6 +231,11 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const rl = checkRateLimit(request, { limit: 10, windowMs: 60000, action: "admin_orders" })
+  if (!rl.success) {
+    return rateLimitExceededResponse(rl)
+  }
+
   const { envMap, db } = getCF()
   if (!verifyAdminKey(request, envMap)) {
     return json({ error: "Unauthorized. Invalid Admin Key." }, 401)

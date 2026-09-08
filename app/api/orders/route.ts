@@ -1,6 +1,7 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare"
 import type { D1Database } from "@cloudflare/workers-types"
 import { products } from "@/lib/products"
+import { checkRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit"
 
 export const dynamic = "force-dynamic"
 
@@ -51,14 +52,36 @@ function generateOrderId(): string {
 }
 
 function sameOrigin(request: Request): boolean {
-  const origin = request.headers.get("Origin")
-  if (!origin) return true
-
-  try {
-    return new URL(origin).origin === new URL(request.url).origin
-  } catch {
+  const secFetchSite = request.headers.get("Sec-Fetch-Site")?.toLowerCase()
+  if (secFetchSite === "cross-site") {
     return false
   }
+
+  const origin = request.headers.get("Origin")
+  const requestOrigin = new URL(request.url).origin
+
+  if (origin) {
+    try {
+      return new URL(origin).origin === requestOrigin
+    } catch {
+      return false
+    }
+  }
+
+  const referer = request.headers.get("Referer")
+  if (referer) {
+    try {
+      return new URL(referer).origin === requestOrigin
+    } catch {
+      return false
+    }
+  }
+
+  if (secFetchSite === "same-origin" || secFetchSite === "same-site") {
+    return true
+  }
+
+  return process.env.NODE_ENV !== "production"
 }
 
 function json(data: unknown, status = 200, extraHeaders?: Record<string, string>): Response {
@@ -83,6 +106,11 @@ function getCF() {
 }
 
 export async function POST(request: Request) {
+  const rl = checkRateLimit(request, { limit: 5, windowMs: 60000, action: "create_order" })
+  if (!rl.success) {
+    return rateLimitExceededResponse(rl)
+  }
+
   if (!sameOrigin(request)) {
     return json({ error: "Invalid request origin." }, 403)
   }

@@ -5,6 +5,7 @@ import {
   createPhonePePayment,
   getPhonePeOrderStatus,
 } from "@/lib/phonepe"
+import { checkRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit"
 
 export const dynamic = "force-dynamic"
 
@@ -18,14 +19,37 @@ function json(data: unknown, status = 200) {
   })
 }
 
-function sameOrigin(request: Request) {
-  const origin = request.headers.get("Origin")
-  if (!origin) return true
-  try {
-    return new URL(origin).origin === new URL(request.url).origin
-  } catch {
+function sameOrigin(request: Request): boolean {
+  const secFetchSite = request.headers.get("Sec-Fetch-Site")?.toLowerCase()
+  if (secFetchSite === "cross-site") {
     return false
   }
+
+  const origin = request.headers.get("Origin")
+  const requestOrigin = new URL(request.url).origin
+
+  if (origin) {
+    try {
+      return new URL(origin).origin === requestOrigin
+    } catch {
+      return false
+    }
+  }
+
+  const referer = request.headers.get("Referer")
+  if (referer) {
+    try {
+      return new URL(referer).origin === requestOrigin
+    } catch {
+      return false
+    }
+  }
+
+  if (secFetchSite === "same-origin" || secFetchSite === "same-site") {
+    return true
+  }
+
+  return process.env.NODE_ENV !== "production"
 }
 
 function generatePaymentMerchantOrderId(orderId: string) {
@@ -34,6 +58,11 @@ function generatePaymentMerchantOrderId(orderId: string) {
 }
 
 export async function POST(request: Request) {
+  const rl = checkRateLimit(request, { limit: 5, windowMs: 60000, action: "init_payment" })
+  if (!rl.success) {
+    return rateLimitExceededResponse(rl)
+  }
+
   if (!sameOrigin(request)) return json({ error: "Invalid request origin." }, 403)
 
   const contentType = request.headers.get("content-type")?.toLowerCase() ?? ""
