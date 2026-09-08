@@ -4,53 +4,45 @@ import { business } from "@/lib/products"
 
 export const metadata: Metadata = {
   title: "Refund & Cancellation Policy | Swadam Foods",
-  description: "Cancellation, failed-payment and refund policy for Swadam Foods orders.",
+  description: "Cancellation and refund policy for Swadam Foods orders.",
 }
 
 export default function RefundPolicyPage() {
   return (
     <LegalPage
       title="Refund & Cancellation Policy"
-      intro="This policy explains when an order may be cancelled and how approved refunds are handled for Swadam Foods purchases. Food products are handled carefully because of their nature and food-safety requirements."
+      intro="This refund and cancellation policy outlines how you can cancel or seek a refund for a product or service that you have purchased through the Platform. All cancellation, refund and replacement requests are subject to review and approval by Swadam Foods."
       sections={[
         {
-          heading: "Order Cancellation",
+          heading: "Cancellation",
           paragraphs: [
-            "You may request cancellation as soon as possible after placing an order. Cancellation is generally possible before the order has been accepted for fulfilment, prepared, packed, or dispatched. Once preparation or dispatch has started, cancellation may no longer be possible except where required by applicable law.",
-            "To request cancellation, contact us using the details below and provide your order ID. We will confirm whether the order can still be cancelled.",
+            "Cancellations will only be considered if the request is made within 7 days of placing the order and will be subject to approval by Swadam Foods. However, cancellation requests may not be entertained if the order has been communicated for shipping, the shipping process has been initiated, or the product is out for delivery. In such an event, you may choose to reject the product at the doorstep, subject to applicable policy and delivery conditions.",
+            `${business.name} does not accept cancellation requests for perishable items like eatables. However, a refund or replacement may be considered if the customer establishes that the quality of the product delivered is not good, and any refund or replacement will be subject to approval by ${business.name}.`,
           ],
         },
         {
-          heading: "Failed, Expired or Pending Payments",
+          heading: "Damaged or Defective Products",
           paragraphs: [
-            "A failed or expired payment does not by itself confirm a paid order. Payment status is reconciled against our server-side order records and information received from the relevant payment provider.",
-            "If money has been debited from your account but the payment is shown as pending or the order has not been confirmed, do not make repeated payments immediately. Contact us with the order ID and relevant payment details so we can reconcile the transaction with PhonePe or Razorpay and determine the appropriate outcome.",
+            "In case of receipt of damaged or defective items, please report the issue to our customer service team. The request will be entertained once the product has been checked and the same is determined by us. Any refund, replacement or exchange arising from such a request will be subject to approval by Swadam Foods. This should be reported within 7 days of receipt of products.",
+            "If you feel that the product received is not as shown on the site or is not as per your expectations, you must bring it to the notice of our customer service within 7 days of receiving the product. Our customer service team, after looking into your complaint, will take an appropriate decision. Any refund, replacement or exchange will be subject to approval by Swadam Foods.",
           ],
         },
         {
-          heading: "When a Refund May Be Approved",
+          heading: "Manufacturer Warranty",
           paragraphs: [
-            "A refund may be approved for reasons including a cancelled order that has already been paid, a duplicate successful charge, an order cancelled by Swadam Foods after payment, or a qualifying issue with a delivered product under our Return Policy. All requests remain subject to verification and applicable law.",
-            "Because our products are food items, change-of-mind refunds after delivery are generally not available, particularly for opened or used products, unless required by applicable law or approved following a qualifying quality, damage, shortage or wrong-item issue.",
+            "In case of complaints regarding products that come with a warranty from the manufacturers, please refer the issue to the manufacturer concerned.",
           ],
         },
         {
-          heading: "How Refunds Are Processed",
+          heading: "Refund Processing",
           paragraphs: [
-            "Where an online payment was made, an approved refund will generally be initiated through the payment provider used for that transaction, such as PhonePe or Razorpay, and returned to the original payment instrument or through the method permitted by the provider.",
-            "Swadam Foods may take up to 7 business days to initiate or complete an approved refund after the required verification is finished. Your bank or payment provider may require additional time to credit the refunded amount. The actual crediting timeline is outside our direct control.",
-          ],
-        },
-        {
-          heading: "Duplicate or Incorrect Charges",
-          paragraphs: [
-            "If you believe you have been charged more than once for the same order, contact us promptly with the order ID and transaction references. We will check our records and the relevant payment provider before issuing any eligible refund.",
+            "No refund is automatic or guaranteed merely because a request is submitted. In case any refund is approved by Swadam Foods following review of the request, it will take 5 days for the refund to be processed.",
           ],
         },
         {
           heading: "Contact Information",
           paragraphs: [
-            `For cancellation, payment or refund requests, contact ${business.name} at ${business.email} or ${business.phoneDisplay}. Please include your order ID whenever available.`,
+            `For cancellation or refund requests, please contact ${business.name} at ${business.email} / ${business.phoneDisplay}.`,
           ],
         },
       ]}
