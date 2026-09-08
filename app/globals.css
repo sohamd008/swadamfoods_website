@@ -203,6 +203,25 @@
       radial-gradient(circle at 85% 18%, oklch(0.78 0.08 155 / 0.24), transparent 26%),
       radial-gradient(circle at 55% 80%, oklch(0.92 0.04 30 / 0.55), transparent 32%);
   }
+
+  .mobile-bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid rgba(255, 255, 255, 0.6);
+    background-color: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 -10px 40px rgba(67, 48, 22, 0.12);
+  }
+  .dark .mobile-bottom-bar {
+    border-top-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(24, 24, 27, 0.88);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+  }
 }
 
 /* Checkout feedback stays in the customer's immediate line of sight. */
