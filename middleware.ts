@@ -61,9 +61,20 @@ const LINK_HEADERS = [
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || request.nextUrl.host
+
+  // 1. Canonical 301 Permanent Redirect (www to non-www and enforce https)
+  if (host && host.startsWith("www.")) {
+    const nonWwwHost = host.replace(/^www\./, "")
+    const destinationUrl = new URL(request.url)
+    destinationUrl.protocol = "https:"
+    destinationUrl.host = nonWwwHost
+    return NextResponse.redirect(destinationUrl.toString(), 301)
+  }
+
   const acceptHeader = request.headers.get("accept") || ""
 
-  // 1. Markdown for Agents Content Negotiation
+  // 2. Markdown for Agents Content Negotiation
   if (
     acceptHeader.includes("text/markdown") &&
     !pathname.startsWith("/api") &&
@@ -83,7 +94,7 @@ export function middleware(request: NextRequest) {
     })
   }
 
-  // 2. Default request continuation with Link response headers for agent discovery
+  // 3. Default request continuation with Link response headers for agent discovery
   const response = NextResponse.next()
 
   // Attach RFC 8288 Link headers to HTML and general responses
@@ -96,6 +107,18 @@ export function middleware(request: NextRequest) {
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
   response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
   response.headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups")
+
+  // Edge caching headers for static storefront pages to achieve < 0.2s TTFB globally
+  if (
+    !pathname.startsWith("/api") &&
+    !pathname.startsWith("/admin") &&
+    !pathname.startsWith("/order") &&
+    !pathname.startsWith("/checkout")
+  ) {
+    response.headers.set("Cache-Control", "public, max-age=0, s-maxage=86400, stale-while-revalidate=604800")
+    response.headers.set("CDN-Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
+    response.headers.set("Cloudflare-CDN-Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
+  }
 
   // Attach CORS for agent discovery surfaces
   if (pathname.startsWith("/.well-known") || pathname === "/openapi.json" || pathname === "/auth.md") {

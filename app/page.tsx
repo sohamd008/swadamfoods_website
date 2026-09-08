@@ -7,6 +7,9 @@ import { FaqSection } from "@/components/faq-section"
 import { SiteFooter } from "@/components/site-footer"
 import { CartDrawerGate } from "@/components/cart-drawer-gate"
 
+export const dynamic = "force-static"
+export const revalidate = 86400
+
 export default function Page() {
   return (
     <>

@@ -28,6 +28,21 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [
+          {
+            type: "host",
+            value: "www.swadamfoods.eu.cc",
+          },
+        ],
+        destination: "https://swadamfoods.eu.cc/:path*",
+        permanent: true,
+      },
+    ]
+  },
   async headers() {
     return [
       {

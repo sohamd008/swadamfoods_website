@@ -30,7 +30,7 @@ export function Hero() {
           </div>
 
           <h1 className="text-balance font-heading text-4xl font-black leading-[1.12] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Authentic Indian snacks, handcrafted the{" "}
+            Authentic Indian snacks &amp; instant premixes, handcrafted the{" "}
             <span className="bg-gradient-to-r from-amber-600 via-orange-500 to-amber-700 bg-clip-text text-transparent dark:from-amber-400 dark:to-orange-300">
               traditional
             </span>{" "}
