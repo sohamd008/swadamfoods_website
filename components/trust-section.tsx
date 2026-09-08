@@ -1,4 +1,5 @@
 import { CheckCircle2 } from "lucide-react"
+import { business } from "@/lib/products"
 
 function FssaiLogo() {
   return (
@@ -80,6 +81,8 @@ const credentials = [
     description:
       "Solely owned and run by a woman entrepreneur in Pune — every recipe, spice blend, and batch is handcrafted with traditional family care.",
     status: "Verified Women Entrepreneurship",
+    regLabel: null,
+    regNumber: null,
   },
   {
     logo: <FssaiLogo />,
@@ -88,6 +91,8 @@ const credentials = [
     description:
       "Registered with the Food Safety and Standards Authority of India for hygienic, compliant, and quality food manufacturing operations.",
     status: "Govt. Food Safety Certified",
+    regLabel: "FSSAI License No.",
+    regNumber: business.fssai,
   },
   {
     logo: <MsmeLogo />,
@@ -96,6 +101,8 @@ const credentials = [
     description:
       "A recognised Micro enterprise under the Ministry of Micro, Small and Medium Enterprises, Government of India.",
     status: "Official UDYAM Registration",
+    regLabel: "UDYAM Reg. No.",
+    regNumber: business.udyam,
   },
 ]
 
@@ -116,7 +123,7 @@ export function TrustSection() {
         </div>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {credentials.map(({ logo, title, badgeText, description, status }) => (
+          {credentials.map(({ logo, title, badgeText, description, status, regLabel, regNumber }) => (
             <div
               key={title}
               className="glass-card flex flex-col justify-between rounded-[2.2rem] p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
@@ -134,9 +141,20 @@ export function TrustSection() {
                 <h3 className="mt-5 font-heading text-xl font-extrabold text-foreground">
                   {title}
                 </h3>
-                <p className="mt-2 text-xs sm:text-sm leading-relaxed text-muted-foreground">
+                <p className="mt-2 text-xs sm:text-base leading-relaxed text-muted-foreground">
                   {description}
                 </p>
+
+                {regNumber && (
+                  <div className="mt-4 rounded-2xl border border-white/60 bg-white/50 px-4 py-2.5 shadow-xs backdrop-blur-md dark:border-white/10 dark:bg-white/5">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground block">
+                      {regLabel}
+                    </span>
+                    <span className="font-mono text-xs sm:text-sm font-black text-foreground tracking-wide select-all">
+                      {regNumber}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="mt-6 flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">

@@ -136,18 +136,18 @@ export function SiteFooter() {
             <div className="flex flex-col gap-2.5">
               <div className="glass-pill rounded-2xl px-4 py-2.5">
                 <span className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground block">
-                  Food Safety Compliance
+                  FSSAI License No.
                 </span>
-                <span className="text-xs font-bold text-foreground">
-                  FSSAI Certified Food Business
+                <span className="font-mono text-xs font-black text-foreground select-all">
+                  {business.fssai}
                 </span>
               </div>
               <div className="glass-pill rounded-2xl px-4 py-2.5">
                 <span className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground block">
-                  Government of India
+                  UDYAM Registration No.
                 </span>
-                <span className="text-xs font-bold text-foreground">
-                  UDYAM MSME Registered Enterprise
+                <span className="font-mono text-xs font-black text-foreground select-all">
+                  {business.udyam}
                 </span>
               </div>
             </div>
