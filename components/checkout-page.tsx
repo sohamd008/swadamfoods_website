@@ -77,10 +77,6 @@ function friendlyError(error: unknown) {
     return "The connection took too long. Please check your internet and try again."
   }
 
-  if (error instanceof TypeError) {
-    return "We couldn't reach Swadam Foods. Check your connection and try again."
-  }
-
   return error instanceof Error && error.message
     ? error.message
     : "Something went wrong. Please try again."
@@ -169,39 +165,53 @@ export function CheckoutPage() {
     setPaymentState("opening")
     setPaymentMessage("")
 
+    if (!redirectUrl) {
+      setPaymentState("failed")
+      setPaymentMessage("Secure payment could not be started. Please try again.")
+      return
+    }
+
     const startedAt = Date.now()
     while (!window.PhonePeCheckout?.transact && Date.now() - startedAt < 7000) {
       await new Promise((resolve) => window.setTimeout(resolve, 100))
     }
 
-    const transact = window.PhonePeCheckout?.transact
-    if (!transact) {
+    if (!window.PhonePeCheckout?.transact) {
       setPaymentState("failed")
       setPaymentMessage("Secure payment could not be loaded. Please refresh the page and try again.")
       return
     }
 
     setPaymentState("paying")
-    transact({
-      tokenUrl: redirectUrl,
-      type: "IFRAME",
-      callback: async (response) => {
-        if (response === "USER_CANCEL") {
+
+    try {
+      // Do not detach `transact` from PhonePeCheckout. The SDK uses its
+      // receiver internally, so calling the method directly is required.
+      window.PhonePeCheckout.transact({
+        tokenUrl: redirectUrl,
+        type: "IFRAME",
+        callback: async (response) => {
+          if (response === "USER_CANCEL") {
+            setPaymentState("idle")
+            setPaymentMessage("Payment cancelled. Your order is still here whenever you're ready.")
+            return
+          }
+
+          for (let attempt = 0; attempt < 8; attempt += 1) {
+            const result = await refreshPaymentStatus(orderId)
+            if (result === "paid" || result === "failed") return
+            await new Promise((resolve) => window.setTimeout(resolve, 1500))
+          }
+
           setPaymentState("idle")
-          setPaymentMessage("Payment cancelled. Your order is still here whenever you're ready.")
-          return
-        }
-
-        for (let attempt = 0; attempt < 6; attempt += 1) {
-          const result = await refreshPaymentStatus(orderId)
-          if (result === "paid" || result === "failed") return
-          await new Promise((resolve) => window.setTimeout(resolve, 1500))
-        }
-
-        setPaymentState("idle")
-        setPaymentMessage("We're still confirming the payment. Please wait a moment and check the order status again.")
-      },
-    })
+          setPaymentMessage("We're still confirming the payment. Please wait a moment and check the order status again.")
+        },
+      })
+    } catch (sdkError) {
+      console.error("PhonePe SDK failed to open:", sdkError)
+      setPaymentState("failed")
+      setPaymentMessage("Secure payment could not be opened. Please refresh the page and try again.")
+    }
   }, [refreshPaymentStatus])
 
   useEffect(() => {
@@ -278,6 +288,12 @@ export function CheckoutPage() {
       return
     }
 
+    if (!phonePeReady || !window.PhonePeCheckout?.transact) {
+      setPaymentState("failed")
+      setPaymentMessage("Secure payment is still loading. Please wait a moment and try again.")
+      return
+    }
+
     setPaymentState("opening")
     setSubmitState("submitting")
 
@@ -305,7 +321,11 @@ export function CheckoutPage() {
       console.error("PhonePe initiation failed:", requestError)
       setSubmitState("idle")
       setPaymentState("failed")
-      setPaymentMessage(friendlyError(requestError))
+      setPaymentMessage(
+        requestError instanceof Error && requestError.message
+          ? requestError.message
+          : "We couldn't start the secure payment right now. Please try again.",
+      )
     }
   }
 
@@ -375,7 +395,11 @@ export function CheckoutPage() {
     } catch (requestError) {
       console.error("Checkout submission failed:", requestError)
       setSubmitState("error")
-      setError(friendlyError(requestError))
+      setError(
+        requestError instanceof Error && requestError.message
+          ? requestError.message
+          : "We couldn't create your order right now. Please try again.",
+      )
     }
   }
 
@@ -489,7 +513,7 @@ export function CheckoutPage() {
               <div className="flex items-center gap-3 rounded-2xl border border-accent/15 bg-accent/7 px-4 py-3"><ShieldCheck className="h-5 w-5 shrink-0 text-accent" aria-hidden="true" /><p className="text-xs leading-5 text-foreground"><span className="font-bold">Your payment is protected.</span> We never need your UPI PIN, OTP, CVV or banking password.</p></div>
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex max-w-md items-start gap-2 text-xs leading-5 text-muted-foreground"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" /><p>Fill in your details, take one secure payment step, then get back to the important business: eating.</p></div>
-                <button type="button" onClick={() => void submitOrder()} disabled={submitState === "submitting" || paymentState === "opening" || paymentState === "paying" || !isOnline || items.length === 0} className="inline-flex min-h-13 items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary px-6 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0">
+                <button type="button" onClick={() => void submitOrder()} disabled={submitState === "submitting" || paymentState === "opening" || paymentState === "paying" || !isOnline || items.length === 0 || !phonePeReady} className="inline-flex min-h-13 items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary px-6 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0">
                   {submitState === "submitting" || paymentState === "opening" || paymentState === "paying" ? <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />{paymentState === "paying" ? "Payment open…" : "Preparing secure payment…"}</> : <>{order ? "Pay securely" : `Pay securely · ₹${total.toLocaleString("en-IN")}`}<ChevronRight className="h-5 w-5" aria-hidden="true" /></>}
                 </button>
               </div>
