@@ -71,7 +71,7 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`bg-background ${manrope.variable}`}
     >
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased" suppressHydrationWarning>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-9MMSSWSXB0"
           strategy="lazyOnload"
