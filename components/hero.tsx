@@ -1,5 +1,5 @@
 import Image from "next/image"
-import { ShieldCheck, Leaf, Clock, Star, Sparkles, ArrowRight } from "lucide-react"
+import { ShieldCheck, Leaf, Clock, Sparkles, ArrowRight } from "lucide-react"
 
 const highlights = [
   { icon: ShieldCheck, label: "FSSAI Registered" },
@@ -16,16 +16,11 @@ export function Hero() {
       <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 md:grid-cols-2 md:gap-14">
         {/* Left Column: Brand Copy & CTAs */}
         <div className="flex flex-col gap-6">
-          {/* Social Proof Live Pill */}
+          {/* Top Brand Badges */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="glass-pill inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-bold text-foreground shadow-xs">
-              <span className="flex text-amber-500">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-3 w-3 fill-amber-500 text-amber-500" />
-                ))}
-              </span>
-              <span className="font-extrabold text-foreground">4.9/5</span>
-              <span className="text-muted-foreground">· 2,500+ Packs Delivered</span>
+            <span className="glass-pill inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest text-foreground shadow-xs">
+              <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+              <span>Made in India · Home-Style Recipes</span>
             </span>
 
             <span className="glass-pill inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400">

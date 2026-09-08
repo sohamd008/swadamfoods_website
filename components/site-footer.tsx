@@ -8,11 +8,6 @@ export function SiteFooter() {
     "Hello Swadam Foods! I'd like to know more about your products.",
   )}`
 
-  const registrations = [
-    { label: "FSSAI Food Safety", value: business.fssai },
-    { label: "UDYAM Govt MSME", value: business.udyam },
-  ]
-
   const paymentMethods = [
     "PhonePe UPI",
     "Google Pay",
@@ -136,20 +131,26 @@ export function SiteFooter() {
           {/* Registrations */}
           <div className="flex flex-col gap-3">
             <span className="text-xs font-extrabold uppercase tracking-widest text-primary">
-              Government Accreditations
+              Official Accreditations
             </span>
-            <dl className="flex flex-col gap-2.5">
-              {registrations.map(({ label, value }) => (
-                <div key={label} className="glass-pill rounded-2xl px-4 py-2.5">
-                  <dt className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground">
-                    {label}
-                  </dt>
-                  <dd className="font-mono text-xs font-black text-foreground mt-0.5">
-                    {value}
-                  </dd>
-                </div>
-              ))}
-            </dl>
+            <div className="flex flex-col gap-2.5">
+              <div className="glass-pill rounded-2xl px-4 py-2.5">
+                <span className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground block">
+                  Food Safety Compliance
+                </span>
+                <span className="text-xs font-bold text-foreground">
+                  FSSAI Certified Food Business
+                </span>
+              </div>
+              <div className="glass-pill rounded-2xl px-4 py-2.5">
+                <span className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground block">
+                  Government of India
+                </span>
+                <span className="text-xs font-bold text-foreground">
+                  UDYAM MSME Registered Enterprise
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Secure Payment Badges */}
