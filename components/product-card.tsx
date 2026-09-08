@@ -32,10 +32,11 @@ export function ProductCard({ product }: { product: Product }) {
             src={product.image || "/placeholder.svg"}
             alt={product.name}
             width={540}
-            height={540}
+            height={405}
             sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) 50vw, 33vw"
             loading="lazy"
-            className="block aspect-[4/3] h-auto w-full object-cover transition-transform duration-700 group-hover:scale-105"
+            style={{ aspectRatio: "4/3" }}
+            className="block h-auto w-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
           {product.badge && (
             <span className="glass-pill absolute left-3.5 top-3.5 rounded-full px-3 py-1 text-xs font-bold text-accent shadow-md">

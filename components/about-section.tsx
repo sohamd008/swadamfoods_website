@@ -11,10 +11,11 @@ export function AboutSection() {
               src="/images/kanda-poha.webp"
               alt="Freshly prepared Kanda Poha garnished with coriander and coconut"
               width={540}
-              height={540}
+              height={405}
               sizes="(max-width: 767px) calc(100vw - 2rem), 50vw"
               loading="lazy"
-              className="relative aspect-[4/3] h-auto w-full rounded-3xl border border-white/70 object-cover shadow-xl backdrop-blur-xl dark:border-white/10"
+              style={{ aspectRatio: "4/3" }}
+              className="relative h-auto w-full rounded-3xl border border-white/70 object-cover shadow-xl backdrop-blur-xl dark:border-white/10"
             />
           </div>
 

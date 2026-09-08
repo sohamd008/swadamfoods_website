@@ -62,11 +62,11 @@ const LINK_HEADERS = [
 
 const CSP_POLICY = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://mercury.phonepe.com https://www.googletagmanager.com",
+  "script-src 'self' 'unsafe-inline' https://mercury.phonepe.com https://www.googletagmanager.com https://www.google-analytics.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: https: blob:",
+  "img-src 'self' data: blob: https://www.google-analytics.com https://www.googletagmanager.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://api.phonepe.com https://mercury.phonepe.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com",
+  "connect-src 'self' https://api.phonepe.com https://mercury.phonepe.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com",
   "frame-src 'self' https://mercury.phonepe.com",
   "frame-ancestors 'none'",
   "object-src 'none'",
@@ -74,6 +74,24 @@ const CSP_POLICY = [
   "form-action 'self' https://mercury.phonepe.com",
   "upgrade-insecure-requests",
 ].join("; ")
+
+// JSON-only .well-known endpoints that are safe for CORS *
+const CORS_ALLOWED_PATHS = new Set([
+  "/.well-known/api-catalog",
+  "/.well-known/service-desc",
+  "/.well-known/describedby",
+  "/.well-known/acp.json",
+  "/.well-known/ai-catalog.json",
+  "/.well-known/mcp",
+  "/.well-known/agent-skills",
+  "/.well-known/ucp",
+  "/.well-known/x402",
+  "/.well-known/oauth-authorization-server",
+  "/.well-known/oauth-protected-resource",
+  "/.well-known/openid-configuration",
+  "/openapi.json",
+  "/auth.md",
+])
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -151,7 +169,7 @@ export function middleware(request: NextRequest) {
   response.headers.set("X-Content-Type-Options", "nosniff")
   response.headers.set("X-Frame-Options", "DENY")
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
-  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(self 'https://mercury.phonepe.com')")
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
   response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
   response.headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups")
 
@@ -167,8 +185,8 @@ export function middleware(request: NextRequest) {
     response.headers.set("Cloudflare-CDN-Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
   }
 
-  // Attach CORS for agent discovery surfaces
-  if (pathname.startsWith("/.well-known") || pathname === "/openapi.json" || pathname === "/auth.md") {
+  // Attach CORS only for JSON/machine-readable discovery endpoints (not HTML pages)
+  if (CORS_ALLOWED_PATHS.has(pathname) || pathname.startsWith("/.well-known/mcp") || pathname.startsWith("/.well-known/agent-skills")) {
     response.headers.set("Access-Control-Allow-Origin", "*")
   }
 
