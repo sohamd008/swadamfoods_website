@@ -3,6 +3,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -29,9 +30,38 @@ type CartContextValue = {
 
 const CartContext = createContext<CartContextValue | null>(null)
 
+const CART_STORAGE_KEY = "swadam-foods-cart"
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [isOpen, setIsOpen] = useState(false)
+  const [hasLoadedCart, setHasLoadedCart] = useState(false)
+
+  useEffect(() => {
+    try {
+      const storedCart = window.localStorage.getItem(CART_STORAGE_KEY)
+      if (storedCart) {
+        const parsedCart = JSON.parse(storedCart) as CartItem[]
+        if (Array.isArray(parsedCart)) {
+          setItems(parsedCart)
+        }
+      }
+    } catch {
+      // Ignore malformed or unavailable local storage data.
+    } finally {
+      setHasLoadedCart(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!hasLoadedCart) return
+
+    try {
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
+    } catch {
+      // Ignore storage failures; the in-memory cart still works.
+    }
+  }, [items, hasLoadedCart])
 
   function addItem(product: Product) {
     setItems((prev) => {
