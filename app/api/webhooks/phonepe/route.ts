@@ -15,13 +15,8 @@ function json(data: unknown, status = 200) {
 }
 
 async function sha256(value: string) {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(value),
-  )
-  return Array.from(new Uint8Array(digest), (byte) =>
-    byte.toString(16).padStart(2, "0"),
-  ).join("")
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")
 }
 
 type PhonePeWebhook = {
@@ -44,14 +39,12 @@ type PhonePeWebhook = {
 
 export async function POST(request: Request) {
   const rawBody = await request.text()
-
-  if (rawBody.length === 0 || rawBody.length > 128 * 1024) {
-    return json({ error: "Invalid webhook payload." }, 400)
-  }
+  if (rawBody.length === 0 || rawBody.length > 128 * 1024) return json({ error: "Invalid webhook payload." }, 400)
 
   try {
-    const verified = await verifyPhonePeWebhook(rawBody, request.headers)
-    if (!verified) return json({ error: "Invalid webhook signature." }, 401)
+    if (!(await verifyPhonePeWebhook(rawBody, request.headers))) {
+      return json({ error: "Invalid webhook signature." }, 401)
+    }
 
     let body: PhonePeWebhook
     try {
@@ -67,22 +60,19 @@ export async function POST(request: Request) {
     if (
       (event !== "checkout.order.completed" && event !== "checkout.order.failed") ||
       !payload ||
-      !merchantOrderId ||
-      !/^SWD-\d{8}-[A-Z0-9]{8}$/.test(merchantOrderId)
+      !merchantOrderId
     ) {
       return json({ received: true })
     }
 
-    if (payload.state !== "COMPLETED" && payload.state !== "FAILED") {
-      return json({ received: true })
-    }
+    if (payload.state !== "COMPLETED" && payload.state !== "FAILED") return json({ received: true })
 
     const { env } = getCloudflareContext()
     const db = (env as CloudflareEnv & { DB: D1Database }).DB
     const order = await db
       .prepare(
         `SELECT id, total, currency, payment_status
-         FROM orders WHERE id = ? LIMIT 1`,
+         FROM orders WHERE gateway_order_id = ? AND payment_gateway = 'phonepe' LIMIT 1`,
       )
       .bind(merchantOrderId)
       .first<{
@@ -93,13 +83,14 @@ export async function POST(request: Request) {
       }>()
 
     if (!order) {
-      console.warn("PhonePe webhook received for unknown order", merchantOrderId)
+      console.warn("PhonePe webhook received for unknown payment attempt", merchantOrderId)
       return json({ received: true })
     }
 
     if (order.currency !== "INR" || payload.amount !== order.total * 100) {
       console.error("PhonePe webhook amount mismatch", {
-        orderId: merchantOrderId,
+        orderId: order.id,
+        merchantOrderId,
         expected: order.total * 100,
         received: payload.amount,
       })
@@ -107,8 +98,6 @@ export async function POST(request: Request) {
     }
 
     const eventId = await sha256(rawBody)
-    const eventPayload = JSON.stringify(body)
-
     try {
       await db
         .prepare(
@@ -116,13 +105,11 @@ export async function POST(request: Request) {
              (order_id, gateway, event_id, event_type, payload)
            VALUES (?, 'phonepe', ?, ?, ?)`,
         )
-        .bind(merchantOrderId, eventId, event, eventPayload)
+        .bind(order.id, eventId, event, rawBody)
         .run()
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      if (/unique|constraint/i.test(message)) {
-        return json({ received: true, duplicate: true })
-      }
+      if (/unique|constraint/i.test(message)) return json({ received: true, duplicate: true })
       throw error
     }
 
@@ -133,30 +120,29 @@ export async function POST(request: Request) {
       await db
         .prepare(
           `UPDATE orders
-           SET payment_gateway = 'phonepe',
-               gateway_order_id = COALESCE(gateway_order_id, ?),
-               payment_status = 'paid',
-               updated_at = datetime('now')
-           WHERE id = ?`,
+           SET payment_status = 'paid', updated_at = datetime('now')
+           WHERE id = ? AND payment_status <> 'refunded'`,
         )
-        .bind(payload.orderId ?? transaction?.transactionId ?? merchantOrderId, merchantOrderId)
+        .bind(order.id)
         .run()
     } else if (event === "checkout.order.failed" && payload.state === "FAILED") {
       await db
         .prepare(
           `UPDATE orders
-           SET payment_gateway = 'phonepe',
-               gateway_order_id = COALESCE(gateway_order_id, ?),
-               payment_status = CASE
-                 WHEN payment_status = 'paid' THEN 'paid'
-                 ELSE 'failed'
-               END,
+           SET payment_status = CASE WHEN payment_status = 'paid' THEN 'paid' ELSE 'failed' END,
                updated_at = datetime('now')
-           WHERE id = ?`,
+           WHERE id = ? AND payment_status <> 'refunded'`,
         )
-        .bind(payload.orderId ?? transaction?.transactionId ?? merchantOrderId, merchantOrderId)
+        .bind(order.id)
         .run()
     }
+
+    console.info("PhonePe webhook processed", {
+      orderId: order.id,
+      merchantOrderId,
+      event,
+      transactionId: transaction?.transactionId ?? null,
+    })
 
     return json({ received: true })
   } catch (error) {
