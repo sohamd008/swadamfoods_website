@@ -3,6 +3,7 @@ import { Manrope } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
 import { CartProvider } from '@/lib/cart-context'
 import { ThemeProvider } from '@/components/theme-provider'
+import { SecurityProtection } from '@/components/security-protection'
 import { business, products } from '@/lib/products'
 import './globals.css'
 
@@ -90,6 +91,13 @@ gtag('config', 'G-9MMSSWSXB0', { send_page_view: true });`}
         >
           <CartProvider>{children}</CartProvider>
         </ThemeProvider>
+        <SecurityProtection />
+        <script
+          id="asset-protection"
+          dangerouslySetInnerHTML={{
+            __html: `(function(){document.addEventListener('contextmenu',function(e){var t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;e.preventDefault();},true);document.addEventListener('dragstart',function(e){var t=e.target;if(t&&(t.tagName==='IMG'||(t.closest&&t.closest('img'))||(t.closest&&t.closest('picture')))){e.preventDefault();}},true);window.addEventListener('keydown',function(e){var isMac=navigator.platform&&navigator.platform.indexOf('Mac')>=0;var cmdOrCtrl=isMac?e.metaKey:e.ctrlKey;if(e.key==='F12'||(cmdOrCtrl&&e.shiftKey&&(e.key==='I'||e.key==='i'||e.key==='J'||e.key==='j'||e.key==='C'||e.key==='c'))||(cmdOrCtrl&&(e.key==='u'||e.key==='U'||e.key==='s'||e.key==='S'))){e.preventDefault();}},true);})();`,
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

@@ -101,6 +101,16 @@
       transition-duration: 0.01ms !important;
     }
   }
+  img, picture, svg {
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
 }
 
 @layer components {
