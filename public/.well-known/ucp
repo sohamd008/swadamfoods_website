@@ -1,0 +1,78 @@
+{
+  "protocol_version": "2026-04-08",
+  "services": [
+    {
+      "name": "in.swadamfoods.store",
+      "version": "1.0.0",
+      "spec": "https://swadamfoods.eu.cc/openapi.json",
+      "transport": "rest",
+      "endpoint": "https://swadamfoods.eu.cc/api/products",
+      "schema": "https://swadamfoods.eu.cc/openapi.json"
+    }
+  ],
+  "capabilities": {
+    "product_catalog": true,
+    "order_creation": true,
+    "order_tracking": true
+  },
+  "endpoints": {
+    "catalog": "https://swadamfoods.eu.cc/api/products",
+    "orders": "https://swadamfoods.eu.cc/api/orders",
+    "status": "https://swadamfoods.eu.cc/api/status"
+  },
+  "ucp": {
+    "version": "2026-04-08",
+    "spec": "https://ucp.dev/2026-04-08/specification/overview",
+    "merchant": {
+      "name": "Swadam Foods",
+      "legal_name": "DANDEKAR VIDYA AJIT",
+      "business_id": "UDYAM-MH-26-1188295",
+      "fssai_id": "21526080002094",
+      "country": "IN",
+      "url": "https://swadamfoods.eu.cc/",
+      "contact": "mailto:swadamfoodsindia@gmail.com"
+    },
+    "services": {
+      "in.swadamfoods.store": [
+        {
+          "version": "1.0.0",
+          "spec": "https://swadamfoods.eu.cc/openapi.json",
+          "transport": "rest",
+          "endpoint": "https://swadamfoods.eu.cc/api/products",
+          "schema": "https://swadamfoods.eu.cc/openapi.json"
+        }
+      ]
+    },
+    "capabilities": {
+      "product_catalog": true,
+      "order_creation": true,
+      "order_tracking": true
+    },
+    "payment_handlers": {
+      "upi": {
+        "provider": "PhonePe",
+        "currency": "INR"
+      }
+    },
+    "pricing": {
+      "currency": "INR",
+      "items": [
+        {
+          "name": "Patal Poha Chivda 200g",
+          "price": 90,
+          "unit": "pack"
+        },
+        {
+          "name": "Instant Kanda Poha Premix 150g",
+          "price": 70,
+          "unit": "pack"
+        },
+        {
+          "name": "Instant Upma Premix 150g",
+          "price": 70,
+          "unit": "pack"
+        }
+      ]
+    }
+  }
+}

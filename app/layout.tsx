@@ -4,6 +4,7 @@ import type { Metadata, Viewport } from 'next'
 import { CartProvider } from '@/lib/cart-context'
 import { ThemeProvider } from '@/components/theme-provider'
 import { business, products } from '@/lib/products'
+import { WebMCPProvider } from '@/components/webmcp-provider'
 import './globals.css'
 
 const manrope = Manrope({
@@ -88,7 +89,10 @@ gtag('config', 'G-9MMSSWSXB0', { send_page_view: true });`}
           enableSystem
           disableTransitionOnChange
         >
-          <CartProvider>{children}</CartProvider>
+          <CartProvider>
+            <WebMCPProvider />
+            {children}
+          </CartProvider>
         </ThemeProvider>
         <script
           type="application/ld+json"

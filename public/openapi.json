@@ -1,0 +1,105 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Swadam Foods Agent & Store API",
+    "version": "1.0.0",
+    "description": "Public catalog, order creation, and agent-native payment endpoints for Swadam Foods.",
+    "contact": {
+      "name": "Swadam Foods",
+      "email": "swadamfoodsindia@gmail.com",
+      "url": "https://swadamfoods.eu.cc"
+    },
+    "license": {
+      "name": "Proprietary",
+      "url": "https://swadamfoods.eu.cc/terms"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://swadamfoods.eu.cc"
+    }
+  ],
+  "x-payment-protocols": [
+    "mpp",
+    "x402",
+    "acp",
+    "ucp"
+  ],
+  "x-service-info": {
+    "categories": [
+      "e-commerce",
+      "food-and-beverage"
+    ],
+    "docs": {
+      "homepage": "https://swadamfoods.eu.cc",
+      "llms": "https://swadamfoods.eu.cc/llms.txt",
+      "apiReference": "https://swadamfoods.eu.cc/openapi.json"
+    }
+  },
+  "paths": {
+    "/api/products": {
+      "get": {
+        "summary": "List all Swadam Foods products",
+        "operationId": "listProducts",
+        "description": "Returns full product catalog with pricing, pack weights, ingredients, and preparation steps.",
+        "responses": {
+          "200": {
+            "description": "Product catalog list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "products": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders": {
+      "post": {
+        "summary": "Create and pay for an order",
+        "operationId": "createOrder",
+        "description": "Creates an order and initiates payment settlement.",
+        "x-payment-info": {
+          "intent": "charge",
+          "method": "card",
+          "amount": "90.00",
+          "currency": "INR",
+          "description": "Swadam Foods Authentic Snack & Premix Order Payment"
+        },
+        "responses": {
+          "200": {
+            "description": "Order created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required via MPP or x402"
+          }
+        }
+      }
+    },
+    "/api/x402": {
+      "get": {
+        "summary": "x402 Payment Challenge Probe",
+        "operationId": "x402Probe",
+        "responses": {
+          "402": {
+            "description": "Payment Required (x402)"
+          }
+        }
+      }
+    }
+  }
+}

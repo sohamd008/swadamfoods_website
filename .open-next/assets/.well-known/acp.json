@@ -13,6 +13,16 @@
         "name": "product_catalog",
         "description": "Public Swadam Foods product catalog with product names, pack sizes, prices, availability metadata, and preparation information.",
         "endpoint": "https://swadamfoods.eu.cc/api/products"
+      },
+      {
+        "name": "order_placement",
+        "description": "Create and initiate checkout sessions for Swadam Foods orders.",
+        "endpoint": "https://swadamfoods.eu.cc/api/orders"
+      },
+      {
+        "name": "order_tracking",
+        "description": "Track the preparation and dispatch status of Swadam Foods customer orders.",
+        "endpoint": "https://swadamfoods.eu.cc/api/orders"
       }
     ]
   }

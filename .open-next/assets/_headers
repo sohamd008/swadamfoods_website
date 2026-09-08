@@ -9,10 +9,7 @@
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'
 
 /
-  Link: </.well-known/api-catalog>; rel="api-catalog"
-  Link: </.well-known/service-desc>; rel="service-desc"
-  Link: </.well-known/service-doc>; rel="service-doc"
-  Link: </.well-known/describedby>; rel="describedby"
+  Link: </.well-known/api-catalog>; rel="api-catalog", </.well-known/service-desc>; rel="service-desc", </.well-known/service-doc>; rel="service-doc", </.well-known/describedby>; rel="describedby", </openapi.json>; rel="service-desc", </auth.md>; rel="describedby"
   Link: </images/hero-chivda.webp>; rel=preload; as=image
 
 /.well-known/api-catalog
@@ -39,11 +36,55 @@
   Content-Type: application/json
   Access-Control-Allow-Origin: *
 
+/.well-known/agent-skills/swadam-foods/SKILL.md
+  Content-Type: text/markdown; charset=utf-8
+  Access-Control-Allow-Origin: *
+
+/.well-known/mcp/server-card.json
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+
+/.well-known/oauth-authorization-server
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+
+/.well-known/openid-configuration
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+
+/.well-known/oauth-protected-resource
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+
+/.well-known/acp.json
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+
+/.well-known/ucp
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+
+/.well-known/x402
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+
+/openapi.json
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+
+/auth.md
+  Content-Type: text/markdown; charset=utf-8
+  Access-Control-Allow-Origin: *
+
 /api/products
   Content-Type: application/json
   Access-Control-Allow-Origin: *
 
 /api/status
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+
+/api/x402
   Content-Type: application/json
   Access-Control-Allow-Origin: *
 

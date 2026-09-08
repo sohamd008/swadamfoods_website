@@ -1,4 +1,12 @@
 {
-  "$schema": "https://agentskills.io/schemas/agent-skills-discovery-v0.2.0.json",
-  "skills": []
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "swadam-foods",
+      "type": "skill-md",
+      "description": "Search products, calculate order totals, and place orders with Swadam Foods in Pune.",
+      "url": "https://swadamfoods.eu.cc/.well-known/agent-skills/swadam-foods/SKILL.md",
+      "digest": "sha256:8e82c4f9a1ed90bfbb302874232c180765070dce1631417a1f91a053348f7ca9"
+    }
+  ]
 }

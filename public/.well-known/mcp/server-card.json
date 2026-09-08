@@ -1,0 +1,12 @@
+{
+  "serverInfo": {
+    "name": "swadam-foods-mcp",
+    "version": "1.0.0"
+  },
+  "endpoint": "https://swadamfoods.eu.cc/api/mcp",
+  "capabilities": {
+    "tools": true,
+    "resources": true,
+    "prompts": false
+  }
+}
