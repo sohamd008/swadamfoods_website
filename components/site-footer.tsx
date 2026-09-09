@@ -292,6 +292,7 @@ export function SiteFooter() {
               <p className="mt-0.5 text-[11px] text-muted-foreground/80">Proprietorship: DANDEKAR VIDYA AJIT</p>
             </div>
             <nav className="flex flex-wrap justify-center sm:justify-end gap-x-5 gap-y-2" aria-label="Legal navigation">
+              <Link href="/track" className="text-xs font-bold text-primary transition-colors hover:underline">Track Order</Link>
               <Link href="/terms" onClick={handlePolicyClick} className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Terms</Link>
               <Link href="/privacy-policy" onClick={handlePolicyClick} className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Privacy</Link>
               <Link href="/payment-policy" onClick={handlePolicyClick} className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">Payments</Link>
