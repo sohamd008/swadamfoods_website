@@ -145,7 +145,7 @@ export function CartDrawer() {
                           <button
                             type="button"
                             onClick={() => removeItem(item.product.id)}
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-destructive touch-manipulation active:scale-95 transition"
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-destructive touch-manipulation active:scale-95 transition"
                             aria-label={`Remove ${item.product.name}`}
                           >
                             <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -157,19 +157,19 @@ export function CartDrawer() {
                             <button
                               type="button"
                               onClick={() => setQuantity(item.product.id, item.quantity - 1)}
-                              className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-secondary touch-manipulation active:scale-95 transition"
+                              className="flex h-10 w-10 min-h-10 min-w-10 items-center justify-center rounded-full hover:bg-secondary touch-manipulation active:scale-95 transition"
                               aria-label={`Decrease ${item.product.name} quantity`}
                             >
-                              <Minus className="h-3.5 w-3.5" aria-hidden="true" />
+                              <Minus className="h-4 w-4" aria-hidden="true" />
                             </button>
                             <span className="min-w-8 text-center text-xs font-bold">{item.quantity}</span>
                             <button
                               type="button"
                               onClick={() => setQuantity(item.product.id, Math.min(item.quantity + 1, 99))}
-                              className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-secondary touch-manipulation active:scale-95 transition"
+                              className="flex h-10 w-10 min-h-10 min-w-10 items-center justify-center rounded-full hover:bg-secondary touch-manipulation active:scale-95 transition"
                               aria-label={`Increase ${item.product.name} quantity`}
                             >
-                              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                              <Plus className="h-4 w-4" aria-hidden="true" />
                             </button>
                           </div>
                           <span className="font-heading text-base font-bold text-foreground">

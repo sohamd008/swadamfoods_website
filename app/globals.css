@@ -93,6 +93,14 @@
   html {
     scroll-behavior: smooth;
   }
+  html, body {
+    overflow-x: clip;
+  }
+  @media screen and (max-width: 767px) {
+    input, select, textarea {
+      font-size: 16px;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     html {
       scroll-behavior: auto;
@@ -220,47 +228,6 @@
     border-top-color: rgba(255, 255, 255, 0.12);
     background-color: rgba(24, 24, 27, 0.88);
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
-  }
-}
-
-.checkout-shell [role="status"],
-.checkout-shell [role="alert"] {
-  position: fixed !important;
-  z-index: 1000 !important;
-  top: max(1rem, env(safe-area-inset-top)) !important;
-  left: 50% !important;
-  width: min(92vw, 520px) !important;
-  max-width: calc(100vw - 2rem) !important;
-  margin: 0 !important;
-  transform: translateX(-50%) !important;
-  box-shadow: 0 20px 60px rgba(67, 48, 22, 0.18) !important;
-  backdrop-filter: blur(22px) !important;
-  -webkit-backdrop-filter: blur(22px) !important;
-  animation: checkout-toast-in 180ms ease-out both;
-}
-
-.checkout-shell [role="status"] button,
-.checkout-shell [role="alert"] button {
-  pointer-events: auto;
-}
-
-@keyframes checkout-toast-in {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-10px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
-  }
-}
-
-@media (max-width: 640px) {
-  .checkout-shell [role="status"],
-  .checkout-shell [role="alert"] {
-    top: max(0.75rem, env(safe-area-inset-top)) !important;
-    width: calc(100vw - 1.5rem) !important;
-    max-width: calc(100vw - 1.5rem) !important;
   }
 }
 

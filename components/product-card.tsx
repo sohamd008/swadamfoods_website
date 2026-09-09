@@ -64,7 +64,7 @@ export function ProductCard({ product, stock }: { product: Product; stock?: numb
               <button
                 type="button"
                 onClick={() => setIsPrepOpen(true)}
-                className="glass-pill flex w-full items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-left text-xs font-bold text-foreground transition-all hover:bg-white/80 active:scale-[0.98] touch-manipulation dark:hover:bg-white/10"
+                className="glass-pill flex min-h-11 w-full items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-left text-xs font-bold text-foreground transition-all hover:bg-white/80 active:scale-[0.98] touch-manipulation dark:hover:bg-white/10"
                 aria-haspopup="dialog"
                 aria-expanded={isPrepOpen}
               >
@@ -147,7 +147,7 @@ export function ProductCard({ product, stock }: { product: Product; stock?: numb
               <button
                 type="button"
                 onClick={() => setIsPrepOpen(false)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/50 text-muted-foreground backdrop-blur-md transition hover:bg-background hover:text-foreground active:scale-95"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/50 text-muted-foreground backdrop-blur-md transition hover:bg-background hover:text-foreground active:scale-95 touch-manipulation"
                 aria-label="Close instructions"
               >
                 <X className="h-4 w-4" aria-hidden="true" />

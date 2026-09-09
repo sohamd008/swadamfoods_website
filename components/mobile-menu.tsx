@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Menu, X } from "lucide-react"
 import { navLinks } from "@/components/site-header"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export function MobileMenu() {
   const [open, setOpen] = useState(false)
@@ -26,7 +27,7 @@ export function MobileMenu() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="glass-pill flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-all hover:scale-105 active:scale-95 md:hidden"
+        className="glass-pill flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-all hover:scale-105 active:scale-95 touch-manipulation md:hidden"
         aria-label={open ? "Close menu" : "Open menu"}
         aria-expanded={open}
         aria-controls="mobile-nav"
@@ -35,17 +36,20 @@ export function MobileMenu() {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black/60 backdrop-blur-md animate-in fade-in duration-200 md:hidden">
-          <div className="flex h-20 items-center justify-between px-6">
+        <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-black/75 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] backdrop-blur-md animate-in fade-in duration-200 md:hidden">
+          <div className="flex h-16 shrink-0 items-center justify-between px-6">
             <span className="font-heading text-lg font-black text-white">Swadam Foods</span>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-xl"
-              aria-label="Close navigation menu"
-            >
-              <X className="h-6 w-6" aria-hidden="true" />
-            </button>
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-xl touch-manipulation active:scale-95"
+                aria-label="Close navigation menu"
+              >
+                <X className="h-6 w-6" aria-hidden="true" />
+              </button>
+            </div>
           </div>
 
           <nav id="mobile-nav" className="flex flex-col gap-2.5 px-6 pt-4" aria-label="Mobile navigation">

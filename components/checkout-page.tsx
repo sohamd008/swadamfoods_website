@@ -519,7 +519,7 @@ export function CheckoutPage() {
   }
 
   return (
-    <main className="checkout-shell min-h-screen px-4 py-5 sm:px-6 sm:py-8 pb-28 lg:pb-8">
+    <main className="checkout-shell min-h-screen px-4 py-5 sm:px-6 sm:py-8 pb-36 sm:pb-28 lg:pb-8">
       <Script
         src="https://mercury.phonepe.com/web/bundle/checkout.js"
         strategy="afterInteractive"
@@ -620,22 +620,59 @@ export function CheckoutPage() {
             </div>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <Field label="Full name" value={name} onChange={setName} placeholder="Your name" error={fieldErrors.name} autoComplete="name" />
+              <Field
+                label="Full name"
+                value={name}
+                onChange={(val) => {
+                  setName(val)
+                  if (fieldErrors.name) setFieldErrors((prev) => ({ ...prev, name: "" }))
+                }}
+                placeholder="Your name"
+                error={fieldErrors.name}
+                autoComplete="name"
+              />
               <Field
                 label="Phone number"
                 value={phone}
-                onChange={(val) => setPhone(sanitizePhone(val))}
+                onChange={(val) => {
+                  setPhone(sanitizePhone(val))
+                  if (fieldErrors.phone) setFieldErrors((prev) => ({ ...prev, phone: "" }))
+                }}
                 placeholder="10-digit mobile number"
                 error={fieldErrors.phone}
                 autoComplete="tel"
+                type="tel"
                 inputMode="numeric"
                 maxLength={10}
                 pattern="[6-9][0-9]{9}"
               />
             </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_150px]">
-              <Field label="Delivery address" value={address} onChange={setAddress} placeholder="House / street, area, city" error={fieldErrors.address} autoComplete="street-address" multiline />
-              <Field label="Pincode" value={pincode} onChange={(value) => setPincode(value.replace(/\D/g, "").slice(0, 6))} placeholder="411041" error={fieldErrors.pincode} autoComplete="postal-code" inputMode="numeric" />
+              <Field
+                label="Delivery address"
+                value={address}
+                onChange={(val) => {
+                  setAddress(val)
+                  if (fieldErrors.address) setFieldErrors((prev) => ({ ...prev, address: "" }))
+                }}
+                placeholder="House / street, area, city"
+                error={fieldErrors.address}
+                autoComplete="street-address"
+                multiline
+              />
+              <Field
+                label="Pincode"
+                value={pincode}
+                onChange={(value) => {
+                  setPincode(value.replace(/\D/g, "").slice(0, 6))
+                  if (fieldErrors.pincode) setFieldErrors((prev) => ({ ...prev, pincode: "" }))
+                }}
+                placeholder="411041"
+                error={fieldErrors.pincode}
+                autoComplete="postal-code"
+                inputMode="numeric"
+                maxLength={6}
+              />
             </div>
 
             <div className="mt-7"><div className="mb-3 flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" aria-hidden="true" /><h2 className="text-sm font-bold text-foreground">Delivery Method</h2></div>
@@ -763,7 +800,7 @@ export function CheckoutPage() {
               className="flex min-h-13 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/25 transition-all active:scale-95 disabled:opacity-50"
             >
               {isSubmittingOrPaying ? (
-                <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> {paymentState === "paying" ? "Opening PhonePe Payment Gateway..." : "Processing..."}</>
+                <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> {paymentState === "paying" ? "Opening PhonePe..." : "Processing..."}</>
               ) : (
                 <>
                   <PhonePeIcon className="h-4 w-4 shrink-0 rounded-sm" />
@@ -781,9 +818,13 @@ export function CheckoutPage() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="cancelled-dialog-title"
+          onClick={() => setShowCancelledModal(false)}
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-in fade-in duration-200"
         >
-          <div className="w-full max-w-md overflow-hidden rounded-[2rem] border border-white/70 bg-white/95 p-6 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-zinc-900/95 sm:p-8">
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-[2rem] border border-white/70 bg-white/95 p-6 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-zinc-900/95 sm:p-8"
+          >
             <div className="flex flex-col items-center text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-400">
                 <CircleAlert className="h-7 w-7" aria-hidden="true" />
@@ -853,6 +894,7 @@ function Field({
   multiline = false,
   maxLength,
   pattern,
+  type = "text",
 }: {
   label: string
   value: string
@@ -864,6 +906,7 @@ function Field({
   multiline?: boolean
   maxLength?: number
   pattern?: string
+  type?: string
 }) {
   const id = `checkout-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`
   return (
@@ -886,6 +929,7 @@ function Field({
       ) : (
         <input
           id={id}
+          type={type}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}

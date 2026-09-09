@@ -14,9 +14,9 @@ export const navLinks = [
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-3 z-50 mx-auto max-w-6xl px-4 sm:px-6">
-      <div className="glass-header flex h-16 items-center justify-between gap-4 rounded-full px-4 sm:px-6">
-        <a href="#top" className="flex min-w-0 items-center gap-2.5 sm:gap-3 transition-transform hover:scale-[1.02] active:scale-95">
+    <header className="sticky top-[max(0.75rem,env(safe-area-inset-top))] z-50 mx-auto max-w-6xl px-3 sm:px-6">
+      <div className="glass-header flex h-16 items-center justify-between gap-2 sm:gap-4 rounded-full px-3.5 sm:px-6">
+        <a href="#top" className="flex min-w-0 items-center gap-2 sm:gap-3 transition-transform hover:scale-[1.02] active:scale-95">
           <span className="flex items-center justify-center overflow-hidden rounded-2xl bg-[#f7f2e7]/90 p-1 shadow-sm ring-1 ring-white/60">
             <Image
               src="/images/swadam-logo.webp"
@@ -50,8 +50,10 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="hidden sm:flex">
+            <ThemeToggle />
+          </div>
           <CartButton />
           <MobileMenu />
         </div>

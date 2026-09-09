@@ -436,7 +436,9 @@ export function TaxInvoiceModal({
             </div>
           </div>
 
-          <div className="overflow-x-auto -mx-2 sm:mx-0 px-2 sm:px-0">
+          <div>
+            <p className="text-[10px] text-stone-400 font-medium sm:hidden mb-1 text-right">Swipe horizontally to view all columns →</p>
+            <div className="overflow-x-auto -mx-2 sm:mx-0 px-2 sm:px-0">
             <table className="w-full min-w-[540px] text-left text-xs border-collapse">
               <thead>
                 <tr className="border-y-2 border-stone-300 bg-stone-100 text-stone-700 uppercase tracking-wider font-extrabold text-[10px]">
@@ -466,6 +468,7 @@ export function TaxInvoiceModal({
                 ))}
               </tbody>
             </table>
+          </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-stone-200 pt-4 text-xs">

@@ -314,7 +314,7 @@ export function OrderTracker({ orderId }: { orderId: string }) {
                       setPhoneError("")
                     }}
                     placeholder="9876543210"
-                    className="w-full rounded-2xl border border-stone-200 bg-stone-50/80 py-3.5 pl-16 pr-4 font-mono text-sm font-bold text-foreground placeholder:text-stone-400 focus:border-amber-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 dark:border-stone-800 dark:bg-stone-950/50 dark:focus:bg-stone-950"
+                    className="w-full rounded-2xl border border-stone-200 bg-stone-50/80 py-3.5 pl-16 pr-4 font-mono text-base sm:text-sm font-bold text-foreground placeholder:text-stone-400 focus:border-amber-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 dark:border-stone-800 dark:bg-stone-950/50 dark:focus:bg-stone-950"
                     autoComplete="tel-national"
                     autoFocus
                   />
@@ -473,7 +473,7 @@ export function OrderTracker({ orderId }: { orderId: string }) {
               </p>
             </div>
 
-            <div className="flex items-center justify-between gap-4 md:flex-col md:items-end">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:flex-col md:items-end">
               <div className="text-left md:text-right">
                 <span className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                   Order Total
