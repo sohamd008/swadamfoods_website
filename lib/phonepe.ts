@@ -103,11 +103,13 @@ export async function getPhonePeAccessToken() {
 
 export async function createPhonePePayment(params: {
   merchantOrderId: string
+  orderId?: string
   amountInRupees: number
   phone: string
 }) {
   const token = await getPhonePeAccessToken()
   const origin = "https://swadamfoods.eu.cc"
+  const cleanOrderId = params.orderId || params.merchantOrderId
   const body = {
     merchantOrderId: params.merchantOrderId,
     amount: Math.round(params.amountInRupees * 100),
@@ -115,7 +117,7 @@ export async function createPhonePePayment(params: {
     paymentFlow: {
       type: "PG_CHECKOUT",
       merchantUrls: {
-        redirectUrl: `${origin}/checkout?payment=phonepe&orderId=${encodeURIComponent(params.merchantOrderId)}`,
+        redirectUrl: `${origin}/checkout?payment=phonepe&orderId=${encodeURIComponent(cleanOrderId)}`,
       },
     },
     prefillUserLoginDetails: {

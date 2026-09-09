@@ -56,8 +56,9 @@ export async function GET(request: Request) {
 
   if (!sameOrigin(request)) return json({ error: "Invalid request origin." }, 403)
 
-  const orderId = new URL(request.url).searchParams.get("orderId")?.trim() ?? ""
-  if (!/^SWD-\d{8}-[A-Z0-9]{8}$/.test(orderId)) return json({ error: "Invalid order ID." }, 400)
+  const rawOrderId = new URL(request.url).searchParams.get("orderId")?.trim() ?? ""
+  const cleanOrderId = rawOrderId.replace(/-P[A-Z0-9]+$/i, "").trim()
+  if (!/^SWD-\d{8}-[A-Z0-9]{8}$/.test(cleanOrderId)) return json({ error: "Invalid order ID." }, 400)
 
   const { env } = getCloudflareContext()
   const db = (env as CloudflareEnv & { DB: D1Database }).DB
@@ -66,9 +67,9 @@ export async function GET(request: Request) {
     const order = await db
       .prepare(
         `SELECT id, total, currency, payment_gateway, gateway_order_id, payment_status
-         FROM orders WHERE id = ? LIMIT 1`,
+         FROM orders WHERE id = ? OR gateway_order_id = ? LIMIT 1`,
       )
-      .bind(orderId)
+      .bind(cleanOrderId, rawOrderId)
       .first<{
         id: string
         total: number
@@ -85,7 +86,7 @@ export async function GET(request: Request) {
 
     if (order.payment_status === "paid") {
       return json({
-        orderId,
+        orderId: order.id,
         state: "COMPLETED",
         paymentStatus: "paid",
         total: order.total,
@@ -96,7 +97,7 @@ export async function GET(request: Request) {
     const status = await getPhonePeOrderStatus(order.gateway_order_id)
     if (status.amount !== undefined && status.amount !== order.total * 100) {
       console.error("PhonePe amount mismatch", {
-        orderId,
+        orderId: order.id,
         expected: order.total * 100,
         received: status.amount,
       })
@@ -112,7 +113,7 @@ export async function GET(request: Request) {
     if (paymentStatus !== order.payment_status) {
       await db
         .prepare(`UPDATE orders SET payment_status = ?, updated_at = datetime('now') WHERE id = ?`)
-        .bind(paymentStatus, orderId)
+        .bind(paymentStatus, order.id)
         .run()
     }
 
@@ -120,7 +121,7 @@ export async function GET(request: Request) {
       ?? status.paymentDetails?.[0]
 
     return json({
-      orderId,
+      orderId: order.id,
       state: status.state ?? "PENDING",
       paymentStatus,
       total: order.total,

@@ -190,7 +190,7 @@ export function CheckoutPage() {
 
     if (isMobile) {
       setPaymentState("paying")
-      setPaymentMessage("Opening PhonePe secure payment...")
+      setPaymentMessage("Opening PhonePe Payment Gateway...")
       window.location.href = redirectUrl
       return
     }
@@ -202,7 +202,7 @@ export function CheckoutPage() {
 
     if (!window.PhonePeCheckout?.transact) {
       setPaymentState("paying")
-      setPaymentMessage("Opening PhonePe secure payment...")
+      setPaymentMessage("Opening PhonePe Payment Gateway...")
       window.location.href = redirectUrl
       return
     }
@@ -221,25 +221,27 @@ export function CheckoutPage() {
             return
           }
 
-          for (let attempt = 0; attempt < 8; attempt += 1) {
-            const result = await refreshPaymentStatus(orderId)
+          const cleanId = orderId.replace(/-P[A-Z0-9]+$/i, "").trim()
+          for (let attempt = 0; attempt < 10; attempt += 1) {
+            const result = await refreshPaymentStatus(cleanId)
             if (result === "paid") {
-              router.replace(`/order/${encodeURIComponent(orderId)}`)
+              clear()
+              router.replace(`/order/${encodeURIComponent(cleanId)}`)
               return
             }
             if (result === "failed") return
             await new Promise((resolve) => window.setTimeout(resolve, 1500))
           }
 
-          setPaymentState("idle")
-          setPaymentMessage("We're still confirming the payment. Please wait a moment and check the order status again.")
+          clear()
+          router.replace(`/order/${encodeURIComponent(cleanId)}`)
         },
       })
     } catch (sdkError) {
       console.error("PhonePe SDK failed to open in iframe, redirecting directly:", sdkError)
       window.location.href = redirectUrl
     }
-  }, [refreshPaymentStatus, router])
+  }, [clear, refreshPaymentStatus, router])
 
   useEffect(() => {
     const handleOnline = () => void checkConnection()
@@ -260,18 +262,31 @@ export function CheckoutPage() {
     const callbackOrderId = params.get("orderId")
     const payment = params.get("payment")
     if (payment === "phonepe" && callbackOrderId) {
+      const cleanId = callbackOrderId.replace(/-P[A-Z0-9]+$/i, "").trim()
       void (async () => {
-        setPaymentState("opening")
-        const result = await refreshPaymentStatus(callbackOrderId)
-        if (result === "paid") {
-          router.replace(`/order/${encodeURIComponent(callbackOrderId)}`)
-        } else if (result === "failed") {
-          setPaymentState("failed")
-          setShowCancelledModal(true)
+        setPaymentState("paying")
+        setPaymentMessage("Verifying payment with PhonePe Payment Gateway...")
+        for (let attempt = 0; attempt < 10; attempt += 1) {
+          const result = await refreshPaymentStatus(cleanId)
+          if (result === "paid") {
+            clear()
+            router.replace(`/order/${encodeURIComponent(cleanId)}`)
+            return
+          }
+          if (result === "failed") {
+            setPaymentState("failed")
+            setPaymentMessage("Payment was not completed. Your order is safe and you can try again.")
+            setShowCancelledModal(true)
+            return
+          }
+          await new Promise((resolve) => window.setTimeout(resolve, 1500))
         }
+
+        clear()
+        router.replace(`/order/${encodeURIComponent(cleanId)}`)
       })()
     }
-  }, [refreshPaymentStatus, router])
+  }, [clear, refreshPaymentStatus, router])
 
   const subtotal = useMemo(() => totalPrice, [totalPrice])
   const deliveryFee = 0
@@ -599,7 +614,7 @@ export function CheckoutPage() {
                 </div>
                 <div className="flex items-center gap-1.5 rounded-full bg-purple-500/10 px-2.5 py-1 border border-purple-500/20 text-[#5F259F] dark:text-purple-300">
                   <PhonePeIcon className="h-3.5 w-3.5" />
-                  <span className="text-[10px] font-extrabold uppercase tracking-wide">PhonePe PG</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wide">PhonePe Payment Gateway</span>
                 </div>
               </div>
 
@@ -626,7 +641,7 @@ export function CheckoutPage() {
                       </span>
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-muted-foreground">
-                      <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">PhonePe</span>
+                      <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">PhonePe Payment Gateway</span>
                       <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">Google Pay</span>
                       <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">Paytm</span>
                       <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">BHIM UPI</span>
@@ -659,11 +674,11 @@ export function CheckoutPage() {
                   className="inline-flex min-h-13 items-center justify-center gap-2.5 rounded-2xl border border-primary/20 bg-primary px-6 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0"
                 >
                   {isSubmittingOrPaying ? (
-                    <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />{paymentState === "paying" ? "Opening PhonePe…" : "Preparing PhonePe secure checkout…"}</>
+                    <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />{paymentState === "paying" ? "Opening PhonePe Payment Gateway…" : "Preparing PhonePe Payment Gateway…"}</>
                   ) : (
                     <>
                       <PhonePeIcon className="h-5 w-5 shrink-0 rounded-md" />
-                      <span>{order ? "Pay with PhonePe" : `Pay securely · ₹${total.toLocaleString("en-IN")}`}</span>
+                      <span>{`Pay Now · ₹${total.toLocaleString("en-IN")}`}</span>
                       <ChevronRight className="h-4 w-4" aria-hidden="true" />
                     </>
                   )}
@@ -680,7 +695,7 @@ export function CheckoutPage() {
               <div className="mt-5 space-y-2.5 text-xs text-muted-foreground border-t border-border/60 pt-4">
                 <div className="flex items-center gap-2">
                   <PhonePeIcon className="h-4 w-4 shrink-0" />
-                  <span className="font-semibold text-foreground">Secured by PhonePe Gateway</span>
+                  <span className="font-semibold text-foreground">Secured by PhonePe Payment Gateway</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <LockKeyhole className="h-4 w-4 text-accent shrink-0" aria-hidden="true" />
@@ -709,11 +724,11 @@ export function CheckoutPage() {
               className="flex min-h-13 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/25 transition-all active:scale-95 disabled:opacity-50"
             >
               {isSubmittingOrPaying ? (
-                <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> {paymentState === "paying" ? "Opening PhonePe..." : "Processing..."}</>
+                <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> {paymentState === "paying" ? "Opening PhonePe Payment Gateway..." : "Processing..."}</>
               ) : (
                 <>
                   <PhonePeIcon className="h-4 w-4 shrink-0 rounded-sm" />
-                  <span>Pay with PhonePe</span>
+                  <span>{`Pay Now · ₹${total.toLocaleString("en-IN")}`}</span>
                   <ChevronRight className="h-4 w-4" aria-hidden="true" />
                 </>
               )}
@@ -748,13 +763,13 @@ export function CheckoutPage() {
                     <span className="text-xs font-bold text-foreground">Direct Payment Link</span>
                   </div>
                   <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                    If your browser or mobile app blocked the payment popup, you can open PhonePe directly:
+                    If your browser or mobile app blocked the payment popup, you can open PhonePe Payment Gateway directly:
                   </p>
                   <a
                     href={lastRedirectUrl}
                     className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#5F259F] px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:opacity-90 active:scale-95 transition-opacity"
                   >
-                    <span>Open PhonePe Checkout</span>
+                    <span>Open PhonePe Payment Gateway Directly</span>
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 </div>

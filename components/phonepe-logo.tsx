@@ -1,4 +1,4 @@
-﻿import type { SVGProps } from "react"
+import type { SVGProps } from "react"
 
 export function PhonePeIcon({ className = "h-5 w-5", ...props }: SVGProps<SVGSVGElement>) {
   return (
@@ -41,7 +41,7 @@ export function PhonePeSecurityBadge({ className = "" }: { className?: string })
       <PhonePeIcon className="h-5 w-5 shrink-0" />
       <div className="flex flex-col text-left leading-none">
         <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#5F259F] dark:text-purple-300">
-          Secured by PhonePe
+          Secured by PhonePe Payment Gateway
         </span>
         <span className="mt-0.5 text-[9px] font-medium text-muted-foreground">
           UPI · QR · Cards · NetBanking

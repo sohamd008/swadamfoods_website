@@ -20,7 +20,7 @@ const faqs = [
   {
     question: "How do I order from Swadam Foods?",
     answer:
-      "Add your favourite products to the cart on our website, then proceed to checkout to enter your delivery address and pay securely online via PhonePe/UPI. You will receive live order tracking and live updates on WhatsApp.",
+      "Add your favourite products to the cart on our website, then proceed to checkout to enter your delivery address and pay securely online via PhonePe Payment Gateway (UPI, Cards & NetBanking). You will receive live order tracking and live updates on WhatsApp.",
   },
   {
     question: "Is Swadam Foods a registered business?",

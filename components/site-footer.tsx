@@ -89,7 +89,7 @@ export function SiteFooter() {
   }, [])
 
   const paymentMethods = [
-    "PhonePe UPI",
+    "PhonePe Payment Gateway UPI",
     "Google Pay",
     "Paytm",
     "BHIM UPI",
@@ -261,7 +261,7 @@ export function SiteFooter() {
               <PhonePeIcon className="h-7 w-7 shrink-0 rounded-lg shadow-xs" />
               <div className="flex flex-col min-w-0">
                 <span className="text-[11px] font-extrabold text-[#5F259F] dark:text-purple-300">
-                  Powered by PhonePe
+                  Powered by PhonePe Payment Gateway
                 </span>
                 <span className="text-[10px] text-muted-foreground truncate">
                   RBI-Authorized · 256-bit SSL

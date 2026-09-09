@@ -35,7 +35,7 @@ const SWADAM_MARKDOWN = `# Swadam Foods — Authentic Homemade Delicacies & Inst
 ## Ordering & Payment
 - **Online Checkout**: https://swadamfoods.eu.cc/checkout
 - **WhatsApp Live Orders**: +91 88888 51522 (https://wa.me/918888851522)
-- **Payment Options**: PhonePe UPI, Google Pay, Paytm, BHIM, Credit/Debit Cards, NetBanking.
+- **Payment Options**: PhonePe Payment Gateway (UPI, Google Pay, Paytm, BHIM, Credit/Debit Cards, NetBanking).
 - **Delivery**: Flat ₹50 across Pune; Porter courier available for out-of-area delivery.
 
 ## Agent & Machine Discovery Surfaces

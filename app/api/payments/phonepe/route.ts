@@ -169,6 +169,7 @@ export async function POST(request: Request) {
     const paymentMerchantOrderId = generatePaymentMerchantOrderId(orderId)
     const payment = await createPhonePePayment({
       merchantOrderId: paymentMerchantOrderId,
+      orderId,
       amountInRupees: result.total,
       phone: result.customer_phone,
     })

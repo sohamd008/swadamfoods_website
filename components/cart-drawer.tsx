@@ -200,7 +200,7 @@ export function CartDrawer() {
               </Link>
               <div className="mt-3 flex items-center justify-center gap-2 text-xs font-bold text-muted-foreground">
                 <PhonePeIcon className="h-4 w-4 shrink-0" />
-                <span>Secured by PhonePe · UPI &amp; Cards</span>
+                <span>Secured by PhonePe Payment Gateway · UPI &amp; Cards</span>
               </div>
             </footer>
           </>

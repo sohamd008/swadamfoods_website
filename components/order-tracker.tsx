@@ -21,10 +21,13 @@ import {
   Check,
   PhoneCall,
   ShieldCheck,
+  FileText,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { PhonePeIcon } from "@/components/phonepe-logo"
 import { WHATSAPP_NUMBER } from "@/lib/products"
+import { TaxInvoiceModal } from "@/components/tax-invoice"
+import { useCart } from "@/lib/cart-context"
 
 type OrderItem = {
   productName: string
@@ -62,7 +65,7 @@ const STAGES = [
   {
     id: "paid",
     label: "Payment Confirmed",
-    subtitle: "Payment verified via PhonePe",
+    subtitle: "Payment verified via PhonePe Payment Gateway",
     icon: ShieldCheck,
   },
   {
@@ -92,11 +95,13 @@ const STAGES = [
 ]
 
 export function OrderTracker({ orderId }: { orderId: string }) {
+  const { clear: clearCart } = useCart()
   const [order, setOrder] = useState<OrderDetails | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>("")
   const [copied, setCopied] = useState<boolean>(false)
   const [refreshing, setRefreshing] = useState<boolean>(false)
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState<boolean>(false)
 
   const fetchOrder = useCallback(
     async (isManualRefresh = false) => {
@@ -109,6 +114,9 @@ export function OrderTracker({ orderId }: { orderId: string }) {
           return
         }
         setOrder(data.order)
+        if (data.order?.paymentStatus === "paid") {
+          clearCart()
+        }
         setError("")
       } catch {
         setError("Failed to connect to server.")
@@ -119,7 +127,7 @@ export function OrderTracker({ orderId }: { orderId: string }) {
         }
       }
     },
-    [orderId],
+    [clearCart, orderId],
   )
 
   useEffect(() => {
@@ -280,14 +288,25 @@ export function OrderTracker({ orderId }: { orderId: string }) {
                 </span>
               </div>
 
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-bold border ${
-                order.paymentStatus === "paid"
-                  ? "bg-emerald-500/15 text-emerald-800 border-emerald-500/30 dark:text-emerald-300"
-                  : "bg-amber-500/15 text-amber-800 border-amber-500/30 dark:text-amber-300"
-              }`}>
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                <span>{order.paymentStatus === "paid" ? "Payment Confirmed" : "Payment Pending"}</span>
-              </span>
+              <div className="flex flex-wrap items-center gap-2 mt-1">
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-bold border ${
+                  order.paymentStatus === "paid"
+                    ? "bg-emerald-500/15 text-emerald-800 border-emerald-500/30 dark:text-emerald-300"
+                    : "bg-amber-500/15 text-amber-800 border-amber-500/30 dark:text-amber-300"
+                }`}>
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span>{order.paymentStatus === "paid" ? "Payment Confirmed" : "Payment Pending"}</span>
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setIsInvoiceOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-bold text-primary hover:bg-primary/20 active:scale-95 transition"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>Download Tax Invoice</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -422,8 +441,18 @@ export function OrderTracker({ orderId }: { orderId: string }) {
                 <span>Payment Gateway</span>
                 <span className="flex items-center gap-1.5 font-bold text-[#5F259F] dark:text-purple-300">
                   <PhonePeIcon className="h-3.5 w-3.5" />
-                  <span>PhonePe {order.paymentStatus === "paid" ? "(Verified Paid)" : "(Pending)"}</span>
+                  <span>PhonePe Payment Gateway {order.paymentStatus === "paid" ? "(Verified Paid)" : "(Pending)"}</span>
                 </span>
+              </div>
+              <div className="pt-2 border-t border-border/50 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsInvoiceOpen(true)}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>View Official GST Invoice ↗</span>
+                </button>
               </div>
             </div>
           </div>
@@ -455,6 +484,14 @@ export function OrderTracker({ orderId }: { orderId: string }) {
           </a>
         </div>
       </main>
+
+      {order && (
+        <TaxInvoiceModal
+          order={order}
+          isOpen={isInvoiceOpen}
+          onClose={() => setIsInvoiceOpen(false)}
+        />
+      )}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare"
 import type { D1Database } from "@cloudflare/workers-types"
 import { checkRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit"
+import { getPhonePeOrderStatus } from "@/lib/phonepe"
 
 export const dynamic = "force-dynamic"
 
@@ -26,6 +27,8 @@ type OrderRow = {
   total: number
   currency: string
   payment_status: string
+  payment_gateway?: string | null
+  gateway_order_id?: string | null
   order_status: string
   created_at: string
   updated_at: string
@@ -58,7 +61,8 @@ export async function GET(
     return rateLimitExceededResponse(rl)
   }
 
-  const { id: orderId } = await params
+  const { id: rawId } = await params
+  const orderId = (rawId || "").replace(/-P[A-Z0-9]+$/i, "").trim()
   if (!orderId || !/^SWD-\d{8}-[A-Z0-9]{8}$/.test(orderId)) {
     return json({ error: "Invalid order ID format." }, 400)
   }
@@ -73,7 +77,7 @@ export async function GET(
       .prepare(
         `SELECT id, customer_name, customer_phone, customer_address, pincode,
                 delivery_method, subtotal, delivery_fee, total, currency,
-                payment_status, order_status, created_at, updated_at
+                payment_status, payment_gateway, gateway_order_id, order_status, created_at, updated_at
          FROM orders
          WHERE id = ?
          LIMIT 1`,
@@ -82,6 +86,27 @@ export async function GET(
       .first<OrderRow>()
 
     if (!order) return json({ error: "Order not found." }, 404)
+
+    if (order.payment_status !== "paid" && order.payment_gateway === "phonepe" && order.gateway_order_id) {
+      try {
+        const ppStatus = await getPhonePeOrderStatus(order.gateway_order_id)
+        if (ppStatus.state === "COMPLETED") {
+          order.payment_status = "paid"
+          await db
+            .prepare(`UPDATE orders SET payment_status = 'paid', updated_at = datetime('now') WHERE id = ?`)
+            .bind(order.id)
+            .run()
+        } else if (ppStatus.state === "FAILED") {
+          order.payment_status = "failed"
+          await db
+            .prepare(`UPDATE orders SET payment_status = 'failed', updated_at = datetime('now') WHERE id = ?`)
+            .bind(order.id)
+            .run()
+        }
+      } catch (err) {
+        console.error("Order page PhonePe status check failed:", err)
+      }
+    }
 
     const itemsResult = await db
       .prepare(
