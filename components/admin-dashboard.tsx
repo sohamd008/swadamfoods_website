@@ -42,7 +42,6 @@ import {
   CheckSquare,
   Square,
   Boxes,
-  TimerReset,
   Minus,
   Plus,
 } from "lucide-react"
@@ -781,11 +780,6 @@ export function AdminDashboard() {
   const [inventory, setInventory] = useState<Record<string, number>>({})
   const [inventoryInputs, setInventoryInputs] = useState<Record<string, string>>({})
   const [inventoryUpdating, setInventoryUpdating] = useState<string | null>(null)
-
-  const [timeSlots, setTimeSlots] = useState<Array<{ id: string; label: string; capacity: number; booked: number; isActive: boolean; available: number }>>([])
-  const [slotsLoading, setSlotsLoading] = useState(false)
-  const [slotUpdating, setSlotUpdating] = useState<string | null>(null)
-
   const LOW_STOCK_THRESHOLD = 10
 
   useEffect(() => {
@@ -869,18 +863,6 @@ export function AdminDashboard() {
       .catch(() => {})
   }, [isAuthorized, adminKey])
 
-  useEffect(() => {
-    if (!isAuthorized || !adminKey) return
-    setSlotsLoading(true)
-    fetch(`/api/admin/time-slots?key=${encodeURIComponent(adminKey)}`)
-      .then((r) => r.json())
-      .then((data: { slots?: Array<{ id: string; label: string; capacity: number; booked: number; isActive: boolean; available: number }> }) => {
-        setTimeSlots(data.slots ?? [])
-      })
-      .catch(() => {})
-      .finally(() => setSlotsLoading(false))
-  }, [isAuthorized, adminKey])
-
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
     const key = inputKey.trim()
@@ -940,32 +922,6 @@ export function AdminDashboard() {
       setInventory((prev) => ({ ...prev, [productId]: stock }))
     } catch {}
     setInventoryUpdating(null)
-  }
-
-  const handleSlotToggle = async (slotId: string, isActive: boolean) => {
-    setSlotUpdating(slotId)
-    try {
-      await fetch("/api/admin/time-slots", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
-        body: JSON.stringify({ slotId, isActive }),
-      })
-      setTimeSlots((prev) => prev.map((s) => (s.id === slotId ? { ...s, isActive } : s)))
-    } catch {}
-    setSlotUpdating(null)
-  }
-
-  const handleSlotCapacity = async (slotId: string, capacity: number) => {
-    setSlotUpdating(slotId)
-    try {
-      await fetch("/api/admin/time-slots", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
-        body: JSON.stringify({ slotId, capacity }),
-      })
-      setTimeSlots((prev) => prev.map((s) => (s.id === slotId ? { ...s, capacity, available: Math.max(0, capacity - s.booked) } : s)))
-    } catch {}
-    setSlotUpdating(null)
   }
 
   const downloadManifest = () => {
@@ -1367,57 +1323,6 @@ export function AdminDashboard() {
                 )
               })}
             </div>
-          </div>
-
-          <div className="rounded-2xl border border-stone-200 bg-white shadow-xs dark:border-stone-800 dark:bg-stone-900">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100 dark:border-stone-800">
-              <div className="flex items-center gap-2">
-                <TimerReset className="h-4 w-4 text-teal-600" />
-                <h2 className="font-extrabold text-sm text-stone-900 dark:text-white">Today&apos;s Delivery Slots</h2>
-              </div>
-              <span className="text-[10px] font-bold text-stone-400">{new Date().toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</span>
-            </div>
-            {slotsLoading ? (
-              <div className="px-5 py-6 flex items-center gap-2 text-xs text-stone-400">
-                <RotateCcw className="h-3.5 w-3.5 animate-spin" />
-                <span>Loading slots…</span>
-              </div>
-            ) : (
-              <div className="divide-y divide-stone-100 dark:divide-stone-800">
-                {timeSlots.map((slot) => {
-                  const isUpdatingSlot = slotUpdating === slot.id
-                  const pct = slot.capacity > 0 ? Math.round((slot.booked / slot.capacity) * 100) : 0
-                  return (
-                    <div key={slot.id} className="px-5 py-3.5 space-y-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-xs font-extrabold text-stone-900 dark:text-white">{slot.label}</p>
-                          <p className="text-[10px] text-stone-400">{slot.booked}/{slot.capacity} booked · {slot.available} available</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1">
-                            <button type="button" disabled={isUpdatingSlot} onClick={() => handleSlotCapacity(slot.id, Math.max(slot.booked, slot.capacity - 1))} className="h-6 w-6 flex items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100 transition active:scale-95 dark:border-stone-700 dark:bg-stone-800 disabled:opacity-50"><Minus className="h-2.5 w-2.5" /></button>
-                            <span className="text-xs font-mono font-bold text-stone-700 dark:text-stone-300 min-w-5 text-center">{slot.capacity}</span>
-                            <button type="button" disabled={isUpdatingSlot} onClick={() => handleSlotCapacity(slot.id, slot.capacity + 1)} className="h-6 w-6 flex items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100 transition active:scale-95 dark:border-stone-700 dark:bg-stone-800 disabled:opacity-50"><Plus className="h-2.5 w-2.5" /></button>
-                          </div>
-                          <button
-                            type="button"
-                            disabled={isUpdatingSlot}
-                            onClick={() => handleSlotToggle(slot.id, !slot.isActive)}
-                            className={`rounded-xl px-3 py-1.5 text-[11px] font-extrabold transition active:scale-95 shadow-xs disabled:opacity-60 ${slot.isActive ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300" : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"}`}
-                          >
-                            {slot.isActive ? "Close" : "Open"}
-                          </button>
-                        </div>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-stone-100 dark:bg-stone-800 overflow-hidden">
-                        <div className={`h-full rounded-full transition-all ${pct >= 90 ? "bg-rose-500" : pct >= 70 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
           </div>
         </div>
 

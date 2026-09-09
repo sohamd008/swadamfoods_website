@@ -4,14 +4,12 @@ import Image from "next/image"
 import Link from "next/link"
 import Script from "next/script"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Turnstile, type TurnstileRef } from "@/components/turnstile"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   ArrowLeft,
   Check,
   ChevronRight,
   CircleAlert,
-  Clock,
   ExternalLink,
   Loader2,
   LockKeyhole,
@@ -109,23 +107,6 @@ export function CheckoutPage() {
   const [showMobileSummary, setShowMobileSummary] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [order, setOrder] = useState<OrderResponse | null>(null)
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
-  const [timeSlots, setTimeSlots] = useState<Array<{ id: string; label: string; available: number }>>([])
-  const [slotsLoading, setSlotsLoading] = useState(false)
-  const [turnstileToken, setTurnstileToken] = useState<string>("")
-  const turnstileRef = useRef<TurnstileRef>(null)
-
-  useEffect(() => {
-    if (delivery !== "pune") return
-    setSlotsLoading(true)
-    fetch("/api/time-slots")
-      .then((r) => r.json())
-      .then((data: { slots?: Array<{ id: string; label: string; available: number }> }) => {
-        setTimeSlots(data.slots ?? [])
-      })
-      .catch(() => {})
-      .finally(() => setSlotsLoading(false))
-  }, [delivery])
 
   const checkConnection = useCallback(async () => {
     if (typeof window === "undefined") return false
@@ -327,9 +308,7 @@ export function CheckoutPage() {
   const total = subtotal + deliveryFee
 
   const isSubmittingOrPaying = submitState === "submitting" || paymentState === "opening" || paymentState === "paying"
-  const canSubmitOrder = Boolean(order)
-    ? !isSubmittingOrPaying && isOnline
-    : !isSubmittingOrPaying && isOnline && items.length > 0 && Boolean(turnstileToken)
+  const canSubmitOrder = !isSubmittingOrPaying && isOnline && items.length > 0
 
   const whatsappHref = useMemo(() => {
     const lines = [
@@ -433,12 +412,6 @@ export function CheckoutPage() {
       return
     }
 
-    if (!turnstileToken) {
-      setError("Please complete the security verification before placing your order.")
-      setSubmitState("error")
-      return
-    }
-
     const connected = await checkConnection()
     if (!connected) {
       setError("You're offline or Swadam Foods could not be reached. Please reconnect and try again.")
@@ -465,17 +438,12 @@ export function CheckoutPage() {
             pincode: pincode.trim(),
           },
           delivery,
-          deliverySlot: selectedSlot ?? undefined,
-          turnstileToken,
-          "cf-turnstile-response": turnstileToken,
         }),
       })
       window.clearTimeout(timeout)
 
       const payload = (await response.json().catch(() => null)) as (OrderResponse & { items?: unknown[] }) | { error?: string } | null
       if (!response.ok) {
-        turnstileRef.current?.reset()
-        setTurnstileToken("")
         throw new Error(payload && "error" in payload ? payload.error || `Request failed (${response.status}).` : `Request failed (${response.status}).`)
       }
 
@@ -501,8 +469,6 @@ export function CheckoutPage() {
 
       await startPhonePePayment(createdOrder.orderId)
     } catch (requestError) {
-      turnstileRef.current?.reset()
-      setTurnstileToken("")
       console.error("Checkout submission failed:", requestError)
       setSubmitState("error")
       setError(
@@ -679,51 +645,6 @@ export function CheckoutPage() {
               </div>
             </div>
 
-            {delivery === "pune" && (
-              <div className="mt-5">
-                <div className="mb-2 flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-primary" aria-hidden="true" />
-                  <h2 className="text-sm font-bold text-foreground">Preferred Delivery Slot <span className="text-muted-foreground font-normal text-xs">(optional)</span></h2>
-                </div>
-                {slotsLoading ? (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span>Loading available slots…</span>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    {timeSlots.map((slot) => {
-                      const isFull = slot.available === 0
-                      const isSelected = selectedSlot === slot.id
-                      return (
-                        <button
-                          key={slot.id}
-                          type="button"
-                          disabled={isFull}
-                          onClick={() => setSelectedSlot(isSelected ? null : slot.id)}
-                          className={`relative flex flex-col items-start rounded-2xl border px-3.5 py-3 text-left text-xs transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${
-                            isSelected
-                              ? "border-primary/50 bg-primary/10 shadow-sm ring-1 ring-primary/30"
-                              : "border-border/70 bg-background/40 hover:border-primary/30 hover:bg-primary/5"
-                          }`}
-                        >
-                          <span className="font-extrabold text-foreground">{slot.label}</span>
-                          <span className={`mt-1 text-[10px] font-semibold ${isFull ? "text-rose-500" : "text-muted-foreground"}`}>
-                            {isFull ? "Fully booked" : `${slot.available} slot${slot.available === 1 ? "" : "s"} left`}
-                          </span>
-                          {isSelected && (
-                            <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                              <Check className="h-2.5 w-2.5" />
-                            </span>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
             <div className="mt-7">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -780,19 +701,6 @@ export function CheckoutPage() {
             )}
 
             {error && (<div role="alert" className="mt-5 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm"><CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" /><div className="flex-1"><p className="font-bold text-foreground">We couldn't complete that</p><p className="mt-0.5 text-muted-foreground">{error}</p></div><button type="button" onClick={() => setError("")} className="text-xs font-bold text-muted-foreground hover:text-foreground">Dismiss</button></div>)}
-
-            <div className="mt-6 flex flex-col items-center justify-center p-3 rounded-2xl border border-border/60 bg-white/40 dark:bg-white/[0.02]">
-              <Turnstile
-                ref={turnstileRef}
-                action="checkout"
-                onVerify={(token) => {
-                  setTurnstileToken(token)
-                  setError("")
-                }}
-                onExpire={() => setTurnstileToken("")}
-                onError={() => setTurnstileToken("")}
-              />
-            </div>
 
             <div className="mt-7 flex flex-col gap-4">
               <div className="flex items-center gap-3 rounded-2xl border border-accent/15 bg-accent/7 px-4 py-3"><ShieldCheck className="h-5 w-5 shrink-0 text-accent" aria-hidden="true" /><p className="text-xs leading-5 text-foreground"><span className="font-bold">Your payment is protected.</span> We never need your UPI PIN, OTP, CVV or banking password.</p></div>

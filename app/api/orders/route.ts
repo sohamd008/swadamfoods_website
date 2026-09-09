@@ -2,7 +2,6 @@ import { getCloudflareContext } from "@opennextjs/cloudflare"
 import type { D1Database } from "@cloudflare/workers-types"
 import { products } from "@/lib/products"
 import { validateIndianMobile } from "@/lib/phone"
-import { verifyTurnstileToken } from "@/lib/turnstile"
 
 export const dynamic = "force-dynamic"
 
@@ -28,9 +27,6 @@ type CreateOrderBody = {
     pincode: string
   }
   delivery: "pune" | "porter"
-  deliverySlot?: string
-  turnstileToken?: string
-  "cf-turnstile-response"?: string
 }
 
 type NormalizedItem = {
@@ -204,24 +200,6 @@ export async function POST(request: Request) {
     return json({ error: "Invalid delivery method." }, 400)
   }
 
-  const deliverySlot = typeof body.deliverySlot === "string" && body.deliverySlot.trim() ? body.deliverySlot.trim() : null
-  const turnstileToken = text(body["cf-turnstile-response"] || body.turnstileToken)
-  const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for")?.split(",")[0].trim() || null
-
-  const { envMap, db } = getCF()
-  const turnstileSecret = envMap.TURNSTILE_SECRET || process.env.TURNSTILE_SECRET || "0x4AAAAAAEtsa8NmCy05qXi40TOWGSAv9xA"
-
-  const turnstileResult = await verifyTurnstileToken({
-    token: turnstileToken,
-    secret: turnstileSecret,
-    expectedAction: "checkout",
-    remoteIp: clientIp,
-  })
-
-  if (!turnstileResult.success) {
-    return json({ error: turnstileResult.error || "Turnstile verification failed. Please try again." }, 403)
-  }
-
   const normalizedItems: NormalizedItem[] = []
   let totalQuantity = 0
 
@@ -262,6 +240,7 @@ export async function POST(request: Request) {
   const subtotal = normalizedItems.reduce((sum, item) => sum + item.lineTotal, 0)
   const deliveryFee = 0
   const total = subtotal + deliveryFee
+  const { db } = getCF()
   let orderId = await getNextOrderId(db)
 
   if (!db || typeof db.prepare !== "function") {
@@ -286,25 +265,26 @@ export async function POST(request: Request) {
 
     while (attempts < 3 && !success) {
       try {
-        let hasSlot = Boolean(deliverySlot)
-        const orderInsertSql = hasSlot
-          ? `INSERT INTO orders (
-              id, customer_name, customer_phone, customer_address, pincode,
-              delivery_method, subtotal, delivery_fee, total, currency,
-              payment_status, order_status, delivery_slot
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'INR', 'pending', 'new', ?)`
-          : `INSERT INTO orders (
-              id, customer_name, customer_phone, customer_address, pincode,
-              delivery_method, subtotal, delivery_fee, total, currency,
-              payment_status, order_status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'INR', 'pending', 'new')`
-
-        const orderBindParams = hasSlot
-          ? [orderId, name, cleanCustomerPhone, address, pincode, delivery, subtotal, deliveryFee, total, deliverySlot]
-          : [orderId, name, cleanCustomerPhone, address, pincode, delivery, subtotal, deliveryFee, total]
-
         const statements = [
-          db.prepare(orderInsertSql).bind(...orderBindParams),
+          db
+            .prepare(
+              `INSERT INTO orders (
+                id, customer_name, customer_phone, customer_address, pincode,
+                delivery_method, subtotal, delivery_fee, total, currency,
+                payment_status, order_status
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'INR', 'pending', 'new')`,
+            )
+            .bind(
+              orderId,
+              name,
+              cleanCustomerPhone,
+              address,
+              pincode,
+              delivery,
+              subtotal,
+              deliveryFee,
+              total,
+            ),
           ...normalizedItems.map((item) =>
             db
               .prepare(
@@ -324,47 +304,17 @@ export async function POST(request: Request) {
           ),
         ]
 
-        try {
-          await db.batch(statements)
-          success = true
-        } catch (batchError) {
-          const batchMsg = batchError instanceof Error ? batchError.message : String(batchError)
-          if (hasSlot && batchMsg.includes("delivery_slot")) {
-            hasSlot = false
-            const fallbackSql = `INSERT INTO orders (
-              id, customer_name, customer_phone, customer_address, pincode,
-              delivery_method, subtotal, delivery_fee, total, currency,
-              payment_status, order_status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'INR', 'pending', 'new')`
-            const fallbackStatements = [
-              db.prepare(fallbackSql).bind(orderId, name, cleanCustomerPhone, address, pincode, delivery, subtotal, deliveryFee, total),
-              ...statements.slice(1),
-            ]
-            await db.batch(fallbackStatements)
-            success = true
-          } else {
-            throw batchError
-          }
-        }
+        await db.batch(statements)
+        success = true
 
-        if (success) {
-          try {
-            if (deliverySlot) {
-              await db
-                .prepare(`UPDATE delivery_time_slots SET booked = booked + 1 WHERE id = ? AND slot_date = date('now')`)
-                .bind(deliverySlot)
-                .run()
-            }
-          } catch {}
-          try {
-            for (const item of normalizedItems) {
-              await db
-                .prepare(`UPDATE product_inventory SET stock = MAX(0, stock - ?) WHERE product_id = ?`)
-                .bind(item.quantity, item.productId)
-                .run()
-            }
-          } catch {}
-        }
+        try {
+          for (const item of normalizedItems) {
+            await db
+              .prepare(`UPDATE product_inventory SET stock = MAX(0, stock - ?) WHERE product_id = ?`)
+              .bind(item.quantity, item.productId)
+              .run()
+          }
+        } catch {}
       } catch (insertError: unknown) {
         attempts++
         const msg = insertError instanceof Error ? insertError.message : String(insertError)
