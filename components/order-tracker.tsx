@@ -132,8 +132,6 @@ export function OrderTracker({ orderId }: { orderId: string }) {
 
   useEffect(() => {
     fetchOrder()
-    const interval = setInterval(() => fetchOrder(false), 10000)
-    return () => clearInterval(interval)
   }, [fetchOrder])
 
   const copyOrderId = () => {
@@ -158,7 +156,7 @@ export function OrderTracker({ orderId }: { orderId: string }) {
         <div className="glass-card flex flex-col items-center space-y-4 rounded-3xl p-8 text-center shadow-xl">
           <RefreshCw className="h-10 w-10 animate-spin text-amber-600 dark:text-amber-400" />
           <div className="space-y-1">
-            <h3 className="font-heading text-lg font-bold text-foreground">Fetching Live Status...</h3>
+            <h3 className="font-heading text-lg font-bold text-foreground">Loading Order Details...</h3>
             <p className="text-xs text-muted-foreground">Connecting to Swadam Foods order system</p>
           </div>
         </div>
@@ -219,7 +217,7 @@ export function OrderTracker({ orderId }: { orderId: string }) {
                 Swadam Foods
               </span>
               <span className="text-[10px] font-semibold tracking-wider text-muted-foreground">
-                Live Order Tracker
+                Order Tracker
               </span>
             </span>
           </Link>
@@ -250,12 +248,9 @@ export function OrderTracker({ orderId }: { orderId: string }) {
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between border-b border-border/60 pb-6">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="relative flex h-3 w-3">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500"></span>
-                </span>
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
                 <span className="text-xs font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
-                  Live Status Active
+                  Order Status
                 </span>
               </div>
 
@@ -351,8 +346,8 @@ export function OrderTracker({ orderId }: { orderId: string }) {
                               {stage.label}
                             </span>
                             {isCurrent && (
-                              <span className="inline-flex items-center rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 animate-pulse">
-                                Live Now
+                              <span className="inline-flex items-center rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300">
+                                Current Stage
                               </span>
                             )}
                           </div>

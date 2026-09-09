@@ -5,7 +5,6 @@ import {
   createPhonePePayment,
   getPhonePeOrderStatus,
 } from "@/lib/phonepe"
-import { checkRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit"
 
 export const dynamic = "force-dynamic"
 
@@ -58,10 +57,6 @@ function generatePaymentMerchantOrderId(orderId: string) {
 }
 
 export async function POST(request: Request) {
-  const rl = checkRateLimit(request, { limit: 5, windowMs: 60000, action: "init_payment" })
-  if (!rl.success) {
-    return rateLimitExceededResponse(rl)
-  }
 
   if (!sameOrigin(request)) return json({ error: "Invalid request origin." }, 403)
 

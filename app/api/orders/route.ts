@@ -1,7 +1,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare"
 import type { D1Database } from "@cloudflare/workers-types"
 import { products } from "@/lib/products"
-import { checkRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit"
 
 export const dynamic = "force-dynamic"
 
@@ -106,11 +105,6 @@ function getCF() {
 }
 
 export async function POST(request: Request) {
-  const rl = checkRateLimit(request, { limit: 5, windowMs: 60000, action: "create_order" })
-  if (!rl.success) {
-    return rateLimitExceededResponse(rl)
-  }
-
   if (!sameOrigin(request)) {
     return json({ error: "Invalid request origin." }, 403)
   }

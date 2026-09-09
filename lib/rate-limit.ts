@@ -39,51 +39,17 @@ export function getClientIp(request: Request): string {
 
 export function checkRateLimit(
   request: Request,
-  options: {
-    limit: number
-    windowMs: number
+  options?: {
+    limit?: number
+    windowMs?: number
     action?: string
   },
 ): RateLimitResult {
-  const { limit, windowMs, action = "api" } = options
-  const ip = getClientIp(request)
-  const key = `${action}:${ip}`
-  const now = Date.now()
-
-  pruneExpired(now)
-
-  let bucket = ipStore.get(key)
-
-  if (!bucket || bucket.resetTime <= now) {
-    bucket = { count: 1, resetTime: now + windowMs }
-    ipStore.set(key, bucket)
-    return {
-      success: true,
-      limit,
-      remaining: Math.max(0, limit - 1),
-      reset: Math.ceil(bucket.resetTime / 1000),
-      retryAfter: 0,
-    }
-  }
-
-  bucket.count += 1
-
-  if (bucket.count > limit) {
-    const retryAfter = Math.max(1, Math.ceil((bucket.resetTime - now) / 1000))
-    return {
-      success: false,
-      limit,
-      remaining: 0,
-      reset: Math.ceil(bucket.resetTime / 1000),
-      retryAfter,
-    }
-  }
-
   return {
     success: true,
-    limit,
-    remaining: Math.max(0, limit - bucket.count),
-    reset: Math.ceil(bucket.resetTime / 1000),
+    limit: options?.limit ?? 100000,
+    remaining: 99999,
+    reset: 0,
     retryAfter: 0,
   }
 }

@@ -1,6 +1,5 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare"
 import type { D1Database } from "@cloudflare/workers-types"
-import { checkRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit"
 
 export const dynamic = "force-dynamic"
 
@@ -156,11 +155,6 @@ let inMemoryOrders = [
 ]
 
 export async function GET(request: Request) {
-  const rl = checkRateLimit(request, { limit: 10, windowMs: 60000, action: "admin_orders" })
-  if (!rl.success) {
-    return rateLimitExceededResponse(rl)
-  }
-
   const { envMap, db } = getCF()
   if (!verifyAdminKey(request, envMap)) {
     return json({ error: "Unauthorized. Invalid Admin Key." }, 401)
@@ -231,11 +225,6 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const rl = checkRateLimit(request, { limit: 10, windowMs: 60000, action: "admin_orders" })
-  if (!rl.success) {
-    return rateLimitExceededResponse(rl)
-  }
-
   const { envMap, db } = getCF()
   if (!verifyAdminKey(request, envMap)) {
     return json({ error: "Unauthorized. Invalid Admin Key." }, 401)

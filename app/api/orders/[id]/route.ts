@@ -1,6 +1,5 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare"
 import type { D1Database } from "@cloudflare/workers-types"
-import { checkRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit"
 import { getPhonePeOrderStatus } from "@/lib/phonepe"
 
 export const dynamic = "force-dynamic"
@@ -56,11 +55,6 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const rl = checkRateLimit(request, { limit: 20, windowMs: 60000, action: "track_order" })
-  if (!rl.success) {
-    return rateLimitExceededResponse(rl)
-  }
-
   const { id: rawId } = await params
   const orderId = (rawId || "").replace(/-P[A-Z0-9]+$/i, "").trim()
   if (!orderId || !/^SWD-\d{8}-[A-Z0-9]{8}$/.test(orderId)) {

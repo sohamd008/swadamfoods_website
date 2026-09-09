@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { checkRateLimit, rateLimitExceededResponse } from "@/lib/rate-limit"
 
 const SWADAM_MARKDOWN = `# Swadam Foods — Authentic Homemade Delicacies & Instant Premixes
 
@@ -102,34 +101,6 @@ export function middleware(request: NextRequest) {
     destinationUrl.protocol = "https:"
     destinationUrl.host = nonWwwHost
     return NextResponse.redirect(destinationUrl.toString(), 301)
-  }
-
-  if (pathname.startsWith("/api") && !pathname.startsWith("/api/webhooks/phonepe")) {
-    let limit = 60
-    let windowMs = 60000
-    let action = "api_general"
-
-    if (pathname === "/api/orders" && request.method === "POST") {
-      limit = 5
-      action = "create_order"
-    } else if (pathname === "/api/payments/phonepe" && request.method === "POST") {
-      limit = 5
-      action = "init_payment"
-    } else if (pathname.startsWith("/api/payments/phonepe/status")) {
-      limit = 30
-      action = "payment_status"
-    } else if (pathname.startsWith("/api/admin")) {
-      limit = 10
-      action = "admin_access"
-    } else if (pathname.startsWith("/api/orders/")) {
-      limit = 20
-      action = "track_order"
-    }
-
-    const rateResult = checkRateLimit(request, { limit, windowMs, action })
-    if (!rateResult.success) {
-      return rateLimitExceededResponse(rateResult)
-    }
   }
 
   const acceptHeader = request.headers.get("accept") || ""

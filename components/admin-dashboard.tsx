@@ -18,6 +18,11 @@ import {
   Phone,
   AlertCircle,
   Package,
+  Info,
+  X,
+  Copy,
+  Check,
+  ExternalLink,
 } from "lucide-react"
 
 type OrderItem = {
@@ -101,13 +106,185 @@ function StatusChip({ status }: { status: string }) {
   )
 }
 
+function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => void }) {
+  const [copied, setCopied] = useState(false)
+  const isPaid = order.paymentStatus === "paid"
+
+  const copyId = () => {
+    navigator.clipboard.writeText(order.id)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-6 backdrop-blur-sm overflow-y-auto">
+      <div className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl bg-white text-stone-900 shadow-2xl border border-stone-200">
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-stone-200 px-5 py-4 bg-stone-50/95 backdrop-blur-md">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-700 font-black shrink-0">
+              <Info className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <h3 className="font-heading text-base font-extrabold text-stone-900 truncate">
+                Order Details
+              </h3>
+              <p className="text-xs text-stone-500 font-mono truncate">{order.id}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={copyId}
+              className="inline-flex items-center gap-1 rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-xs font-bold text-stone-700 hover:bg-stone-100 transition active:scale-95"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+              <span>{copied ? "Copied" : "Copy ID"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl p-2 text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition"
+              aria-label="Close details"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 sm:p-6 space-y-5 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-3 space-y-1">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-stone-400 block">Status</span>
+              <StatusChip status={order.orderStatus} />
+            </div>
+            <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-3 space-y-1">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-stone-400 block">Payment</span>
+              <span
+                className="inline-block text-xs font-bold px-2.5 py-1 rounded-full"
+                style={isPaid
+                  ? { background: "#F0FDF4", color: "#15803D", border: "1px solid #86EFAC" }
+                  : { background: "#FEF3C7", color: "#92400E", border: "1px solid #FCD34D" }}
+              >
+                {isPaid ? "✓ Paid" : "⏳ Pending"}
+              </span>
+            </div>
+            <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-3 space-y-1">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-stone-400 block">Total Amount</span>
+              <span className="text-base font-black text-stone-900 font-mono">₹{order.total}</span>
+            </div>
+            <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-3 space-y-1">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-stone-400 block">Gateway</span>
+              <span className="text-xs font-bold text-stone-800">{order.paymentGateway === "phonepe" ? "PhonePe PG" : (order.paymentGateway || "Direct / COD")}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-2xl border border-stone-200 bg-stone-50/60 p-4">
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-stone-400 block">Customer Information</span>
+              <p className="text-sm font-extrabold text-stone-900">{order.customerName}</p>
+              <div className="flex items-center gap-2 pt-0.5">
+                <a
+                  href={`tel:${order.customerPhone}`}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-amber-800 hover:underline"
+                >
+                  <Phone className="h-3.5 w-3.5" />
+                  <span>{order.customerPhone}</span>
+                </a>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-stone-400 block">Delivery Details</span>
+              <p className="font-medium text-stone-800 leading-relaxed">{order.customerAddress}</p>
+              <p className="font-bold text-stone-900">Pincode: {order.pincode}</p>
+              <span className="inline-block rounded-lg bg-stone-200 px-2 py-0.5 text-[10px] font-bold text-stone-700">
+                {order.deliveryMethod === "porter" ? "🚗 Porter Express Delivery" : "🏠 Home Delivery in Pune (FREE)"}
+              </span>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-stone-200 bg-stone-50/60 p-4 space-y-2">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-stone-400 block">System & Gateway Info</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+              <div>
+                <span className="text-stone-400">Created:</span>{" "}
+                <span className="font-medium text-stone-800">{new Date(order.createdAt).toLocaleString("en-IN")}</span>
+              </div>
+              <div>
+                <span className="text-stone-400">Updated:</span>{" "}
+                <span className="font-medium text-stone-800">{new Date(order.updatedAt).toLocaleString("en-IN")}</span>
+              </div>
+              <div>
+                <span className="text-stone-400">Gateway Order ID:</span>{" "}
+                <span className="font-mono text-stone-800 text-[10px]">{order.gatewayOrderId || "N/A"}</span>
+              </div>
+              <div>
+                <span className="text-stone-400">Currency:</span>{" "}
+                <span className="font-bold text-stone-800">{order.currency || "INR"}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-stone-400 block">Itemized Bill ({order.items.length} items)</span>
+            <div className="overflow-x-auto rounded-2xl border border-stone-200">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-stone-100 text-stone-600 font-extrabold text-[10px] uppercase border-b border-stone-200">
+                    <th className="py-2.5 px-3">#</th>
+                    <th className="py-2.5 px-3">Item</th>
+                    <th className="py-2.5 px-2 text-center">Pack</th>
+                    <th className="py-2.5 px-2 text-center">Qty</th>
+                    <th className="py-2.5 px-3 text-right">Rate</th>
+                    <th className="py-2.5 px-3 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100 bg-white">
+                  {order.items.map((item, idx) => (
+                    <tr key={idx}>
+                      <td className="py-2.5 px-3 text-stone-400 font-mono">{idx + 1}</td>
+                      <td className="py-2.5 px-3 font-bold text-stone-900">{item.product_name}</td>
+                      <td className="py-2.5 px-2 text-center text-stone-500">{item.weight}</td>
+                      <td className="py-2.5 px-2 text-center font-bold text-stone-900">{item.quantity}</td>
+                      <td className="py-2.5 px-3 text-right font-mono text-stone-600">₹{item.unit_price}</td>
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-stone-900">₹{item.line_total}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="border-t border-stone-200 pt-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <Link
+              href={`/order/${order.id}`}
+              target="_blank"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 hover:underline"
+            >
+              <span>Open Customer Tracking Page</span>
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
+            <div className="flex items-center gap-4 text-xs font-bold text-stone-900">
+              <span>Subtotal: ₹{order.subtotal}</span>
+              <span>Delivery: ₹{order.deliveryFee}</span>
+              <span className="text-base font-black text-emerald-700 font-mono">Total: ₹{order.total}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function OrderCard({
   order,
   onStatusChange,
+  onViewDetails,
   updatingId,
 }: {
   order: Order
   onStatusChange: (id: string, status: string) => Promise<void>
+  onViewDetails: (order: Order) => void
   updatingId: string | null
 }) {
   const updating = updatingId === order.id
@@ -140,7 +317,18 @@ function OrderCard({
       <div className="px-6 pt-6 pb-5 border-b border-stone-100">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1 min-w-0">
-            <div className="text-2xl font-extrabold text-stone-900 truncate">{order.customerName}</div>
+            <div className="flex items-center gap-2.5">
+              <div className="text-2xl font-extrabold text-stone-900 truncate">{order.customerName}</div>
+              <button
+                type="button"
+                onClick={() => onViewDetails(order)}
+                className="inline-flex items-center justify-center h-8 w-8 rounded-full border border-stone-300 bg-stone-100 hover:bg-primary hover:text-white hover:border-primary text-stone-600 transition shadow-xs touch-manipulation active:scale-95 shrink-0"
+                title="View All Order Details"
+                aria-label="View All Order Details"
+              >
+                <Info className="w-4 h-4" />
+              </button>
+            </div>
             <div className="flex flex-wrap items-center gap-3 text-stone-500">
               <span className="flex items-center gap-1.5 font-medium text-base">
                 <Phone className="w-4 h-4 text-stone-400" />
@@ -264,6 +452,7 @@ export function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("")
   const [showSearch, setShowSearch] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState<Order | null>(null)
 
   useEffect(() => {
     const stored = localStorage.getItem("swadam_admin_key")
@@ -507,11 +696,18 @@ export function AdminDashboard() {
               key={order.id}
               order={order}
               onStatusChange={handleStatusChange}
+              onViewDetails={setSelectedOrderDetails}
               updatingId={updatingId}
             />
           ))}
         </div>
       </div>
+      {selectedOrderDetails && (
+        <OrderDetailModal
+          order={selectedOrderDetails}
+          onClose={() => setSelectedOrderDetails(null)}
+        />
+      )}
     </div>
   )
 }

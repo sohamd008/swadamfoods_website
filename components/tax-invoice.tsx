@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { Printer, Download, X, ShieldCheck, CheckCircle2, Building2 } from "lucide-react"
+import { Printer, Download, X, ShieldCheck, CheckCircle2, Building2, Loader2 } from "lucide-react"
 import { PhonePeIcon } from "@/components/phonepe-logo"
 
 export type TaxInvoiceOrder = {
@@ -102,8 +102,59 @@ export function TaxInvoiceModal({
   const cgst = Math.round((totalGst / 2) * 100) / 100
   const sgst = Math.round((totalGst - cgst) * 100) / 100
 
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
+
   const handlePrint = () => {
     window.print()
+  }
+
+  const handleDownloadPdf = async () => {
+    const element = document.getElementById("tax-invoice-printable")
+    if (!element) return
+
+    setIsGeneratingPdf(true)
+    try {
+      const html2canvasModule = await import("html2canvas")
+      const html2canvas = html2canvasModule.default || html2canvasModule
+      const { jsPDF } = await import("jspdf")
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      })
+
+      const imgData = canvas.toDataURL("image/png")
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      })
+
+      const imgWidth = 210
+      const pageHeight = 297
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+      let position = 0
+
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+
+      pdf.save(`Invoice-${order.id}.pdf`)
+    } catch (err) {
+      console.error("PDF generation failed, falling back to print:", err)
+      window.print()
+    } finally {
+      setIsGeneratingPdf(false)
+    }
   }
 
   return (
@@ -118,11 +169,29 @@ export function TaxInvoiceModal({
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 sm:px-4 text-xs font-extrabold text-primary-foreground shadow-sm hover:opacity-95 active:scale-95 transition touch-manipulation disabled:opacity-60"
+            >
+              {isGeneratingPdf ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Generating PDF...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="h-3.5 w-3.5" />
+                  <span>Download PDF</span>
+                </>
+              )}
+            </button>
+            <button
+              type="button"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 sm:px-4 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-95 transition touch-manipulation"
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-stone-300 bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200 active:scale-95 transition touch-manipulation"
             >
               <Printer className="h-3.5 w-3.5" />
-              <span>Print / Save PDF</span>
+              <span>Print</span>
             </button>
             <button
               type="button"
@@ -318,6 +387,32 @@ export function TaxInvoiceModal({
                   <p className="text-[9px] text-stone-400">No Physical Signature Required</p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-stone-200 print:hidden">
+            <div className="flex items-center gap-2 text-xs text-stone-600">
+              <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>Official GST &amp; FSSAI Compliant Tax Invoice</span>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={isGeneratingPdf}
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-xs font-extrabold text-primary-foreground shadow-md active:scale-95 transition touch-manipulation disabled:opacity-60"
+              >
+                {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                <span>{isGeneratingPdf ? "Generating PDF..." : "Download Official PDF"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-stone-300 bg-stone-100 px-4 py-3 text-xs font-bold text-stone-700 hover:bg-stone-200 active:scale-95 transition touch-manipulation"
+              >
+                <Printer className="h-4 w-4" />
+                <span>Print</span>
+              </button>
             </div>
           </div>
 
