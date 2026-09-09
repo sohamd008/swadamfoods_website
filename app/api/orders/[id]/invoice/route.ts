@@ -186,7 +186,7 @@ export async function GET(
   doc.setFontSize(7.5)
   doc.setTextColor(71, 85, 105)
   doc.text("Authentic Homemade Delicacies & Instant Premixes", margin + 5, 23)
-  doc.text("Proprietor: Sanyukta Sachin Dhumal | B-10, Ruturang Society, Aranyeshwar, Pune 411009", margin + 5, 27)
+  doc.text("B-10, Ruturang Society, Aranyeshwar, Pune 411009", margin + 5, 27)
   doc.setFont("helvetica", "bold")
   doc.text("GSTIN: 27AOCPD1930N1Z1 | FSSAI: 21524018002620 | MSME: UDYAM-MH-26-1188295", margin + 5, 31)
   doc.setFont("helvetica", "normal")
