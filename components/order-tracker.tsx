@@ -28,7 +28,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle"
 import { PhonePeIcon } from "@/components/phonepe-logo"
 import dynamic from "next/dynamic"
-import { WHATSAPP_NUMBER } from "@/lib/products"
+import { WHATSAPP_NUMBER, products } from "@/lib/products"
 import { useCart } from "@/lib/cart-context"
 import { validateIndianMobile } from "@/lib/phone"
 
@@ -103,7 +103,7 @@ const STAGES = [
 ]
 
 export function OrderTracker({ orderId }: { orderId: string }) {
-  const { clear: clearCart } = useCart()
+  const { clear: clearCart, addItem, openCart } = useCart()
   const [order, setOrder] = useState<OrderDetails | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>("")
@@ -652,6 +652,36 @@ export function OrderTracker({ orderId }: { orderId: string }) {
             </div>
           </div>
         </div>
+
+        {order.orderStatus === "delivered" && (
+          <div className="glass-card rounded-3xl p-6 sm:p-8 text-center space-y-4 border border-primary/20 bg-primary/5 shadow-xl">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-inner">
+              <ShoppingBag className="h-7 w-7" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-heading text-lg font-extrabold text-foreground">Loved your order?</h3>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                Reorder the exact same items with one tap — your cart will be ready instantly.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                order.items.forEach((item) => {
+                  const product = products.find((p) => p.name === item.productName || p.id === item.productName)
+                  if (product) {
+                    for (let i = 0; i < item.quantity; i++) addItem(product)
+                  }
+                })
+                openCart()
+              }}
+              className="inline-flex items-center gap-2 rounded-2xl bg-primary hover:opacity-90 px-6 py-3.5 text-xs font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] active:scale-95"
+            >
+              <ShoppingBag className="h-4 w-4" />
+              <span>Reorder Same Items</span>
+            </button>
+          </div>
+        )}
 
         <div className="glass-card rounded-3xl p-6 sm:p-8 text-center space-y-4 border border-emerald-500/30 bg-emerald-500/5 shadow-xl">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-600/30">

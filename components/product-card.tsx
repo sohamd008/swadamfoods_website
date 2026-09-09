@@ -6,7 +6,7 @@ import { ChefHat, X, ArrowRight } from "lucide-react"
 import { AddToCartButton } from "@/components/add-to-cart-button"
 import type { Product } from "@/lib/products"
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({ product, stock }: { product: Product; stock?: number }) {
   const [isPrepOpen, setIsPrepOpen] = useState(false)
   const hasPrep = Boolean(product.prepSteps?.length)
 
@@ -77,6 +77,18 @@ export function ProductCard({ product }: { product: Product }) {
                   <ArrowRight className="h-3 w-3" aria-hidden="true" />
                 </span>
               </button>
+            )}
+
+            {stock !== undefined && stock <= 10 && stock > 0 && (
+              <div className="flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-800 dark:text-amber-300">
+                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                <span>Only {stock} pack{stock > 1 ? "s" : ""} left from today&apos;s batch!</span>
+              </div>
+            )}
+            {stock !== undefined && stock === 0 && (
+              <div className="flex items-center gap-1.5 rounded-xl border border-stone-300 bg-stone-100 px-3 py-1.5 text-xs font-bold text-stone-600 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-400">
+                <span>Sold out from today&apos;s batch</span>
+              </div>
             )}
 
             <div className="flex items-center justify-between gap-3 border-t border-white/40 pt-4 dark:border-white/10">

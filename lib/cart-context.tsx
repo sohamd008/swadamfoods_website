@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react"
 import type { Product } from "@/lib/products"
+import { trackEvent } from "@/lib/analytics"
 
 export type CartItem = {
   product: Product
@@ -64,6 +65,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   function addItem(product: Product) {
     setItems((prev) => {
       const existing = prev.find((item) => item.product.id === product.id)
+      trackEvent("add_to_cart", {
+        currency: "INR",
+        value: product.price,
+        items: [{ item_id: product.id, item_name: product.name, price: product.price, quantity: 1, item_brand: "Swadam Foods" }],
+      })
       if (existing) {
         return prev.map((item) =>
           item.product.id === product.id
@@ -77,7 +83,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }
 
   function removeItem(productId: string) {
-    setItems((prev) => prev.filter((item) => item.product.id !== productId))
+    setItems((prev) => {
+      const found = prev.find((i) => i.product.id === productId)
+      if (found) {
+        trackEvent("remove_from_cart", {
+          currency: "INR",
+          value: found.product.price * found.quantity,
+          items: [{ item_id: found.product.id, item_name: found.product.name, price: found.product.price, quantity: found.quantity, item_brand: "Swadam Foods" }],
+        })
+      }
+      return prev.filter((item) => item.product.id !== productId)
+    })
   }
 
   function setQuantity(productId: string, quantity: number) {

@@ -22,11 +22,13 @@ import {
   MessageSquare,
   MapPin,
   Lock,
+  ShoppingBag,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { PhonePeIcon } from "@/components/phonepe-logo"
 import dynamic from "next/dynamic"
-import { WHATSAPP_NUMBER } from "@/lib/products"
+import { WHATSAPP_NUMBER, products } from "@/lib/products"
+import { useCart } from "@/lib/cart-context"
 import { sanitizePhone, validateIndianMobile } from "@/lib/phone"
 
 const TaxInvoiceModal = dynamic(
@@ -101,6 +103,7 @@ const STAGES = [
 ]
 
 export function TrackOrderPage() {
+  const { addItem, openCart } = useCart()
   const searchParams = useSearchParams()
   const initialOrderId = searchParams.get("orderId") || searchParams.get("id") || ""
   const initialPhone = searchParams.get("phone") || searchParams.get("mobile") || ""
@@ -605,6 +608,25 @@ export function TrackOrderPage() {
               </div>
 
               <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-stone-200/80 pt-6 dark:border-stone-800/80">
+                {order.orderStatus === "delivered" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      order.items.forEach((item) => {
+                        const product = products.find((p) => p.name === item.productName || p.id === item.productName)
+                        if (product) {
+                          for (let i = 0; i < item.quantity; i++) addItem(product)
+                        }
+                      })
+                      openCart()
+                    }}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-xs font-bold text-primary-foreground shadow-md hover:opacity-90 active:scale-95 transition"
+                  >
+                    <ShoppingBag className="h-4 w-4" />
+                    <span>Reorder Same Items</span>
+                  </button>
+                )}
+
                 <a
                   href={`https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappMessage}`}
                   target="_blank"

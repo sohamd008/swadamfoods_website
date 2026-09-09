@@ -156,6 +156,32 @@ gtag('config', 'G-9MMSSWSXB0', { send_page_view: true });`}
                     })),
                   },
                 },
+                ...products.map((p) => ({
+                  '@type': 'Product',
+                  '@id': `https://swadamfoods.eu.cc/#product-${p.id}`,
+                  name: p.name,
+                  description: p.description,
+                  image: `https://swadamfoods.eu.cc${p.image}`,
+                  sku: p.id,
+                  mpn: p.id,
+                  brand: {
+                    '@type': 'Brand',
+                    name: 'Swadam Foods',
+                  },
+                  offers: {
+                    '@type': 'Offer',
+                    url: 'https://swadamfoods.eu.cc/#products',
+                    priceCurrency: 'INR',
+                    price: p.price,
+                    priceValidUntil: '2027-12-31',
+                    availability: 'https://schema.org/InStock',
+                    itemCondition: 'https://schema.org/NewCondition',
+                    seller: {
+                      '@type': 'Organization',
+                      name: 'Swadam Foods',
+                    },
+                  },
+                })),
                 {
                   '@type': 'FAQPage',
                   '@id': 'https://swadamfoods.eu.cc/#faq',

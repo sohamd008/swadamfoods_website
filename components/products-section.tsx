@@ -1,7 +1,25 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { ProductCard } from "@/components/product-card"
 import { products } from "@/lib/products"
 
 export function ProductsSection() {
+  const [inventory, setInventory] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    fetch("/api/inventory")
+      .then((r) => r.json())
+      .then((data: { inventory?: Array<{ productId: string; stock: number }> }) => {
+        const map: Record<string, number> = {}
+        for (const item of data.inventory ?? []) {
+          map[item.productId] = item.stock
+        }
+        setInventory(map)
+      })
+      .catch(() => {})
+  }, [])
+
   return (
     <section id="products" className="relative scroll-mt-20 py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -19,7 +37,11 @@ export function ProductsSection() {
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              stock={inventory[product.id]}
+            />
           ))}
         </div>
       </div>

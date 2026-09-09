@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import React, { useState, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import dynamic from "next/dynamic"
-import { WHATSAPP_NUMBER } from "@/lib/products"
+import { WHATSAPP_NUMBER, products } from "@/lib/products"
 
 const TaxInvoiceModal = dynamic(
   () => import("@/components/tax-invoice").then((mod) => mod.TaxInvoiceModal),
@@ -35,6 +35,16 @@ import {
   Calendar,
   Sparkles,
   Layers,
+  Download,
+  BarChart2,
+  Bell,
+  BellOff,
+  CheckSquare,
+  Square,
+  Boxes,
+  TimerReset,
+  Minus,
+  Plus,
 } from "lucide-react"
 
 type OrderItem = {
@@ -465,6 +475,8 @@ function OrderCard({
   onViewDetails,
   onOpenInvoice,
   updatingId,
+  isSelected,
+  onToggleSelect,
 }: {
   order: Order
   onStatusChange: (id: string, status: string) => Promise<void>
@@ -472,6 +484,8 @@ function OrderCard({
   onViewDetails: (order: Order) => void
   onOpenInvoice: (order: Order) => void
   updatingId: string | null
+  isSelected?: boolean
+  onToggleSelect?: (id: string) => void
 }) {
   const [showWaMenu, setShowWaMenu] = useState(false)
   const updating = updatingId === order.id
@@ -491,9 +505,19 @@ function OrderCard({
   ]
 
   return (
-    <div className="relative rounded-2xl border border-stone-200/90 bg-white shadow-sm hover:shadow-md transition-all">
+    <div className={`relative rounded-2xl border bg-white shadow-sm hover:shadow-md transition-all ${isSelected ? "border-primary/60 ring-2 ring-primary/20" : "border-stone-200/90"}`}>
       <div className="p-4 sm:p-5 border-b border-stone-100 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
+          {onToggleSelect && (
+            <button
+              type="button"
+              onClick={() => onToggleSelect(order.id)}
+              className="shrink-0 text-stone-400 hover:text-primary transition active:scale-95"
+              title={isSelected ? "Deselect order" : "Select order for bulk action"}
+            >
+              {isSelected ? <CheckSquare className="h-4.5 w-4.5 text-primary" /> : <Square className="h-4.5 w-4.5" />}
+            </button>
+          )}
           <span className="font-mono text-xs font-black text-stone-900 bg-stone-100 px-2.5 py-1 rounded-lg border border-stone-200">
             {order.id}
           </span>
@@ -747,6 +771,23 @@ export function AdminDashboard() {
   const [autoSendWhatsApp, setAutoSendWhatsApp] = useState(true)
   const [statusNotification, setStatusNotification] = useState<string | null>(null)
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkStatus, setBulkStatus] = useState("preparing")
+  const [bulkUpdating, setBulkUpdating] = useState(false)
+
+  const [chimeEnabled, setChimeEnabled] = useState(true)
+  const prevOrderCountRef = React.useRef(0)
+
+  const [inventory, setInventory] = useState<Record<string, number>>({})
+  const [inventoryInputs, setInventoryInputs] = useState<Record<string, string>>({})
+  const [inventoryUpdating, setInventoryUpdating] = useState<string | null>(null)
+
+  const [timeSlots, setTimeSlots] = useState<Array<{ id: string; label: string; capacity: number; booked: number; isActive: boolean; available: number }>>([])
+  const [slotsLoading, setSlotsLoading] = useState(false)
+  const [slotUpdating, setSlotUpdating] = useState<string | null>(null)
+
+  const LOW_STOCK_THRESHOLD = 10
+
   useEffect(() => {
     const stored = localStorage.getItem("swadam_admin_key")
     if (stored) setAdminKey(stored)
@@ -789,6 +830,57 @@ export function AdminDashboard() {
     return () => clearInterval(timer)
   }, [isAuthorized, adminKey, fetchOrders])
 
+  useEffect(() => {
+    if (!isAuthorized) return
+    const newCount = orders.filter((o) => o.orderStatus === "new" && o.paymentStatus === "paid").length
+    if (chimeEnabled && newCount > prevOrderCountRef.current && prevOrderCountRef.current > 0) {
+      try {
+        const ctx = new AudioContext()
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.type = "sine"
+        osc.frequency.setValueAtTime(880, ctx.currentTime)
+        osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.3)
+        gain.gain.setValueAtTime(0.4, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6)
+        osc.start(ctx.currentTime)
+        osc.stop(ctx.currentTime + 0.6)
+      } catch {}
+    }
+    prevOrderCountRef.current = newCount
+  }, [orders, chimeEnabled, isAuthorized])
+
+  useEffect(() => {
+    if (!isAuthorized || !adminKey) return
+    fetch(`/api/admin/inventory?key=${encodeURIComponent(adminKey)}`)
+      .then((r) => r.json())
+      .then((data: { inventory?: Array<{ productId: string; stock: number }> }) => {
+        const map: Record<string, number> = {}
+        const inputs: Record<string, string> = {}
+        for (const item of data.inventory ?? []) {
+          map[item.productId] = item.stock
+          inputs[item.productId] = String(item.stock)
+        }
+        setInventory(map)
+        setInventoryInputs(inputs)
+      })
+      .catch(() => {})
+  }, [isAuthorized, adminKey])
+
+  useEffect(() => {
+    if (!isAuthorized || !adminKey) return
+    setSlotsLoading(true)
+    fetch(`/api/admin/time-slots?key=${encodeURIComponent(adminKey)}`)
+      .then((r) => r.json())
+      .then((data: { slots?: Array<{ id: string; label: string; capacity: number; booked: number; isActive: boolean; available: number }> }) => {
+        setTimeSlots(data.slots ?? [])
+      })
+      .catch(() => {})
+      .finally(() => setSlotsLoading(false))
+  }, [isAuthorized, adminKey])
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
     const key = inputKey.trim()
@@ -806,6 +898,103 @@ export function AdminDashboard() {
     setAdminKey("")
     setIsAuthorized(false)
     setOrders([])
+    setSelectedIds(new Set())
+  }
+
+  const handleBulkStatusUpdate = async () => {
+    if (selectedIds.size === 0) return
+    setBulkUpdating(true)
+    const ids = Array.from(selectedIds)
+    for (const orderId of ids) {
+      try {
+        const res = await fetch("/api/admin/orders", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+          body: JSON.stringify({ orderId, orderStatus: bulkStatus }),
+        })
+        if (res.ok) {
+          setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, orderStatus: bulkStatus } : o)))
+          if (autoSendWhatsApp) {
+            const order = orders.find((o) => o.id === orderId)
+            if (order) openWhatsApp(order.customerPhone, getWhatsAppMessage(order, bulkStatus))
+          }
+        }
+      } catch {}
+    }
+    setSelectedIds(new Set())
+    setBulkUpdating(false)
+    setStatusNotification(`Bulk updated ${ids.length} order${ids.length > 1 ? "s" : ""} to "${STATUS_CONFIG[bulkStatus as keyof typeof STATUS_CONFIG]?.label || bulkStatus}"`)
+    setTimeout(() => setStatusNotification(null), 4000)
+  }
+
+  const handleInventoryUpdate = async (productId: string) => {
+    const stockStr = inventoryInputs[productId] ?? "0"
+    const stock = Math.max(0, parseInt(stockStr, 10) || 0)
+    setInventoryUpdating(productId)
+    try {
+      await fetch("/api/admin/inventory", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify({ productId, stock }),
+      })
+      setInventory((prev) => ({ ...prev, [productId]: stock }))
+    } catch {}
+    setInventoryUpdating(null)
+  }
+
+  const handleSlotToggle = async (slotId: string, isActive: boolean) => {
+    setSlotUpdating(slotId)
+    try {
+      await fetch("/api/admin/time-slots", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify({ slotId, isActive }),
+      })
+      setTimeSlots((prev) => prev.map((s) => (s.id === slotId ? { ...s, isActive } : s)))
+    } catch {}
+    setSlotUpdating(null)
+  }
+
+  const handleSlotCapacity = async (slotId: string, capacity: number) => {
+    setSlotUpdating(slotId)
+    try {
+      await fetch("/api/admin/time-slots", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify({ slotId, capacity }),
+      })
+      setTimeSlots((prev) => prev.map((s) => (s.id === slotId ? { ...s, capacity, available: Math.max(0, capacity - s.booked) } : s)))
+    } catch {}
+    setSlotUpdating(null)
+  }
+
+  const downloadManifest = () => {
+    const today = new Date().toISOString().slice(0, 10)
+    const todayOrders = orders.filter(
+      (o) => ["packed", "shipped"].includes(o.orderStatus) && o.createdAt?.startsWith(today),
+    )
+    const rows = [
+      ["Order ID", "Customer Name", "Phone", "Address", "Pincode", "Delivery", "Items", "Total (INR)", "Status"],
+      ...todayOrders.map((o) => [
+        o.id,
+        o.customerName,
+        o.customerPhone,
+        `"${o.customerAddress.replace(/"/g, '""')}"`,
+        o.pincode,
+        o.deliveryMethod === "porter" ? "Porter" : "Pune Home",
+        `"${o.items.map((i) => `${i.product_name} x${i.quantity}`).join(", ")}"`,
+        String(o.total),
+        o.orderStatus,
+      ]),
+    ]
+    const csv = rows.map((r) => r.join(",")).join("\n")
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `swadam-manifest-${today}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
@@ -1013,6 +1202,25 @@ export function AdminDashboard() {
               <span className="hidden sm:inline">Refresh</span>
             </button>
 
+            <button
+              type="button"
+              onClick={downloadManifest}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-50 transition shadow-xs active:scale-95 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300"
+              title="Download today's dispatch manifest CSV"
+            >
+              <Download className="h-3.5 w-3.5 text-stone-500" />
+              <span className="hidden sm:inline">Manifest</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setChimeEnabled(!chimeEnabled)}
+              className={`inline-flex items-center justify-center h-9 w-9 rounded-xl border transition shadow-xs active:scale-95 ${chimeEnabled ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40" : "border-stone-200 bg-white text-stone-400 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-900"}`}
+              title={chimeEnabled ? "Mute new order chime" : "Unmute new order chime"}
+            >
+              {chimeEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+            </button>
+
             <Link
               href="/"
               target="_blank"
@@ -1097,6 +1305,122 @@ export function AdminDashboard() {
           </div>
         </div>
 
+        {Object.entries(inventory).some(([, stock]) => stock <= LOW_STOCK_THRESHOLD && stock >= 0) && (
+          <div className="flex items-center gap-3 rounded-2xl border border-orange-300 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-800 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-300">
+            <AlertCircle className="h-4 w-4 shrink-0 text-orange-600" />
+            <span>
+              Low Stock Alert: {Object.entries(inventory).filter(([, s]) => s <= LOW_STOCK_THRESHOLD && s >= 0).map(([id]) => {
+                const p = products.find((pr) => pr.id === id)
+                return p ? `${p.name} (${inventory[id]} left)` : id
+              }).join(", ")}
+            </span>
+          </div>
+        )}
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-stone-200 bg-white shadow-xs dark:border-stone-800 dark:bg-stone-900">
+            <div className="flex items-center gap-2 px-5 py-4 border-b border-stone-100 dark:border-stone-800">
+              <Boxes className="h-4 w-4 text-amber-600" />
+              <h2 className="font-extrabold text-sm text-stone-900 dark:text-white">Stock Inventory Manager</h2>
+            </div>
+            <div className="divide-y divide-stone-100 dark:divide-stone-800">
+              {products.map((product) => {
+                const stock = inventory[product.id] ?? 0
+                const inputVal = inventoryInputs[product.id] ?? String(stock)
+                const isLow = stock <= LOW_STOCK_THRESHOLD
+                const isUpdatingThis = inventoryUpdating === product.id
+                return (
+                  <div key={product.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-stone-900 dark:text-white truncate">{product.name}</p>
+                      <p className="text-[10px] text-stone-400">{product.weight}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${isLow ? "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800" : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"}`}>
+                        {isLow ? `${stock} left` : `${stock} in stock`}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button type="button" onClick={() => setInventoryInputs((p) => ({ ...p, [product.id]: String(Math.max(0, parseInt(inputVal, 10) - 1 || 0)) }))} className="h-7 w-7 flex items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100 transition active:scale-95 dark:border-stone-700 dark:bg-stone-800">
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <input
+                          type="number"
+                          min="0"
+                          value={inputVal}
+                          onChange={(e) => setInventoryInputs((p) => ({ ...p, [product.id]: e.target.value }))}
+                          className="w-16 rounded-lg border border-stone-200 bg-stone-50 px-2 py-1 text-center text-xs font-mono font-bold focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500/20 dark:border-stone-700 dark:bg-stone-800 dark:text-white"
+                        />
+                        <button type="button" onClick={() => setInventoryInputs((p) => ({ ...p, [product.id]: String((parseInt(inputVal, 10) || 0) + 1) }))} className="h-7 w-7 flex items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100 transition active:scale-95 dark:border-stone-700 dark:bg-stone-800">
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isUpdatingThis}
+                        onClick={() => handleInventoryUpdate(product.id)}
+                        className="rounded-xl bg-amber-500 hover:bg-amber-600 px-3 py-1.5 text-[11px] font-extrabold text-white transition active:scale-95 disabled:opacity-60 shadow-xs"
+                      >
+                        {isUpdatingThis ? <RotateCcw className="h-3 w-3 animate-spin" /> : "Save"}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-stone-200 bg-white shadow-xs dark:border-stone-800 dark:bg-stone-900">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100 dark:border-stone-800">
+              <div className="flex items-center gap-2">
+                <TimerReset className="h-4 w-4 text-teal-600" />
+                <h2 className="font-extrabold text-sm text-stone-900 dark:text-white">Today&apos;s Delivery Slots</h2>
+              </div>
+              <span className="text-[10px] font-bold text-stone-400">{new Date().toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</span>
+            </div>
+            {slotsLoading ? (
+              <div className="px-5 py-6 flex items-center gap-2 text-xs text-stone-400">
+                <RotateCcw className="h-3.5 w-3.5 animate-spin" />
+                <span>Loading slots…</span>
+              </div>
+            ) : (
+              <div className="divide-y divide-stone-100 dark:divide-stone-800">
+                {timeSlots.map((slot) => {
+                  const isUpdatingSlot = slotUpdating === slot.id
+                  const pct = slot.capacity > 0 ? Math.round((slot.booked / slot.capacity) * 100) : 0
+                  return (
+                    <div key={slot.id} className="px-5 py-3.5 space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-extrabold text-stone-900 dark:text-white">{slot.label}</p>
+                          <p className="text-[10px] text-stone-400">{slot.booked}/{slot.capacity} booked · {slot.available} available</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
+                            <button type="button" disabled={isUpdatingSlot} onClick={() => handleSlotCapacity(slot.id, Math.max(slot.booked, slot.capacity - 1))} className="h-6 w-6 flex items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100 transition active:scale-95 dark:border-stone-700 dark:bg-stone-800 disabled:opacity-50"><Minus className="h-2.5 w-2.5" /></button>
+                            <span className="text-xs font-mono font-bold text-stone-700 dark:text-stone-300 min-w-5 text-center">{slot.capacity}</span>
+                            <button type="button" disabled={isUpdatingSlot} onClick={() => handleSlotCapacity(slot.id, slot.capacity + 1)} className="h-6 w-6 flex items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100 transition active:scale-95 dark:border-stone-700 dark:bg-stone-800 disabled:opacity-50"><Plus className="h-2.5 w-2.5" /></button>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={isUpdatingSlot}
+                            onClick={() => handleSlotToggle(slot.id, !slot.isActive)}
+                            className={`rounded-xl px-3 py-1.5 text-[11px] font-extrabold transition active:scale-95 shadow-xs disabled:opacity-60 ${slot.isActive ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300" : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"}`}
+                          >
+                            {slot.isActive ? "Close" : "Open"}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-stone-100 dark:bg-stone-800 overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${pct >= 90 ? "bg-rose-500" : pct >= 70 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
@@ -1171,6 +1495,32 @@ export function AdminDashboard() {
             </div>
           )}
 
+          {filtered.length > 0 && (
+            <div className="flex items-center gap-3 px-1">
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedIds.size === filtered.length) {
+                    setSelectedIds(new Set())
+                  } else {
+                    setSelectedIds(new Set(filtered.map((o) => o.id)))
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-stone-600 hover:text-primary transition active:scale-95"
+              >
+                {selectedIds.size === filtered.length && filtered.length > 0 ? (
+                  <CheckSquare className="h-4 w-4 text-primary" />
+                ) : (
+                  <Square className="h-4 w-4" />
+                )}
+                <span>{selectedIds.size > 0 ? `${selectedIds.size} selected` : "Select all"}</span>
+              </button>
+              {selectedIds.size > 0 && (
+                <button type="button" onClick={() => setSelectedIds(new Set())} className="text-xs font-bold text-rose-600 hover:text-rose-800 active:scale-95">Clear</button>
+              )}
+            </div>
+          )}
+
           <div className="space-y-3">
             {filtered.map((order) => (
               <OrderCard
@@ -1181,11 +1531,45 @@ export function AdminDashboard() {
                 onViewDetails={setSelectedOrderDetails}
                 onOpenInvoice={setSelectedInvoiceOrder}
                 updatingId={updatingId}
+                isSelected={selectedIds.has(order.id)}
+                onToggleSelect={(id) => setSelectedIds((prev) => {
+                  const next = new Set(prev)
+                  if (next.has(id)) next.delete(id)
+                  else next.add(id)
+                  return next
+                })}
               />
             ))}
           </div>
         </div>
       </main>
+
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-2xl border border-stone-300 bg-stone-900/95 px-4 py-3 shadow-2xl backdrop-blur-md">
+          <span className="text-xs font-extrabold text-white">{selectedIds.size} order{selectedIds.size > 1 ? "s" : ""} selected</span>
+          <select
+            value={bulkStatus}
+            onChange={(e) => setBulkStatus(e.target.value)}
+            className="rounded-xl border border-stone-600 bg-stone-800 px-2 py-1.5 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            {Object.entries(STATUS_CONFIG).filter(([, v]) => v.nextStatus !== null || ["accepted","preparing","packed","shipped","delivered"].includes(["accepted","preparing","packed","shipped","delivered"].find(s => s) ?? "")).map(([key, val]) => (
+              <option key={key} value={key}>{val.label}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={bulkUpdating}
+            onClick={handleBulkStatusUpdate}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-extrabold text-primary-foreground transition active:scale-95 disabled:opacity-60 shadow-lg"
+          >
+            {bulkUpdating ? <RotateCcw className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+            <span>Apply</span>
+          </button>
+          <button type="button" onClick={() => setSelectedIds(new Set())} className="text-stone-400 hover:text-white transition active:scale-95">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {selectedOrderDetails && (
         <OrderDetailModal
