@@ -134,6 +134,14 @@ const STATUS_CONFIG = {
   },
 } as const
 
+const ORDER_PROCESS_STEPS = [
+  { id: "accepted", label: "1. Confirmed", shortLabel: "Confirmed", icon: Sparkles },
+  { id: "preparing", label: "2. Kitchen", shortLabel: "Kitchen", icon: ChefHat },
+  { id: "packed", label: "3. Packed", shortLabel: "Packed", icon: Package },
+  { id: "shipped", label: "4. Out for Delivery", shortLabel: "En Route", icon: Truck },
+  { id: "delivered", label: "5. Delivered", shortLabel: "Delivered", icon: ShieldCheck },
+] as const
+
 const FILTER_TABS = [
   { id: "active", label: "Active Orders", icon: Layers },
   { id: "new", label: "New", icon: Clock },
@@ -144,21 +152,25 @@ const FILTER_TABS = [
   { id: "all", label: "All Orders", icon: Sparkles },
 ]
 
-function getWhatsAppMessage(order: Order, type: "accepted" | "preparing" | "packed" | "shipped" | "delivered") {
+function getWhatsAppMessage(order: Order, type: string) {
   const origin = typeof window !== "undefined" ? window.location.origin : "https://swadamfoods.eu.cc"
-  const url = `${origin}/track?orderId=${encodeURIComponent(order.id)}`
-  const msgs = {
+  const phoneParam = encodeURIComponent(order.customerPhone.replace(/\D/g, "").slice(-10))
+  const url = `${origin}/track?orderId=${encodeURIComponent(order.id)}&phone=${phoneParam}`
+  const msgs: Record<string, string> = {
+    new: `Namaste ${order.customerName}! We received your Swadam Foods order *${order.id}* (₹${order.total}). We are reviewing it now.\n\nTrack order: ${url}`,
     accepted: `Namaste ${order.customerName}! Your Swadam Foods order *${order.id}* (₹${order.total}) is confirmed. We are starting preparation.\n\nTrack order: ${url}`,
     preparing: `Namaste ${order.customerName}! Your order *${order.id}* is currently being freshly prepared in our kitchen.\n\nTrack progress: ${url}`,
     packed: `Namaste ${order.customerName}! Your order *${order.id}* is freshly packed, sealed, and ready for dispatch.\n\nTrack order: ${url}`,
     shipped: `Namaste ${order.customerName}! Your order *${order.id}* is out for delivery with our delivery partner.\n\nTrack live: ${url}`,
     delivered: `Namaste ${order.customerName}! Your order *${order.id}* has been successfully delivered. Thank you for choosing Swadam Foods! Enjoy your authentic delicacies.`,
+    cancelled: `Namaste ${order.customerName}! Your Swadam Foods order *${order.id}* has been cancelled. For any queries or refund assistance, please reply to this message.`,
   }
-  return msgs[type]
+  return msgs[type] || msgs.accepted
 }
 
 function openWhatsApp(phone: string, message: string) {
   let p = phone.replace(/\D/g, "")
+  if (!p) return
   if (p.length === 10) p = "91" + p
   window.open(`https://wa.me/${p}?text=${encodeURIComponent(message)}`, "_blank")
 }
@@ -194,10 +206,14 @@ function OrderDetailModal({
   order,
   onClose,
   onOpenInvoice,
+  onStatusChangeWithWhatsApp,
+  updatingId,
 }: {
   order: Order
   onClose: () => void
   onOpenInvoice: (order: Order) => void
+  onStatusChangeWithWhatsApp?: (order: Order, newStatus: string) => Promise<void>
+  updatingId?: string | null
 }) {
   const [copied, setCopied] = useState(false)
   const isPaid = order.paymentStatus === "paid"
@@ -294,6 +310,61 @@ function OrderDetailModal({
             </div>
           </div>
 
+          <div className="rounded-2xl border border-stone-200 bg-stone-50/70 p-4 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-stone-400">
+                Order Process &amp; WhatsApp Notifications
+              </span>
+              <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-1">
+                <MessageSquare className="h-3 w-3" />
+                <span>Tap any step to advance &amp; notify</span>
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {ORDER_PROCESS_STEPS.map((step, idx) => {
+                const stepOrder = ["accepted", "preparing", "packed", "shipped", "delivered"]
+                const currentIdx = stepOrder.indexOf(order.orderStatus)
+                const isCurrent = order.orderStatus === step.id
+                const isPassed = currentIdx !== -1 && idx < currentIdx
+                const StepIcon = step.icon
+                const isUpdating = updatingId === order.id
+
+                return (
+                  <button
+                    key={step.id}
+                    type="button"
+                    disabled={isUpdating}
+                    onClick={() => {
+                      if (onStatusChangeWithWhatsApp) {
+                        onStatusChangeWithWhatsApp(order, step.id)
+                      }
+                    }}
+                    className={`flex flex-col items-center justify-center p-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 border text-center ${
+                      isCurrent
+                        ? "border-amber-500 bg-amber-500/15 text-amber-900 ring-2 ring-amber-500/30 font-black"
+                        : isPassed
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                        : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:bg-stone-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1 mb-1">
+                      {isPassed ? (
+                        <Check className="h-3.5 w-3.5 text-emerald-600" />
+                      ) : (
+                        <StepIcon className={`h-3.5 w-3.5 ${isCurrent ? "text-amber-600" : "text-stone-400"}`} />
+                      )}
+                    </div>
+                    <span className="text-[11px] leading-tight">{step.shortLabel}</span>
+                    <span className="text-[9px] text-emerald-600 font-medium flex items-center gap-0.5 mt-0.5">
+                      <MessageSquare className="h-2 w-2" />
+                      WhatsApp
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-stone-200 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-extrabold uppercase tracking-wider text-stone-400">
@@ -385,12 +456,14 @@ function OrderDetailModal({
 function OrderCard({
   order,
   onStatusChange,
+  onStatusChangeWithWhatsApp,
   onViewDetails,
   onOpenInvoice,
   updatingId,
 }: {
   order: Order
   onStatusChange: (id: string, status: string) => Promise<void>
+  onStatusChangeWithWhatsApp: (order: Order, status: string) => Promise<void>
   onViewDetails: (order: Order) => void
   onOpenInvoice: (order: Order) => void
   updatingId: string | null
@@ -513,13 +586,14 @@ function OrderCard({
             <button
               type="button"
               disabled={updating}
-              onClick={() => onStatusChange(order.id, cfg.nextStatus!)}
+              onClick={() => onStatusChangeWithWhatsApp(order, cfg.nextStatus!)}
               className={`w-full py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-sm ${cfg.nextColor} disabled:opacity-60`}
             >
               {updating ? (
                 <RotateCcw className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <>
+                  <MessageSquare className="h-3.5 w-3.5" />
                   <span>{cfg.nextLabel}</span>
                   <span>&rarr;</span>
                 </>
@@ -584,17 +658,65 @@ function OrderCard({
                 type="button"
                 disabled={updating}
                 onClick={() => {
-                  if (confirm(`Are you sure you want to cancel order ${order.id}?`)) {
-                    onStatusChange(order.id, "cancelled")
+                  if (confirm(`Are you sure you want to cancel order ${order.id}? This will also notify the customer via WhatsApp.`)) {
+                    onStatusChangeWithWhatsApp(order, "cancelled")
                   }
                 }}
                 className="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50/80 p-2 text-rose-600 hover:bg-rose-100 transition active:scale-95 shrink-0"
-                title="Cancel Order"
+                title="Cancel Order & Send WhatsApp"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
+        </div>
+      </div>
+
+      <div className="px-4 pb-4 sm:px-5 sm:pb-5 pt-3 border-t border-stone-100 dark:border-stone-800/60">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-stone-400">
+            Order Process Steps &amp; WhatsApp Updates
+          </span>
+          <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+            <MessageSquare className="h-3 w-3" />
+            <span>Click any step to advance &amp; send WhatsApp</span>
+          </span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+          {ORDER_PROCESS_STEPS.map((step, idx) => {
+            const stepOrder = ["accepted", "preparing", "packed", "shipped", "delivered"]
+            const currentIdx = stepOrder.indexOf(order.orderStatus)
+            const isCurrent = order.orderStatus === step.id
+            const isPassed = currentIdx !== -1 && idx < currentIdx
+            const StepIcon = step.icon
+
+            return (
+              <button
+                key={step.id}
+                type="button"
+                disabled={updating}
+                onClick={() => onStatusChangeWithWhatsApp(order, step.id)}
+                className={`group flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 border ${
+                  isCurrent
+                    ? "border-amber-500 bg-amber-500/15 text-amber-900 dark:text-amber-300 font-extrabold shadow-xs ring-1 ring-amber-500/30"
+                    : isPassed
+                    ? "border-emerald-200 bg-emerald-50/60 text-emerald-800 hover:bg-emerald-100/80 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-400"
+                    : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300"
+                }`}
+                title={`Advance to ${step.label} and send WhatsApp`}
+              >
+                <span className="flex items-center gap-1.5 truncate">
+                  {isPassed ? (
+                    <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                  ) : (
+                    <StepIcon className={`h-3.5 w-3.5 shrink-0 ${isCurrent ? "text-amber-600" : "text-stone-400"}`} />
+                  )}
+                  <span className="truncate">{step.shortLabel}</span>
+                </span>
+                <MessageSquare className="h-2.5 w-2.5 text-stone-300 group-hover:text-emerald-600 shrink-0 transition" />
+              </button>
+            )
+          })}
         </div>
       </div>
     </div>
@@ -617,6 +739,8 @@ export function AdminDashboard() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<Order | null>(null)
   const [selectedInvoiceOrder, setSelectedInvoiceOrder] = useState<Order | null>(null)
+  const [autoSendWhatsApp, setAutoSendWhatsApp] = useState(true)
+  const [statusNotification, setStatusNotification] = useState<string | null>(null)
 
   useEffect(() => {
     const stored = localStorage.getItem("swadam_admin_key")
@@ -665,11 +789,11 @@ export function AdminDashboard() {
     const key = inputKey.trim()
     if (!key) {
       setAuthError("Please enter your admin passcode.")
-      return
+    } else {
+      localStorage.setItem("swadam_admin_key", key)
+      setAdminKey(key)
+      fetchOrders(key)
     }
-    localStorage.setItem("swadam_admin_key", key)
-    setAdminKey(key)
-    fetchOrders(key)
   }
 
   const handleLogout = () => {
@@ -691,6 +815,9 @@ export function AdminDashboard() {
         setOrders((prev) =>
           prev.map((o) => (o.id === orderId ? { ...o, orderStatus: newStatus } : o)),
         )
+        setSelectedOrderDetails((prev) =>
+          prev && prev.id === orderId ? { ...prev, orderStatus: newStatus } : prev,
+        )
       } else {
         alert("Failed to update status. Please try again.")
       }
@@ -700,6 +827,23 @@ export function AdminDashboard() {
       setUpdatingId(null)
     }
   }
+
+  const handleStatusChangeWithWhatsApp = useCallback(
+    async (order: Order, newStatus: string) => {
+      if (autoSendWhatsApp) {
+        const msg = getWhatsAppMessage(order, newStatus)
+        openWhatsApp(order.customerPhone, msg)
+        const label = STATUS_CONFIG[newStatus as keyof typeof STATUS_CONFIG]?.label || newStatus
+        setStatusNotification(`Updated ${order.id} to "${label}" & opened WhatsApp message`)
+      } else {
+        const label = STATUS_CONFIG[newStatus as keyof typeof STATUS_CONFIG]?.label || newStatus
+        setStatusNotification(`Updated ${order.id} to "${label}"`)
+      }
+      setTimeout(() => setStatusNotification(null), 4000)
+      await handleStatusChange(order.id, newStatus)
+    },
+    [autoSendWhatsApp, adminKey],
+  )
 
   const filtered = useMemo(() => {
     return orders.filter((o) => {
@@ -838,6 +982,21 @@ export function AdminDashboard() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setAutoSendWhatsApp(!autoSendWhatsApp)}
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition shadow-xs active:scale-95 ${
+                autoSendWhatsApp
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                  : "border-stone-200 bg-white text-stone-500 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-900"
+              }`}
+              title="Toggle automatic WhatsApp messaging when advancing order steps"
+            >
+              <MessageSquare className={`h-3.5 w-3.5 ${autoSendWhatsApp ? "text-emerald-600" : "text-stone-400"}`} />
+              <span className="hidden sm:inline">WhatsApp on Steps:</span>
+              <span>{autoSendWhatsApp ? "ON" : "OFF"}</span>
+            </button>
+
             <button
               type="button"
               onClick={() => fetchOrders(adminKey)}
@@ -1013,6 +1172,7 @@ export function AdminDashboard() {
                 key={order.id}
                 order={order}
                 onStatusChange={handleStatusChange}
+                onStatusChangeWithWhatsApp={handleStatusChangeWithWhatsApp}
                 onViewDetails={setSelectedOrderDetails}
                 onOpenInvoice={setSelectedInvoiceOrder}
                 updatingId={updatingId}
@@ -1027,6 +1187,8 @@ export function AdminDashboard() {
           order={selectedOrderDetails}
           onClose={() => setSelectedOrderDetails(null)}
           onOpenInvoice={(ord) => setSelectedInvoiceOrder(ord)}
+          onStatusChangeWithWhatsApp={handleStatusChangeWithWhatsApp}
+          updatingId={updatingId}
         />
       )}
 
@@ -1057,6 +1219,13 @@ export function AdminDashboard() {
           isOpen={true}
           onClose={() => setSelectedInvoiceOrder(null)}
         />
+      )}
+
+      {statusNotification && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-950/95 px-4 py-3 text-xs font-bold text-emerald-100 shadow-2xl backdrop-blur-md">
+          <MessageSquare className="h-4 w-4 text-emerald-400 shrink-0" />
+          <span>{statusNotification}</span>
+        </div>
       )}
     </div>
   )

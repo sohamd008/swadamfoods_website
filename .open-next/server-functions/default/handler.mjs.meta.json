@@ -3930,7 +3930,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/node_modules/next/dist/server/load-manifest.external.js": {
-      "bytes": 96704,
+      "bytes": 96700,
       "imports": [
         {
           "path": "path",
@@ -4683,7 +4683,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/chunks/ssr/components_admin-dashboard_tsx_0atqtv_._.js": {
-      "bytes": 33904,
+      "bytes": 40047,
       "imports": [],
       "format": "cjs"
     },
@@ -5549,7 +5549,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/.next/server/chunks/ssr/components_track-order-page_tsx_01_y3i7._.js": {
-      "bytes": 18572,
+      "bytes": 19102,
       "imports": [],
       "format": "cjs"
     },
@@ -9852,7 +9852,7 @@
           "bytesInOutput": 442
         },
         ".open-next/server-functions/default/node_modules/next/dist/server/load-manifest.external.js": {
-          "bytesInOutput": 74531
+          "bytesInOutput": 74527
         },
         ".open-next/cloudflare-templates/shims/throw.js": {
           "bytesInOutput": 215
@@ -9978,7 +9978,7 @@
           "bytesInOutput": 261
         },
         ".open-next/server-functions/default/.next/server/chunks/ssr/components_admin-dashboard_tsx_0atqtv_._.js": {
-          "bytesInOutput": 34472
+          "bytesInOutput": 40711
         },
         ".open-next/server-functions/default/.next/server/chunks/ssr/node_modules_04fvtrd._.js": {
           "bytesInOutput": 10628
@@ -10191,7 +10191,7 @@
           "bytesInOutput": 261
         },
         ".open-next/server-functions/default/.next/server/chunks/ssr/components_track-order-page_tsx_01_y3i7._.js": {
-          "bytesInOutput": 18767
+          "bytesInOutput": 19317
         },
         ".open-next/server-functions/default/.next/server/chunks/ssr/node_modules_jspdf_dist_jspdf_node_min_1yhd6aj.js": {
           "bytesInOutput": 394
@@ -10449,7 +10449,7 @@
           "bytesInOutput": 67209
         }
       },
-      "bytes": 6264350
+      "bytes": 6271135
     }
   }
 }

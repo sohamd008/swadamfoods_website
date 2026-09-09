@@ -97,9 +97,10 @@ const STAGES = [
 export function TrackOrderPage() {
   const searchParams = useSearchParams()
   const initialOrderId = searchParams.get("orderId") || searchParams.get("id") || ""
+  const initialPhone = searchParams.get("phone") || searchParams.get("mobile") || ""
 
   const [orderId, setOrderId] = useState(initialOrderId.toUpperCase())
-  const [phone, setPhone] = useState("")
+  const [phone, setPhone] = useState(initialPhone)
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState("")
@@ -111,7 +112,40 @@ export function TrackOrderPage() {
     if (initialOrderId) {
       setOrderId(initialOrderId.toUpperCase())
     }
-  }, [initialOrderId])
+    if (initialPhone) {
+      setPhone(initialPhone)
+    }
+  }, [initialOrderId, initialPhone])
+
+  useEffect(() => {
+    const cleanId = initialOrderId.trim().toUpperCase()
+    const cleanPhone = initialPhone.replace(/\D/g, "")
+    if (cleanId && cleanPhone.length >= 10) {
+      const autoVerify = async () => {
+        setLoading(true)
+        setError("")
+        try {
+          const res = await fetch("/api/orders/track", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: cleanId, phone: cleanPhone }),
+          })
+          const data = await res.json()
+          if (!res.ok) {
+            setError(data.error || "Verification failed. Please check your details.")
+            return
+          }
+          setOrder(data.order)
+          setError("")
+        } catch {
+          setError("Failed to connect to the server. Please check your internet connection.")
+        } finally {
+          setLoading(false)
+        }
+      }
+      autoVerify()
+    }
+  }, [initialOrderId, initialPhone])
 
   const handleVerify = async (e?: React.FormEvent, isSilentRefresh = false) => {
     if (e) e.preventDefault()
