@@ -65,11 +65,11 @@ export async function POST(request: Request) {
       return json({ error: "Please enter your Order ID." }, 400)
     }
 
-    const orderIdMatch = rawOrderId.match(/SWD-\d{8}-[A-Z0-9]{8}/)
-    const orderId = orderIdMatch ? orderIdMatch[0] : rawOrderId
+    const orderIdMatch = rawOrderId.match(/SWAD-[A-Z0-9]{4,8}|SWD-\d{8}-[A-Z0-9]{8}/i)
+    const orderId = orderIdMatch ? orderIdMatch[0].toUpperCase() : rawOrderId
 
-    if (!/^SWD-\d{8}-[A-Z0-9]{8}$/.test(orderId)) {
-      return json({ error: "Invalid Order ID format. Expected format: SWD-YYYYMMDD-XXXXXXXX" }, 400)
+    if (!/^(SWAD-[A-Z0-9]{4,8}|SWD-\d{8}-[A-Z0-9]{8})$/i.test(orderId)) {
+      return json({ error: "Invalid Order ID format. Expected format: SWAD-XXXX or SWD-YYYYMMDD-XXXXXXXX" }, 400)
     }
 
     const inputPhoneDigits = rawPhone.replace(/\D/g, "")

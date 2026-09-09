@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Printer, Download, X, ShieldCheck, CheckCircle2, Building2, Loader2 } from "lucide-react"
 import { PhonePeIcon } from "@/components/phonepe-logo"
@@ -85,7 +85,7 @@ export function TaxInvoiceModal({
 }) {
   if (!isOpen) return null
 
-  const invoiceNumber = `INV-${order.id.replace(/^SWD-/, "")}`
+  const invoiceNumber = `INV-${order.id.replace(/^(SWAD-|SWD-)/, "")}`
   const invoiceDate = new Date(order.createdAt).toLocaleDateString("en-IN", {
     year: "numeric",
     month: "short",
@@ -104,79 +104,215 @@ export function TaxInvoiceModal({
 
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    document.body.style.overflow = "hidden"
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+      document.body.style.overflow = ""
+    }
+  }, [onClose])
+
   const handlePrint = () => {
     window.print()
   }
 
   const handleDownloadPdf = async () => {
-    const element = document.getElementById("tax-invoice-printable")
-    if (!element) return
-
     setIsGeneratingPdf(true)
     try {
-      const html2canvasModule = await import("html2canvas")
-      const html2canvas = html2canvasModule.default || html2canvasModule
       const { jsPDF } = await import("jspdf")
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
+      const margin = 14
+      const pageWidth = 210
+      const contentWidth = pageWidth - margin * 2
 
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
+      doc.setDrawColor(226, 232, 240)
+      doc.rect(margin, 10, contentWidth, 277)
+
+      doc.setFillColor(248, 250, 252)
+      doc.rect(margin, 10, contentWidth, 34, "F")
+      doc.setDrawColor(203, 213, 225)
+      doc.line(margin, 44, margin + contentWidth, 44)
+
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(15)
+      doc.setTextColor(30, 41, 59)
+      doc.text("SWADAM FOODS", margin + 5, 18)
+
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(7.5)
+      doc.setTextColor(71, 85, 105)
+      doc.text("Authentic Homemade Delicacies & Instant Premixes", margin + 5, 23)
+      doc.text("Proprietor: Sanyukta Sachin Dhumal | B-10, Ruturang Society, Aranyeshwar, Pune 411009", margin + 5, 27)
+      doc.setFont("helvetica", "bold")
+      doc.text("GSTIN: 27AOCPD1930N1Z1 | FSSAI: 21524018002620 | MSME: UDYAM-MH-26-1188295", margin + 5, 31)
+      doc.setFont("helvetica", "normal")
+      doc.text("WhatsApp: +91 88888 51522 | Email: contact@swadamfoods.eu.cc", margin + 5, 35)
+      doc.text("FSSAI Registered Category: 2106 90 99 (Food Preparations)", margin + 5, 39)
+
+      const rightColX = margin + 115
+      doc.setFillColor(234, 88, 12)
+      doc.roundedRect(rightColX, 14, 62, 7, 1.5, 1.5, "F")
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(8.5)
+      doc.setTextColor(255, 255, 255)
+      doc.text("TAX INVOICE / BILL OF SUPPLY", rightColX + 31, 18.8, { align: "center" })
+
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(7.5)
+      doc.setTextColor(51, 65, 85)
+      doc.text("Invoice No: " + invoiceNumber, rightColX, 26)
+      doc.text("Order ID: " + order.id, rightColX, 30)
+      doc.text("Date: " + invoiceDate + " " + invoiceTime, rightColX, 34)
+      doc.text("Place of Supply: Maharashtra (27)", rightColX, 38)
+      doc.text("Reverse Charge: No", rightColX, 42)
+
+      let curY = 50
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(8)
+      doc.setTextColor(100, 116, 139)
+      doc.text("BILLED & SHIPPED TO", margin + 5, curY)
+      doc.text("FULFILLMENT & PAYMENT", rightColX, curY)
+
+      curY += 4.5
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(9)
+      doc.setTextColor(15, 23, 42)
+      doc.text(order.customerName, margin + 5, curY)
+      doc.text(order.deliveryMethod === "porter" ? "Porter Delivery" : "Pune Home Delivery", rightColX, curY)
+
+      curY += 4
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(8)
+      doc.setTextColor(51, 65, 85)
+      const addrLines = doc.splitTextToSize(order.customerAddress + ", Pune - " + order.pincode, 95)
+      doc.text(addrLines, margin + 5, curY)
+      doc.text("Payment: PhonePe Payment Gateway", rightColX, curY)
+      doc.text("Payment Status: " + (order.paymentStatus === "paid" ? "PAID IN FULL" : "PENDING"), rightColX, curY + 4)
+      doc.text("Delivery Fee: FREE", rightColX, curY + 8)
+
+      curY += Math.max(addrLines.length * 4 + 4, 14)
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(7.5)
+      doc.text("Phone: " + order.customerPhoneMasked, margin + 5, curY - 2)
+
+      doc.setDrawColor(203, 213, 225)
+      doc.line(margin, curY, margin + contentWidth, curY)
+
+      curY += 5
+      doc.setFillColor(241, 245, 249)
+      doc.rect(margin, curY, contentWidth, 7, "F")
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(7.5)
+      doc.setTextColor(30, 41, 59)
+      doc.text("#", margin + 3, curY + 4.5)
+      doc.text("Item Description", margin + 12, curY + 4.5)
+      doc.text("HSN", margin + 82, curY + 4.5)
+      doc.text("Pack", margin + 105, curY + 4.5)
+      doc.text("Qty", margin + 125, curY + 4.5)
+      doc.text("Rate", margin + 145, curY + 4.5, { align: "right" })
+      doc.text("Total (Rs)", margin + contentWidth - 4, curY + 4.5, { align: "right" })
+
+      curY += 7
+      order.items.forEach((it, i) => {
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(8)
+        doc.setTextColor(15, 23, 42)
+        doc.text(String(i + 1), margin + 3, curY + 5)
+        doc.setFont("helvetica", "bold")
+        doc.text(it.productName, margin + 12, curY + 5)
+        doc.setFont("helvetica", "normal")
+        doc.text("2106 90 99", margin + 82, curY + 5)
+        doc.text(it.weight, margin + 105, curY + 5)
+        doc.text(String(it.quantity), margin + 125, curY + 5)
+        doc.text("Rs. " + it.unitPrice, margin + 145, curY + 5, { align: "right" })
+        doc.setFont("helvetica", "bold")
+        doc.text("Rs. " + it.lineTotal, margin + contentWidth - 4, curY + 5, { align: "right" })
+        curY += 7
+        doc.setDrawColor(241, 245, 249)
+        doc.line(margin, curY, margin + contentWidth, curY)
       })
 
-      const imgData = canvas.toDataURL("image/png")
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      })
+      curY += 6
+      doc.setDrawColor(203, 213, 225)
+      doc.line(margin, curY, margin + contentWidth, curY)
 
-      const imgWidth = 210
-      const pageHeight = 297
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-      let heightLeft = imgHeight
-      let position = 0
+      curY += 6
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(8)
+      doc.setTextColor(71, 85, 105)
+      doc.text("Amount in Words:", margin + 5, curY)
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(15, 23, 42)
+      doc.text(numberToWordsINR(order.total), margin + 5, curY + 4.5)
 
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
+      const totX = margin + 120
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(8)
+      doc.setTextColor(71, 85, 105)
+      doc.text("Subtotal:", totX, curY)
+      doc.text("Rs. " + order.subtotal.toFixed(2), margin + contentWidth - 4, curY, { align: "right" })
 
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight
-        pdf.addPage()
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
-      }
+      doc.text("CGST (2.5%):", totX, curY + 4)
+      doc.text("Rs. " + cgst.toFixed(2), margin + contentWidth - 4, curY + 4, { align: "right" })
 
-      pdf.save(`Invoice-${order.id}.pdf`)
-    } catch (err) {
-      console.error("PDF generation failed, falling back to print:", err)
-      window.print()
+      doc.text("SGST (2.5%):", totX, curY + 8)
+      doc.text("Rs. " + sgst.toFixed(2), margin + contentWidth - 4, curY + 8, { align: "right" })
+
+      doc.text("Delivery Fee:", totX, curY + 12)
+      doc.text(order.deliveryFee === 0 ? "FREE" : "Rs. " + order.deliveryFee.toFixed(2), margin + contentWidth - 4, curY + 12, { align: "right" })
+
+      doc.setFillColor(248, 250, 252)
+      doc.rect(totX - 2, curY + 15, contentWidth - 118, 8, "F")
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(9.5)
+      doc.setTextColor(15, 23, 42)
+      doc.text("Grand Total:", totX, curY + 20.5)
+      doc.text("Rs. " + order.total.toFixed(2), margin + contentWidth - 4, curY + 20.5, { align: "right" })
+
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(7.5)
+      doc.setTextColor(100, 116, 139)
+      doc.text("Payment Verified via PhonePe Payment Gateway (RBI Authorized)", margin + 5, 270)
+      doc.text("For SWADAM FOODS — Authorised Signatory", margin + contentWidth - 4, 270, { align: "right" })
+      doc.text("This is an authentic, computer-generated tax invoice issued by Swadam Foods under GST rules.", margin + contentWidth / 2, 280, { align: "center" })
+
+      doc.save(`Invoice-${order.id}.pdf`)
+    } catch {
+      window.open(`/api/orders/${encodeURIComponent(order.id)}/invoice`, "_blank")
     } finally {
       setIsGeneratingPdf(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/60 p-2 sm:p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] backdrop-blur-sm print:p-0 print:bg-white print:static">
-      <div className="relative my-6 w-full max-w-3xl rounded-3xl bg-white text-stone-900 shadow-2xl border border-stone-200 overflow-hidden print:shadow-none print:border-none print:m-0 print:rounded-none print:w-full print:max-w-none">
-        
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-stone-200 px-4 py-3 sm:px-6 sm:py-4 bg-stone-50/95 backdrop-blur-md print:hidden">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-2 sm:p-4 backdrop-blur-sm print:p-0 print:bg-white print:static"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative flex flex-col w-full max-w-3xl max-h-[92dvh] sm:max-h-[90vh] rounded-3xl bg-white text-stone-900 shadow-2xl border border-stone-200 overflow-hidden print:shadow-none print:border-none print:m-0 print:rounded-none print:w-full print:max-w-none"
+      >
+        <div className="sticky top-0 z-30 flex items-center justify-between border-b border-stone-200 px-3 py-3 sm:px-6 sm:py-3.5 bg-stone-50/95 backdrop-blur-md print:hidden shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <Building2 className="h-5 w-5 text-amber-700 shrink-0" />
-            <span className="font-heading text-sm sm:text-base font-extrabold text-stone-900 truncate">Tax Invoice / Bill of Supply</span>
+            <span className="font-heading text-xs sm:text-base font-extrabold text-stone-900 truncate">Tax Invoice / Bill of Supply</span>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               type="button"
               onClick={handleDownloadPdf}
               disabled={isGeneratingPdf}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 sm:px-4 text-xs font-extrabold text-primary-foreground shadow-sm hover:opacity-95 active:scale-95 transition touch-manipulation disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 sm:px-4 text-xs font-extrabold text-primary-foreground shadow-sm hover:opacity-95 active:scale-95 transition touch-manipulation disabled:opacity-60"
             >
               {isGeneratingPdf ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span>Generating PDF...</span>
+                  <span className="hidden sm:inline">Generating...</span>
                 </>
               ) : (
                 <>
@@ -196,15 +332,16 @@ export function TaxInvoiceModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl p-2 text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition touch-manipulation"
+              className="inline-flex items-center gap-1 rounded-xl border border-stone-300 bg-white px-2.5 py-2 sm:px-3 text-xs font-extrabold text-stone-700 hover:bg-stone-100 active:scale-95 transition touch-manipulation shadow-xs"
               aria-label="Close invoice"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
+              <span className="hidden sm:inline">Close</span>
             </button>
           </div>
         </div>
 
-        <div id="tax-invoice-printable" className="p-6 sm:p-8 space-y-6 text-stone-900 bg-white">
+        <div id="tax-invoice-printable" className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6 text-stone-900 bg-white overscroll-contain">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 border-b border-stone-200 pb-6">
             <div className="space-y-2 max-w-sm">
               <div className="flex items-center gap-3">
@@ -408,10 +545,18 @@ export function TaxInvoiceModal({
               <button
                 type="button"
                 onClick={handlePrint}
-                className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-stone-300 bg-stone-100 px-4 py-3 text-xs font-bold text-stone-700 hover:bg-stone-200 active:scale-95 transition touch-manipulation"
+                className="hidden sm:inline-flex items-center justify-center gap-1.5 rounded-2xl border border-stone-300 bg-stone-100 px-4 py-3 text-xs font-bold text-stone-700 hover:bg-stone-200 active:scale-95 transition touch-manipulation"
               >
                 <Printer className="h-4 w-4" />
                 <span>Print</span>
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-stone-300 bg-stone-100 px-4 py-3 text-xs font-extrabold text-stone-700 hover:bg-stone-200 active:scale-95 transition touch-manipulation"
+              >
+                <X className="h-4 w-4" />
+                <span>Close</span>
               </button>
             </div>
           </div>

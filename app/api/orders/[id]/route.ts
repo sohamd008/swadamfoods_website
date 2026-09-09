@@ -56,8 +56,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: rawId } = await params
-  const orderId = (rawId || "").replace(/-P[A-Z0-9]+$/i, "").trim()
-  if (!orderId || !/^SWD-\d{8}-[A-Z0-9]{8}$/.test(orderId)) {
+  const orderId = (rawId || "").replace(/-P[A-Z0-9]+$/i, "").trim().toUpperCase()
+  if (!orderId || !/^(SWAD-[A-Z0-9]{4,8}|SWD-\d{8}-[A-Z0-9]{8})$/i.test(orderId)) {
     return json({ error: "Invalid order ID format." }, 400)
   }
 

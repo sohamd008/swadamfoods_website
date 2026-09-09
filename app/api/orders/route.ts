@@ -42,12 +42,13 @@ function text(value: unknown): string {
 }
 
 function generateOrderId(): string {
-  const date = new Date()
-  const y = date.getUTCFullYear()
-  const m = String(date.getUTCMonth() + 1).padStart(2, "0")
-  const d = String(date.getUTCDate()).padStart(2, "0")
-  const random = crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()
-  return `SWD-${y}${m}${d}-${random}`
+  const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+  let code = ""
+  const bytes = crypto.getRandomValues(new Uint8Array(4))
+  for (let i = 0; i < 4; i++) {
+    code += chars[bytes[i] % chars.length]
+  }
+  return `SWAD-${code}`
 }
 
 function sameOrigin(request: Request): boolean {

@@ -72,8 +72,8 @@ export async function POST(request: Request) {
     return json({ error: "Invalid JSON request." }, 400)
   }
 
-  const orderId = typeof body.orderId === "string" ? body.orderId.trim() : ""
-  if (!/^SWD-\d{8}-[A-Z0-9]{8}$/.test(orderId)) {
+  const orderId = typeof body.orderId === "string" ? body.orderId.trim().toUpperCase() : ""
+  if (!/^(SWAD-[A-Z0-9]{4,8}|SWD-\d{8}-[A-Z0-9]{8})$/i.test(orderId)) {
     return json({ error: "Invalid order ID." }, 400)
   }
 

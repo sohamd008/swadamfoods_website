@@ -261,7 +261,7 @@ export function TrackOrderPage() {
                       type="text"
                       value={orderId}
                       onChange={(e) => setOrderId(e.target.value.toUpperCase())}
-                      placeholder="SWD-20260909-XXXXXXXX"
+                      placeholder="SWAD-XXXX or SWD-XXXXXXXX"
                       className="w-full rounded-2xl border border-stone-200 bg-stone-50/80 px-4 py-3.5 font-mono text-sm font-bold text-foreground placeholder:text-stone-400 focus:border-amber-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 dark:border-stone-800 dark:bg-stone-950/50 dark:focus:bg-stone-950"
                       autoComplete="off"
                     />
