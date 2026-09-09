@@ -28,6 +28,7 @@ import {
 import { useCart } from "@/lib/cart-context"
 import { trackEvent } from "@/lib/analytics"
 import { WHATSAPP_NUMBER } from "@/lib/products"
+import { sanitizePhone, validateIndianMobile } from "@/lib/phone"
 import { PhonePeIcon, PhonePeLogo, PhonePeSecurityBadge } from "@/components/phonepe-logo"
 
 declare global {
@@ -309,7 +310,7 @@ export function CheckoutPage() {
         ? "Delivery: Home delivery in Pune (FREE)"
         : "Delivery: Outside Pune via Porter (charges to be confirmed)",
       `Name: ${name.trim()}`,
-      `Phone: ${phone.trim()}`,
+      `Phone: ${sanitizePhone(phone)}`,
       `Address: ${address.trim()}, ${pincode.trim()}`,
       order ? `Order ID: ${order.orderId}` : "",
     ].filter(Boolean)
@@ -320,13 +321,13 @@ export function CheckoutPage() {
   function validate() {
     const nextErrors: Record<string, string> = {}
     const cleanName = name.trim()
-    const cleanPhone = normalizePhone(phone)
     const cleanAddress = address.trim()
     const cleanPincode = pincode.trim()
 
     if (items.length === 0) nextErrors.items = "Your cart is empty."
     if (cleanName.length < 2 || cleanName.length > 80) nextErrors.name = "Enter your name (2–80 characters)."
-    if (!/^[0-9+()\-\s]{10,20}$/.test(cleanPhone)) nextErrors.phone = "Enter a valid phone number."
+    const phoneCheck = validateIndianMobile(phone)
+    if (!phoneCheck.isValid) nextErrors.phone = phoneCheck.error || "Enter a valid 10-digit mobile number."
     if (cleanAddress.length < 8 || cleanAddress.length > 240) nextErrors.address = "Enter a complete delivery address."
     if (!/^\d{6}$/.test(cleanPincode)) nextErrors.pincode = "Enter a valid 6-digit pincode."
 
@@ -418,7 +419,7 @@ export function CheckoutPage() {
           items: items.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
           customer: {
             name: name.trim(),
-            phone: phone.trim(),
+            phone: sanitizePhone(phone),
             address: address.trim(),
             pincode: pincode.trim(),
           },
@@ -592,7 +593,17 @@ export function CheckoutPage() {
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <Field label="Full name" value={name} onChange={setName} placeholder="Your name" error={fieldErrors.name} autoComplete="name" />
-              <Field label="Phone number" value={phone} onChange={setPhone} placeholder="98765 43210" error={fieldErrors.phone} autoComplete="tel" inputMode="tel" />
+              <Field
+                label="Phone number"
+                value={phone}
+                onChange={(val) => setPhone(sanitizePhone(val))}
+                placeholder="10-digit mobile number"
+                error={fieldErrors.phone}
+                autoComplete="tel"
+                inputMode="numeric"
+                maxLength={10}
+                pattern="[6-9][0-9]{9}"
+              />
             </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_150px]">
               <Field label="Delivery address" value={address} onChange={setAddress} placeholder="House / street, area, city" error={fieldErrors.address} autoComplete="street-address" multiline />
@@ -803,9 +814,71 @@ export function CheckoutPage() {
   )
 }
 
-function Field({ label, value, onChange, placeholder, error, autoComplete, inputMode, multiline = false }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; error?: string; autoComplete?: string; inputMode?: "text" | "tel" | "numeric"; multiline?: boolean }) {
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  error,
+  autoComplete,
+  inputMode,
+  multiline = false,
+  maxLength,
+  pattern,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+  error?: string
+  autoComplete?: string
+  inputMode?: "text" | "tel" | "numeric"
+  multiline?: boolean
+  maxLength?: number
+  pattern?: string
+}) {
   const id = `checkout-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`
-  return <label htmlFor={id} className="flex flex-col gap-1.5"><span className="text-sm font-bold text-foreground">{label}</span>{multiline ? <textarea id={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} autoComplete={autoComplete} rows={3} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} className={`min-h-24 resize-none rounded-2xl border bg-white/45 px-4 py-3.5 text-base sm:text-sm text-foreground shadow-inner outline-none backdrop-blur-xl placeholder:text-muted-foreground/70 dark:bg-white/5 touch-manipulation ${error ? "border-destructive/45" : "border-white/70 focus:border-primary/50"}`} /> : <input id={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} autoComplete={autoComplete} inputMode={inputMode} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} className={`min-h-13 rounded-2xl border bg-white/45 px-4 py-3.5 text-base sm:text-sm text-foreground shadow-inner outline-none backdrop-blur-xl placeholder:text-muted-foreground/70 dark:bg-white/5 touch-manipulation ${error ? "border-destructive/45" : "border-white/70 focus:border-primary/50"}`} />}{error && <span id={`${id}-error`} className="text-xs font-semibold text-destructive">{error}</span>}</label>
+  return (
+    <label htmlFor={id} className="flex flex-col gap-1.5">
+      <span className="text-sm font-bold text-foreground">{label}</span>
+      {multiline ? (
+        <textarea
+          id={id}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          rows={3}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${id}-error` : undefined}
+          className={`min-h-24 resize-none rounded-2xl border bg-white/45 px-4 py-3.5 text-base sm:text-sm text-foreground shadow-inner outline-none backdrop-blur-xl placeholder:text-muted-foreground/70 dark:bg-white/5 touch-manipulation ${
+            error ? "border-destructive/45" : "border-white/70 focus:border-primary/50"
+          }`}
+        />
+      ) : (
+        <input
+          id={id}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          inputMode={inputMode}
+          maxLength={maxLength}
+          pattern={pattern}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${id}-error` : undefined}
+          className={`min-h-13 rounded-2xl border bg-white/45 px-4 py-3.5 text-base sm:text-sm text-foreground shadow-inner outline-none backdrop-blur-xl placeholder:text-muted-foreground/70 dark:bg-white/5 touch-manipulation ${
+            error ? "border-destructive/45" : "border-white/70 focus:border-primary/50"
+          }`}
+        />
+      )}
+      {error && (
+        <span id={`${id}-error`} className="text-xs font-semibold text-destructive">
+          {error}
+        </span>
+      )}
+    </label>
+  )
 }
 
 function DeliveryCard({ selected, icon, title, detail, note, onClick }: { selected: boolean; icon: React.ReactNode; title: string; detail: string; note: string; onClick: () => void }) {

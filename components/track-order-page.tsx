@@ -26,6 +26,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle"
 import { PhonePeIcon } from "@/components/phonepe-logo"
 import { WHATSAPP_NUMBER } from "@/lib/products"
+import { sanitizePhone, validateIndianMobile } from "@/lib/phone"
 import { TaxInvoiceModal } from "@/components/tax-invoice"
 
 type OrderItem = {
@@ -119,8 +120,8 @@ export function TrackOrderPage() {
 
   useEffect(() => {
     const cleanId = initialOrderId.trim().toUpperCase()
-    const cleanPhone = initialPhone.replace(/\D/g, "")
-    if (cleanId && cleanPhone.length >= 10) {
+    const phoneValidation = validateIndianMobile(initialPhone)
+    if (cleanId && phoneValidation.isValid) {
       const autoVerify = async () => {
         setLoading(true)
         setError("")
@@ -128,7 +129,7 @@ export function TrackOrderPage() {
           const res = await fetch("/api/orders/track", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderId: cleanId, phone: cleanPhone }),
+            body: JSON.stringify({ orderId: cleanId, phone: phoneValidation.cleanPhone }),
           })
           const data = await res.json()
           if (!res.ok) {
@@ -151,17 +152,19 @@ export function TrackOrderPage() {
     if (e) e.preventDefault()
 
     const cleanId = orderId.trim().toUpperCase()
-    const cleanPhone = phone.replace(/\D/g, "")
+    const phoneValidation = validateIndianMobile(phone)
 
     if (!cleanId) {
       setError("Please enter your Order ID.")
       return
     }
 
-    if (cleanPhone.length < 10) {
-      setError("Please enter a valid 10-digit mobile number.")
+    if (!phoneValidation.isValid) {
+      setError(phoneValidation.error || "Please enter a valid 10-digit mobile number.")
       return
     }
+
+    const cleanPhone = phoneValidation.cleanPhone
 
     if (isSilentRefresh) {
       setRefreshing(true)
@@ -315,9 +318,10 @@ export function TrackOrderPage() {
                       id="mobile-number"
                       type="tel"
                       inputMode="numeric"
+                      pattern="[6-9][0-9]{9}"
                       maxLength={10}
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                      onChange={(e) => setPhone(sanitizePhone(e.target.value))}
                       placeholder="10-digit mobile number"
                       className="w-full rounded-2xl border border-stone-200 bg-stone-50/80 py-3.5 pl-16 pr-4 font-mono text-sm font-bold text-foreground placeholder:text-stone-400 focus:border-amber-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 dark:border-stone-800 dark:bg-stone-950/50 dark:focus:bg-stone-950"
                       autoComplete="tel"

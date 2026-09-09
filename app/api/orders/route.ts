@@ -1,6 +1,7 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare"
 import type { D1Database } from "@cloudflare/workers-types"
 import { products } from "@/lib/products"
+import { validateIndianMobile } from "@/lib/phone"
 
 export const dynamic = "force-dynamic"
 
@@ -156,9 +157,11 @@ export async function POST(request: Request) {
   if (address.length < 8 || address.length > MAX_ADDRESS_LENGTH) {
     return json({ error: "Please enter a complete delivery address." }, 400)
   }
-  if (phone.length > MAX_PHONE_LENGTH || !/^[0-9+()\-\s]{10,20}$/.test(phone)) {
-    return json({ error: "Please enter a valid phone number." }, 400)
+  const phoneValidation = validateIndianMobile(phone)
+  if (!phoneValidation.isValid) {
+    return json({ error: phoneValidation.error || "Please enter a valid 10-digit mobile number." }, 400)
   }
+  const cleanCustomerPhone = phoneValidation.cleanPhone
   if (!/^\d{6}$/.test(pincode)) {
     return json({ error: "Please enter a valid 6-digit pincode." }, 400)
   }
@@ -236,7 +239,7 @@ export async function POST(request: Request) {
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'INR', 'pending', 'new')`,
         )
         .bind(
-          orderId, name, phone, address, pincode, delivery,
+          orderId, name, cleanCustomerPhone, address, pincode, delivery,
           subtotal, deliveryFee, total,
         ),
       ...normalizedItems.map((item) =>

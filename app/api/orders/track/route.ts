@@ -1,6 +1,7 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare"
 import type { D1Database } from "@cloudflare/workers-types"
 import { getPhonePeOrderStatus } from "@/lib/phonepe"
+import { validateIndianMobile } from "@/lib/phone"
 
 export const dynamic = "force-dynamic"
 
@@ -72,11 +73,11 @@ export async function POST(request: Request) {
       return json({ error: "Invalid Order ID format. Expected format: SWAD-XXXX or SWD-YYYYMMDD-XXXXXXXX" }, 400)
     }
 
-    const inputPhoneDigits = rawPhone.replace(/\D/g, "")
-    if (inputPhoneDigits.length < 10) {
-      return json({ error: "Please enter a valid 10-digit mobile number." }, 400)
+    const phoneValidation = validateIndianMobile(rawPhone)
+    if (!phoneValidation.isValid) {
+      return json({ error: phoneValidation.error || "Please enter a valid 10-digit mobile number." }, 400)
     }
-    const inputPhoneLast10 = inputPhoneDigits.slice(-10)
+    const inputPhoneLast10 = phoneValidation.cleanPhone
 
     const { db } = getCF()
     if (!db || typeof db.prepare !== "function") {
