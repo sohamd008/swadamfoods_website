@@ -47,7 +47,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch {
-      // Ignore malformed or unavailable local storage data.
     } finally {
       setHasLoadedCart(true)
     }
@@ -59,7 +58,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
     } catch {
-      // Ignore storage failures; the in-memory cart still works.
     }
   }, [items, hasLoadedCart])
 

@@ -75,7 +75,6 @@ const CSP_POLICY = [
   "upgrade-insecure-requests",
 ].join("; ")
 
-// JSON-only .well-known endpoints that are safe for CORS *
 const CORS_ALLOWED_PATHS = new Set([
   "/.well-known/api-catalog",
   "/.well-known/service-desc",
@@ -97,7 +96,6 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || request.nextUrl.host
 
-  // 1. Canonical 301 Permanent Redirect (www to non-www and enforce https)
   if (host && host.startsWith("www.")) {
     const nonWwwHost = host.replace(/^www\./, "")
     const destinationUrl = new URL(request.url)
@@ -106,7 +104,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(destinationUrl.toString(), 301)
   }
 
-  // 2. Edge Rate Limiting on API endpoints (prevents abuse, high API consumption, and DDoS)
   if (pathname.startsWith("/api") && !pathname.startsWith("/api/webhooks/phonepe")) {
     let limit = 60
     let windowMs = 60000
@@ -137,7 +134,6 @@ export function middleware(request: NextRequest) {
 
   const acceptHeader = request.headers.get("accept") || ""
 
-  // 3. Markdown for Agents Content Negotiation
   if (
     acceptHeader.includes("text/markdown") &&
     !pathname.startsWith("/api") &&
@@ -158,13 +154,10 @@ export function middleware(request: NextRequest) {
     })
   }
 
-  // 4. Default request continuation with Link response headers and hardened security
   const response = NextResponse.next()
 
-  // Attach RFC 8288 Link headers to HTML and general responses
   response.headers.set("Link", LINK_HEADERS)
 
-  // Attach enterprise production security headers
   response.headers.set("Content-Security-Policy", CSP_POLICY)
   response.headers.set("X-Content-Type-Options", "nosniff")
   response.headers.set("X-Frame-Options", "DENY")
@@ -173,7 +166,6 @@ export function middleware(request: NextRequest) {
   response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
   response.headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups")
 
-  // Edge caching headers for static storefront pages to achieve < 0.2s TTFB globally
   if (
     !pathname.startsWith("/api") &&
     !pathname.startsWith("/admin") &&
@@ -185,7 +177,6 @@ export function middleware(request: NextRequest) {
     response.headers.set("Cloudflare-CDN-Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
   }
 
-  // Attach CORS only for JSON/machine-readable discovery endpoints (not HTML pages)
   if (CORS_ALLOWED_PATHS.has(pathname) || pathname.startsWith("/.well-known/mcp") || pathname.startsWith("/.well-known/agent-skills")) {
     response.headers.set("Access-Control-Allow-Origin", "*")
   }
@@ -195,9 +186,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except static files (images, favicon, etc.)
-     */
     "/((?!_next/static|_next/image|images|favicon.ico).*)"
   ]
 }

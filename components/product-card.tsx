@@ -10,7 +10,6 @@ export function ProductCard({ product }: { product: Product }) {
   const [isPrepOpen, setIsPrepOpen] = useState(false)
   const hasPrep = Boolean(product.prepSteps?.length)
 
-  // Lock body scroll when iOS modal sheet is open & listen for Escape
   useEffect(() => {
     if (!isPrepOpen) return
     document.body.style.overflow = "hidden"
@@ -95,27 +94,22 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
       </article>
 
-      {/* iOS Style Action Sheet for Preparation & Serving Instructions */}
       {hasPrep && isPrepOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          {/* iOS Frosted Backdrop */}
           <div
             className="fixed inset-0 bg-black/45 backdrop-blur-md transition-opacity duration-200"
             onClick={() => setIsPrepOpen(false)}
             aria-hidden="true"
           />
 
-          {/* iOS Sheet Card */}
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby={`prep-title-${product.id}`}
             className="ios-sheet relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 transition-all duration-200 transform-gpu"
           >
-            {/* iOS Top Drag Pill Indicator for Mobile */}
             <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-foreground/20 sm:hidden" />
 
-            {/* Header */}
             <div className="flex items-start justify-between gap-3 border-b border-border/60 pb-4">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/60 bg-secondary/50 shadow-xs">
@@ -148,7 +142,6 @@ export function ProductCard({ product }: { product: Product }) {
               </button>
             </div>
 
-            {/* iOS Inset Grouped Step List */}
             <div className="my-4 max-h-[60vh] overflow-y-auto pr-1">
               <ol className="divide-y divide-border/40 overflow-hidden rounded-2xl border border-border/60 bg-white/40 shadow-xs backdrop-blur-md dark:bg-white/5">
                 {product.prepSteps!.map((step, i) => (
@@ -162,7 +155,6 @@ export function ProductCard({ product }: { product: Product }) {
               </ol>
             </div>
 
-            {/* iOS Done Action Button */}
             <div className="pt-1">
               <button
                 type="button"

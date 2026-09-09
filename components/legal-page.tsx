@@ -26,7 +26,6 @@ export function LegalPage({
     try {
       sessionStorage.setItem("swadam_viewing_policy", "true")
     } catch {
-      // Ignore
     }
   }, [])
 
@@ -40,7 +39,6 @@ export function LegalPage({
         return
       }
     } catch {
-      // Fallback to normal anchor navigation to /#footer
     }
   }
 

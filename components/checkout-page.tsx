@@ -188,8 +188,6 @@ export function CheckoutPage() {
         window.innerWidth < 768 ||
         ("ontouchstart" in window && window.innerWidth < 1024))
 
-    // On mobile devices, native redirect is essential so Chrome/Safari allows
-    // launching UPI apps (PhonePe, GPay, Paytm) with 1 tap, avoiding iframe blocks.
     if (isMobile) {
       setPaymentState("paying")
       setPaymentMessage("Opening PhonePe secure payment...")
@@ -197,14 +195,12 @@ export function CheckoutPage() {
       return
     }
 
-    // On desktop, attempt the PhonePe iframe overlay
     const startedAt = Date.now()
     while (!window.PhonePeCheckout?.transact && Date.now() - startedAt < 4000) {
       await new Promise((resolve) => window.setTimeout(resolve, 100))
     }
 
     if (!window.PhonePeCheckout?.transact) {
-      // Fallback: If PhonePe script took too long or was blocked by browser extension
       setPaymentState("paying")
       setPaymentMessage("Opening PhonePe secure payment...")
       window.location.href = redirectUrl
@@ -214,8 +210,6 @@ export function CheckoutPage() {
     setPaymentState("paying")
 
     try {
-      // Do not detach `transact` from PhonePeCheckout. The SDK uses its
-      // receiver internally, so calling the method directly is required.
       window.PhonePeCheckout.transact({
         tokenUrl: redirectUrl,
         type: "IFRAME",
@@ -507,7 +501,6 @@ export function CheckoutPage() {
           </div>
         )}
 
-        {/* Mobile Top Order Summary Collapsible (lg:hidden) */}
         <div className="mb-5 rounded-[2rem] border border-white/70 bg-white/60 p-4 shadow-xl backdrop-blur-2xl dark:border-white/10 dark:bg-black/20 lg:hidden">
           <button
             type="button"
@@ -703,7 +696,6 @@ export function CheckoutPage() {
           </aside>
         </div>
 
-        {/* Sticky Mobile Bottom Payment Bar (lg:hidden) */}
         <div className="mobile-bottom-bar px-4 pt-3.5 lg:hidden">
           <div className="mx-auto flex max-w-md items-center justify-between gap-4">
             <div className="flex flex-col">

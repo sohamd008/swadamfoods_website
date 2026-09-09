@@ -18,7 +18,6 @@ export function SiteFooter() {
       sessionStorage.setItem("swadam_viewing_policy", "true")
       sessionStorage.setItem("swadam_from_home", "true")
     } catch {
-      // Ignore
     }
   }
 
@@ -55,7 +54,6 @@ export function SiteFooter() {
           const t3 = setTimeout(performScroll, 300)
         }
       } catch {
-        // Ignore
       }
     }
 
@@ -74,7 +72,6 @@ export function SiteFooter() {
               sessionStorage.setItem("swadam_from_home", "true")
             }
           } catch {
-            // Ignore
           }
           ticking = false
         })
@@ -104,7 +101,6 @@ export function SiteFooter() {
   return (
     <footer id="contact" className="relative scroll-mt-20 border-t border-white/40 pt-8 dark:border-white/10">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        {/* Pre-Footer Hero CTA */}
         <div className="glass-panel relative overflow-hidden rounded-[2.5rem] p-8 text-center sm:p-14 shadow-2xl">
           <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
           <div className="pointer-events-none absolute -left-20 -bottom-20 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
@@ -139,9 +135,7 @@ export function SiteFooter() {
           </div>
         </div>
 
-        {/* Footer Columns */}
         <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Brand Info */}
           <div className="flex flex-col gap-4 lg:col-span-1">
             <span className="w-fit overflow-hidden rounded-2xl border border-white/60 bg-[#f7f2e7]/90 p-2.5 shadow-sm">
               <Image
@@ -162,7 +156,6 @@ export function SiteFooter() {
             </div>
           </div>
 
-          {/* Contact Details */}
           <div className="flex flex-col gap-3">
             <span className="text-xs font-extrabold uppercase tracking-widest text-primary">
               Contact Us
@@ -211,7 +204,6 @@ export function SiteFooter() {
             </p>
           </div>
 
-          {/* Registrations */}
           <div className="flex flex-col gap-3">
             <span className="text-xs font-extrabold uppercase tracking-widest text-primary">
               Official Accreditations
@@ -259,14 +251,12 @@ export function SiteFooter() {
             </div>
           </div>
 
-          {/* Secure Payment Badges */}
           <div className="flex flex-col gap-3">
             <span className="text-xs font-extrabold uppercase tracking-widest text-primary flex items-center gap-1.5">
               <CreditCard className="h-3.5 w-3.5" />
               <span>Secure Payment Modes</span>
             </span>
 
-            {/* Official PhonePe Trust Badge */}
             <div className="glass-pill flex items-center gap-2.5 rounded-2xl p-2.5 border border-purple-500/25 bg-purple-500/10">
               <PhonePeIcon className="h-7 w-7 shrink-0 rounded-lg shadow-xs" />
               <div className="flex flex-col min-w-0">
@@ -295,7 +285,6 @@ export function SiteFooter() {
           </div>
         </div>
 
-        {/* Legal & Copyright */}
         <div id="footer" className="mt-14 border-t border-white/40 pt-6 dark:border-white/10 scroll-mt-10">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-center text-xs text-muted-foreground sm:text-left">

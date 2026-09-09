@@ -10,13 +10,10 @@ const highlights = [
 export function Hero() {
   return (
     <section id="top" className="relative overflow-hidden py-8 sm:py-14 lg:py-18">
-      {/* Ambient warm lighting mesh */}
       <div className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-[550px] w-[850px] -translate-x-1/2 rounded-full bg-gradient-to-tr from-amber-400/25 via-orange-400/15 to-emerald-400/20 blur-3xl opacity-75 dark:from-amber-600/15 dark:to-emerald-600/10" />
 
       <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 md:grid-cols-2 md:gap-14">
-        {/* Left Column: Brand Copy & CTAs */}
         <div className="flex flex-col gap-6">
-          {/* Top Brand Badges */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="glass-pill inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest text-foreground shadow-xs">
               <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
@@ -58,7 +55,6 @@ export function Hero() {
             </a>
           </div>
 
-          {/* Value Proposition Tags */}
           <ul className="flex flex-wrap gap-x-5 gap-y-2.5 pt-3 border-t border-white/40 dark:border-white/10">
             {highlights.map(({ icon: Icon, label }) => (
               <li
@@ -72,7 +68,6 @@ export function Hero() {
           </ul>
         </div>
 
-        {/* Right Column: Hero Visual Food Showcase */}
         <div className="relative group">
           <div className="absolute -inset-1.5 rounded-[2.8rem] bg-gradient-to-r from-amber-500/25 to-emerald-500/25 blur-2xl transition-all duration-500 group-hover:blur-3xl opacity-80" />
           
@@ -89,7 +84,6 @@ export function Hero() {
             />
           </div>
 
-          {/* Floating Glass Badges */}
           <div className="glass-panel absolute top-5 right-5 rounded-2xl px-3.5 py-2 shadow-xl border border-white/80 dark:border-white/10">
             <p className="flex items-center gap-1.5 text-xs font-black text-emerald-800 dark:text-emerald-300">
               <Sparkles className="h-3.5 w-3.5 text-emerald-600" />

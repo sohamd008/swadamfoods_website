@@ -221,7 +221,6 @@
   }
 }
 
-/* Checkout feedback stays in the customer's immediate line of sight. */
 .checkout-shell [role="status"],
 .checkout-shell [role="alert"] {
   position: fixed !important;

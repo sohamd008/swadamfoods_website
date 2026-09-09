@@ -101,7 +101,6 @@ function StatusChip({ status }: { status: string }) {
   )
 }
 
-// ── Full Order Card ───────────────────────────────────────────────────────────
 function OrderCard({
   order,
   onStatusChange,
@@ -138,10 +137,8 @@ function OrderCard({
 
   return (
     <div className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
-      {/* ── Card Header ── */}
       <div className="px-6 pt-6 pb-5 border-b border-stone-100">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          {/* Customer */}
           <div className="space-y-1 min-w-0">
             <div className="text-2xl font-extrabold text-stone-900 truncate">{order.customerName}</div>
             <div className="flex flex-wrap items-center gap-3 text-stone-500">
@@ -159,7 +156,6 @@ function OrderCard({
             </div>
           </div>
 
-          {/* Amount + Status */}
           <div className="flex flex-col items-end gap-2 shrink-0">
             <div className="text-3xl font-black text-stone-900 font-mono">₹{order.total}</div>
             <StatusChip status={order.orderStatus} />
@@ -176,7 +172,6 @@ function OrderCard({
         <div className="mt-2 text-xs text-stone-400 font-mono">{order.id}</div>
       </div>
 
-      {/* ── Items ── */}
       <div className="px-6 py-5 border-b border-stone-100 bg-stone-50">
         <div className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-3">Items Ordered</div>
         <div className="divide-y divide-stone-200">
@@ -196,7 +191,6 @@ function OrderCard({
         </div>
       </div>
 
-      {/* ── Status Actions ── */}
       {actions.length > 0 && (
         <div className="px-6 py-5 border-b border-stone-100">
           <div className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-3">Update Status</div>
@@ -227,7 +221,6 @@ function OrderCard({
         </div>
       )}
 
-      {/* ── WhatsApp Buttons ── */}
       <div className="px-6 py-5">
         <div className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-3">
           📱 Send WhatsApp Update to Customer
@@ -256,7 +249,6 @@ function OrderCard({
   )
 }
 
-// ── Main Dashboard ────────────────────────────────────────────────────────────
 export function AdminDashboard() {
   const [adminKey, setAdminKey] = useState("")
   const [inputKey, setInputKey] = useState("")
@@ -362,7 +354,6 @@ export function AdminDashboard() {
     return { revenue, active, enroute, pending }
   }, [orders])
 
-  // ── LOGIN ──────────────────────────────────────────────────────────────────
   if (!isAuthorized) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-stone-100">
@@ -408,11 +399,8 @@ export function AdminDashboard() {
     )
   }
 
-  // ── DASHBOARD ──────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-stone-100">
-
-      {/* ── Top Bar ── */}
       <header className="bg-white border-b border-stone-200 sticky top-0 z-40">
         <div className="flex items-center justify-between px-5 py-4 max-w-5xl mx-auto gap-3">
           <div className="flex items-center gap-3">
@@ -457,8 +445,6 @@ export function AdminDashboard() {
       </header>
 
       <div className="max-w-5xl mx-auto px-4 py-5 space-y-5">
-
-        {/* ── KPI Cards ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: "Today's Revenue", value: `₹${kpis.revenue.toLocaleString("en-IN")}`, Icon: IndianRupee, color: "#15803D", bg: "#F0FDF4", border: "#86EFAC" },
@@ -476,7 +462,6 @@ export function AdminDashboard() {
           ))}
         </div>
 
-        {/* ── Filter Tabs ── */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           {FILTER_TABS.map((tab) => {
             const active = statusFilter === tab.id
@@ -500,14 +485,12 @@ export function AdminDashboard() {
           })}
         </div>
 
-        {/* ── Error ── */}
         {error && (
           <div className="p-4 rounded-2xl flex gap-3 bg-red-50 border border-red-200 text-red-700 text-sm font-semibold">
             <AlertCircle className="w-5 h-5 shrink-0" /> {error}
           </div>
         )}
 
-        {/* ── Empty ── */}
         {filtered.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-3xl border border-stone-100 shadow-sm">
             <Package className="w-16 h-16 text-stone-200" />
@@ -518,7 +501,6 @@ export function AdminDashboard() {
           </div>
         )}
 
-        {/* ── Order Cards ── */}
         <div className="space-y-4">
           {filtered.map((order) => (
             <OrderCard

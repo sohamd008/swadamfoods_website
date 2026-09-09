@@ -1,4 +1,4 @@
-﻿export type RateLimitResult = {
+export type RateLimitResult = {
   success: boolean
   limit: number
   remaining: number
@@ -11,7 +11,6 @@ type RateLimitBucket = {
   resetTime: number
 }
 
-// In-memory sliding window rate limiter for edge/worker isolates
 const ipStore = new Map<string, RateLimitBucket>()
 let lastCleanup = Date.now()
 

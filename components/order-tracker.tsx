@@ -190,7 +190,6 @@ export function OrderTracker({ orderId }: { orderId: string }) {
 
   return (
     <div className="ambient-bg min-h-screen pb-16 pt-4">
-      {/* Top Header Bar */}
       <header className="sticky top-3 z-40 mx-auto max-w-4xl px-4 sm:px-6">
         <div className="glass-header flex h-16 items-center justify-between gap-4 rounded-full px-4 sm:px-6">
           <Link
@@ -238,9 +237,7 @@ export function OrderTracker({ orderId }: { orderId: string }) {
         </div>
       </header>
 
-      {/* Main Content Area */}
       <main className="mx-auto max-w-4xl px-4 pt-6 sm:px-6 space-y-6">
-        {/* Order Status Banner */}
         <div className="glass-card relative overflow-hidden rounded-3xl p-6 sm:p-8 shadow-xl border border-white/60 dark:border-white/10">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between border-b border-border/60 pb-6">
             <div className="space-y-1.5">
@@ -294,7 +291,6 @@ export function OrderTracker({ orderId }: { orderId: string }) {
             </div>
           </div>
 
-          {/* Progress Tracker Bar */}
           <div className="pt-6">
             {isCancelled ? (
               <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 text-center text-rose-700 dark:text-rose-300">
@@ -312,7 +308,6 @@ export function OrderTracker({ orderId }: { orderId: string }) {
                   </span>
                 </div>
 
-                {/* Progress Steps Grid / List */}
                 <div className="relative space-y-6 pl-4 sm:pl-6 before:absolute before:left-7 sm:before:left-9 before:top-3 before:bottom-3 before:w-1 before:bg-border/60">
                   {STAGES.map((stage, idx) => {
                     const isPassed = idx <= currentStageIdx
@@ -321,7 +316,6 @@ export function OrderTracker({ orderId }: { orderId: string }) {
 
                     return (
                       <div key={stage.id} className="relative flex items-start gap-4">
-                        {/* Icon Node */}
                         <div
                           className={`relative z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border-2 transition-all duration-300 ${
                             isPassed
@@ -332,7 +326,6 @@ export function OrderTracker({ orderId }: { orderId: string }) {
                           <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </div>
 
-                        {/* Step Label & Subtitle */}
                         <div className="min-w-0 flex-1 pt-0.5">
                           <div className="flex items-center gap-2">
                             <span className={`font-heading text-sm font-bold ${isPassed ? "text-foreground" : "text-muted-foreground"}`}>
@@ -355,9 +348,7 @@ export function OrderTracker({ orderId }: { orderId: string }) {
           </div>
         </div>
 
-        {/* Order Details Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Delivery Details Card */}
           <div className="glass-card rounded-3xl p-6 space-y-4 shadow-lg border border-white/60 dark:border-white/10">
             <div className="flex items-center gap-2 border-b border-border/50 pb-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-400">
@@ -391,7 +382,6 @@ export function OrderTracker({ orderId }: { orderId: string }) {
             </div>
           </div>
 
-          {/* Items Summary Card */}
           <div className="glass-card rounded-3xl p-6 space-y-4 shadow-lg border border-white/60 dark:border-white/10">
             <div className="flex items-center gap-2 border-b border-border/50 pb-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-400">
@@ -439,7 +429,6 @@ export function OrderTracker({ orderId }: { orderId: string }) {
           </div>
         </div>
 
-        {/* WhatsApp Business Direct Contact Section */}
         <div className="glass-card rounded-3xl p-6 sm:p-8 text-center space-y-4 border border-emerald-500/30 bg-emerald-500/5 shadow-xl">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-600/30">
             <MessageSquare className="h-7 w-7" />

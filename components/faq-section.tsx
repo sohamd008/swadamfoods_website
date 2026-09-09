@@ -52,7 +52,6 @@ export function FaqSection() {
           </p>
         </div>
 
-        {/* iOS Inset Grouped FAQ List */}
         <div className="overflow-hidden rounded-[2.2rem] border border-white/70 bg-white/40 shadow-xl backdrop-blur-2xl divide-y divide-border/60 dark:border-white/10 dark:bg-white/5">
           {faqs.map((faq, idx) => (
             <div
