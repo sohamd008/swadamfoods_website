@@ -52,7 +52,7 @@ export async function GET(request: Request) {
 
   const rawOrderId = new URL(request.url).searchParams.get("orderId")?.trim() ?? ""
   const cleanOrderId = rawOrderId.replace(/-P[A-Z0-9]+$/i, "").trim().toUpperCase()
-  if (!/^(SWAD-[A-Z0-9]{4,8}|SWD-\d{8}-[A-Z0-9]{8})$/i.test(cleanOrderId)) return json({ error: "Invalid order ID." }, 400)
+  if (!/^(SWAD-[A-Z0-9]{4,16}|SWD-\d{8}-[A-Z0-9]{8})$/i.test(cleanOrderId)) return json({ error: "Invalid order ID." }, 400)
 
   const { env } = getCloudflareContext()
   const db = (env as CloudflareEnv & { DB: D1Database }).DB

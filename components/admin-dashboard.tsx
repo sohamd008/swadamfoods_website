@@ -3,8 +3,13 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import dynamic from "next/dynamic"
 import { WHATSAPP_NUMBER } from "@/lib/products"
-import { TaxInvoiceModal } from "@/components/tax-invoice"
+
+const TaxInvoiceModal = dynamic(
+  () => import("@/components/tax-invoice").then((mod) => mod.TaxInvoiceModal),
+  { ssr: false }
+)
 import {
   ChefHat,
   Truck,

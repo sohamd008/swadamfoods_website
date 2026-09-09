@@ -1,6 +1,7 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare"
 import type { D1Database } from "@cloudflare/workers-types"
 import { getPhonePeOrderStatus } from "@/lib/phonepe"
+import { validateIndianMobile } from "@/lib/phone"
 
 export const dynamic = "force-dynamic"
 
@@ -57,7 +58,7 @@ export async function GET(
 ) {
   const { id: rawId } = await params
   const orderId = (rawId || "").replace(/-P[A-Z0-9]+$/i, "").trim().toUpperCase()
-  if (!orderId || !/^(SWAD-[A-Z0-9]{4,8}|SWD-\d{8}-[A-Z0-9]{8})$/i.test(orderId)) {
+  if (!orderId || !/^(SWAD-[A-Z0-9]{4,16}|SWD-\d{8}-[A-Z0-9]{8})$/i.test(orderId)) {
     return json({ error: "Invalid order ID format." }, 400)
   }
 
@@ -80,6 +81,44 @@ export async function GET(
       .first<OrderRow>()
 
     if (!order) return json({ error: "Order not found." }, 404)
+
+    const customerPhoneInput = request.headers.get("x-customer-phone") || new URL(request.url).searchParams.get("phone") || ""
+    const adminKey = request.headers.get("x-admin-key") || request.headers.get("authorization")?.replace("Bearer ", "") || ""
+    const isAdmin = Boolean(adminKey && process.env.ADMIN_SECRET_KEY && adminKey === process.env.ADMIN_SECRET_KEY)
+
+    const dbPhoneDigits = (order.customer_phone || "").replace(/\D/g, "")
+    const dbPhoneLast10 = dbPhoneDigits.slice(-10)
+
+    let isVerified = isAdmin
+    if (!isVerified && customerPhoneInput) {
+      const phoneValidation = validateIndianMobile(customerPhoneInput)
+      if (phoneValidation.isValid && phoneValidation.cleanPhone === dbPhoneLast10) {
+        isVerified = true
+      } else if (phoneValidation.isValid && phoneValidation.cleanPhone !== dbPhoneLast10) {
+        return json(
+          {
+            error: "The mobile number entered does not match the mobile number used when placing this order. Please verify and try again.",
+            requiresVerification: true,
+          },
+          403,
+        )
+      }
+    }
+
+    if (!isVerified) {
+      return json({
+        requiresVerification: true,
+        order: {
+          id: order.id,
+          customerPhoneMasked: order.customer_phone.replace(/(\d{2})\d{6}(\d{2})/, "$1******$2"),
+          deliveryMethod: order.delivery_method,
+          paymentStatus: order.payment_status,
+          orderStatus: order.order_status,
+          createdAt: order.created_at,
+          updatedAt: order.updated_at,
+        },
+      })
+    }
 
     if (order.payment_status !== "paid" && order.payment_gateway === "phonepe" && order.gateway_order_id) {
       try {

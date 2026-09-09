@@ -435,6 +435,13 @@ export function CheckoutPage() {
 
       const createdOrder = payload as OrderResponse
       setOrder(createdOrder)
+      try {
+        const cleanCustPhone = sanitizePhone(phone)
+        if (cleanCustPhone) {
+          localStorage.setItem("swadam_track_verified_" + createdOrder.orderId, cleanCustPhone)
+          sessionStorage.setItem("swadam_track_verified_" + createdOrder.orderId, cleanCustPhone)
+        }
+      } catch {}
       trackEvent("begin_checkout", {
         currency: createdOrder.currency,
         value: createdOrder.total,
@@ -478,10 +485,17 @@ export function CheckoutPage() {
                 <div className="glass-panel rounded-2xl p-4 text-left"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total</p><p className="mt-1 text-sm font-bold text-foreground">₹{order.total.toLocaleString("en-IN")}</p></div>
               </div>
               <div className="mt-8 flex w-full flex-col gap-3 sm:flex-row">
+                <Link
+                  href={"/order/" + order.orderId}
+                  className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-transform hover:-translate-y-0.5 active:scale-[0.99]"
+                >
+                  <Package className="h-4 w-4" aria-hidden="true" />
+                  <span>Track Live Order</span>
+                </Link>
                 <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-accent/30 bg-accent/90 px-5 py-3 text-sm font-bold text-accent-foreground shadow-lg shadow-accent/15 transition-transform hover:-translate-y-0.5 active:scale-[0.99]">
                   Message us on WhatsApp<ChevronRight className="h-4 w-4" aria-hidden="true" />
                 </a>
-                <Link href="/" className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-white/70 bg-white/35 px-5 py-3 text-sm font-bold text-foreground backdrop-blur-xl transition-colors hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10">Back to Swadam Foods</Link>
+                <Link href="/" className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-white/70 bg-white/35 px-5 py-3 text-sm font-bold text-foreground backdrop-blur-xl transition-colors hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10">Back to Store</Link>
               </div>
             </div>
           </section>

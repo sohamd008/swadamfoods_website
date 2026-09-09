@@ -22,12 +22,20 @@ import {
   PhoneCall,
   ShieldCheck,
   FileText,
+  Phone,
+  Lock,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { PhonePeIcon } from "@/components/phonepe-logo"
+import dynamic from "next/dynamic"
 import { WHATSAPP_NUMBER } from "@/lib/products"
-import { TaxInvoiceModal } from "@/components/tax-invoice"
 import { useCart } from "@/lib/cart-context"
+import { validateIndianMobile } from "@/lib/phone"
+
+const TaxInvoiceModal = dynamic(
+  () => import("@/components/tax-invoice").then((mod) => mod.TaxInvoiceModal),
+  { ssr: false }
+)
 
 type OrderItem = {
   productName: string
@@ -102,18 +110,49 @@ export function OrderTracker({ orderId }: { orderId: string }) {
   const [copied, setCopied] = useState<boolean>(false)
   const [refreshing, setRefreshing] = useState<boolean>(false)
   const [isInvoiceOpen, setIsInvoiceOpen] = useState<boolean>(false)
+  const [needsVerification, setNeedsVerification] = useState<boolean>(false)
+  const [phoneInput, setPhoneInput] = useState<string>("")
+  const [phoneError, setPhoneError] = useState<string>("")
+  const [verifying, setVerifying] = useState<boolean>(false)
+  const [maskedPhone, setMaskedPhone] = useState<string>("")
 
   const fetchOrder = useCallback(
     async (isManualRefresh = false) => {
       if (isManualRefresh) setRefreshing(true)
       try {
-        const res = await fetch(`/api/orders/${orderId}`)
+        const savedPhone =
+          (typeof window !== "undefined" &&
+            (localStorage.getItem("swadam_track_verified_" + orderId) ||
+              sessionStorage.getItem("swadam_track_verified_" + orderId))) ||
+          ""
+
+        const headers: Record<string, string> = {}
+        if (savedPhone) {
+          headers["x-customer-phone"] = savedPhone
+        }
+
+        const res = await fetch(`/api/orders/${orderId}`, { headers })
         const data = await res.json()
         if (!res.ok) {
+          if (data.requiresVerification) {
+            setNeedsVerification(true)
+            setMaskedPhone(data.order?.customerPhoneMasked || "")
+            setError("")
+            return
+          }
           setError(data.error || "Order not found.")
           return
         }
+
+        if (data.requiresVerification) {
+          setNeedsVerification(true)
+          setMaskedPhone(data.order?.customerPhoneMasked || "")
+          setError("")
+          return
+        }
+
         setOrder(data.order)
+        setNeedsVerification(false)
         if (data.order?.paymentStatus === "paid") {
           clearCart()
         }
@@ -129,6 +168,47 @@ export function OrderTracker({ orderId }: { orderId: string }) {
     },
     [clearCart, orderId],
   )
+
+  const handleVerifyPhone = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    setPhoneError("")
+
+    const validation = validateIndianMobile(phoneInput)
+    if (!validation.isValid) {
+      setPhoneError(validation.error || "Please enter a valid 10-digit mobile number.")
+      return
+    }
+
+    setVerifying(true)
+    try {
+      const res = await fetch("/api/orders/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, phone: validation.cleanPhone }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.verified) {
+        setPhoneError(data.error || "Verification failed. Please check the mobile number.")
+        return
+      }
+
+      try {
+        localStorage.setItem("swadam_track_verified_" + orderId, validation.cleanPhone)
+        sessionStorage.setItem("swadam_track_verified_" + orderId, validation.cleanPhone)
+      } catch {}
+
+      setOrder(data.order)
+      setNeedsVerification(false)
+      if (data.order?.paymentStatus === "paid") {
+        clearCart()
+      }
+      setPhoneError("")
+    } catch {
+      setPhoneError("Unable to verify mobile number. Please try again.")
+    } finally {
+      setVerifying(false)
+    }
+  }
 
   useEffect(() => {
     fetchOrder()
@@ -160,6 +240,126 @@ export function OrderTracker({ orderId }: { orderId: string }) {
             <p className="text-xs text-muted-foreground">Connecting to Swadam Foods order system</p>
           </div>
         </div>
+      </div>
+    )
+  }
+
+  if (needsVerification) {
+    return (
+      <div className="ambient-bg min-h-screen px-4 py-8 sm:px-6">
+        <header className="sticky top-3 z-40 mx-auto max-w-4xl">
+          <div className="glass-header flex h-16 items-center justify-between gap-4 rounded-full px-4 sm:px-6">
+            <Link href="/" className="flex min-w-0 items-center gap-2.5 sm:gap-3 transition-transform hover:scale-[1.02] active:scale-95">
+              <span className="flex items-center justify-center overflow-hidden rounded-2xl bg-[#f7f2e7]/90 p-1 shadow-sm ring-1 ring-white/60">
+                <Image src="/images/swadam-logo.webp" alt="Swadam Foods" width={448} height={244} sizes="59px" priority className="h-8 w-auto shrink-0" />
+              </span>
+              <div className="flex flex-col min-w-0">
+                <span className="font-heading text-sm sm:text-base font-extrabold tracking-tight text-foreground truncate">Swadam Foods</span>
+                <span className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase truncate">Order Security</span>
+              </div>
+            </Link>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <Link href="/" className="glass-pill inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold text-foreground transition-all hover:bg-white/60 dark:hover:bg-white/10 active:scale-95">
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Store</span>
+              </Link>
+            </div>
+          </div>
+        </header>
+
+        <main className="mx-auto max-w-md pt-8">
+          <div className="glass-card rounded-[2.5rem] border border-white/70 bg-white/70 p-6 sm:p-8 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-stone-900/80 space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                <Lock className="h-6 w-6" />
+              </div>
+              <div>
+                <span className="glass-pill rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                  One-Time Verification
+                </span>
+                <h1 className="font-heading text-xl font-black text-foreground">Verify Your Mobile</h1>
+              </div>
+            </div>
+
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              To protect customer privacy and delivery address details, please verify the 10-digit mobile number registered with order <strong className="font-mono text-foreground">{orderId}</strong>.
+            </p>
+
+            {maskedPhone && (
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-800 dark:text-amber-300">
+                Registered Mobile: <strong className="font-mono tracking-wider">{maskedPhone}</strong>
+              </div>
+            )}
+
+            <form onSubmit={handleVerifyPhone} className="space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="verify-phone" className="text-xs font-extrabold uppercase tracking-wide text-foreground">
+                  10-Digit Mobile Number
+                </label>
+                <div className="relative flex items-center">
+                  <span className="absolute left-4 flex items-center gap-1 text-xs font-bold text-muted-foreground">
+                    <Phone className="h-3.5 w-3.5" />
+                    <span>+91</span>
+                  </span>
+                  <input
+                    id="verify-phone"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
+                    value={phoneInput}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 10)
+                      setPhoneInput(val)
+                      setPhoneError("")
+                    }}
+                    placeholder="9876543210"
+                    className="w-full rounded-2xl border border-stone-200 bg-stone-50/80 py-3.5 pl-16 pr-4 font-mono text-sm font-bold text-foreground placeholder:text-stone-400 focus:border-amber-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 dark:border-stone-800 dark:bg-stone-950/50 dark:focus:bg-stone-950"
+                    autoComplete="tel-national"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {phoneError && (
+                <div className="flex items-start gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs font-semibold text-rose-700 dark:text-rose-400">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>{phoneError}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={verifying || phoneInput.length !== 10}
+                className="flex w-full min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3.5 text-xs font-extrabold uppercase tracking-wider text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {verifying ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>Verifying...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="h-4 w-4" />
+                    <span>Verify & Unlock Tracking</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="pt-2 border-t border-stone-200/60 dark:border-stone-800/60 text-center">
+              <a
+                href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hello Swadam Foods, I need help verifying my order ${orderId}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
+              >
+                <MessageSquare className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Need assistance? Chat on WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        </main>
       </div>
     )
   }

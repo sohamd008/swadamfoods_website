@@ -25,9 +25,14 @@ import {
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { PhonePeIcon } from "@/components/phonepe-logo"
+import dynamic from "next/dynamic"
 import { WHATSAPP_NUMBER } from "@/lib/products"
 import { sanitizePhone, validateIndianMobile } from "@/lib/phone"
-import { TaxInvoiceModal } from "@/components/tax-invoice"
+
+const TaxInvoiceModal = dynamic(
+  () => import("@/components/tax-invoice").then((mod) => mod.TaxInvoiceModal),
+  { ssr: false }
+)
 
 type OrderItem = {
   productName: string
@@ -120,7 +125,18 @@ export function TrackOrderPage() {
 
   useEffect(() => {
     const cleanId = initialOrderId.trim().toUpperCase()
-    const phoneValidation = validateIndianMobile(initialPhone)
+    let checkPhone = initialPhone
+    if (!checkPhone && cleanId && typeof window !== "undefined") {
+      checkPhone =
+        localStorage.getItem("swadam_track_verified_" + cleanId) ||
+        sessionStorage.getItem("swadam_track_verified_" + cleanId) ||
+        ""
+      if (checkPhone) {
+        setPhone(checkPhone)
+      }
+    }
+
+    const phoneValidation = validateIndianMobile(checkPhone)
     if (cleanId && phoneValidation.isValid) {
       const autoVerify = async () => {
         setLoading(true)
@@ -136,6 +152,10 @@ export function TrackOrderPage() {
             setError(data.error || "Verification failed. Please check your details.")
             return
           }
+          try {
+            localStorage.setItem("swadam_track_verified_" + cleanId, phoneValidation.cleanPhone)
+            sessionStorage.setItem("swadam_track_verified_" + cleanId, phoneValidation.cleanPhone)
+          } catch {}
           setOrder(data.order)
           setError("")
         } catch {
@@ -186,6 +206,11 @@ export function TrackOrderPage() {
         setError(data.error || "Verification failed. Please check your details.")
         return
       }
+
+      try {
+        localStorage.setItem("swadam_track_verified_" + cleanId, cleanPhone)
+        sessionStorage.setItem("swadam_track_verified_" + cleanId, cleanPhone)
+      } catch {}
 
       setOrder(data.order)
       setError("")
@@ -298,7 +323,7 @@ export function TrackOrderPage() {
                       type="text"
                       value={orderId}
                       onChange={(e) => setOrderId(e.target.value.toUpperCase())}
-                      placeholder="SWAD-XXXX or SWD-XXXXXXXX"
+                      placeholder="SWAD-1001 or SWAD-XXXX"
                       className="w-full rounded-2xl border border-stone-200 bg-stone-50/80 px-4 py-3.5 font-mono text-sm font-bold text-foreground placeholder:text-stone-400 focus:border-amber-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 dark:border-stone-800 dark:bg-stone-950/50 dark:focus:bg-stone-950"
                       autoComplete="off"
                     />

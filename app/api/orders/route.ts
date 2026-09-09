@@ -42,14 +42,44 @@ function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : ""
 }
 
-function generateOrderId(): string {
-  const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
-  let code = ""
-  const bytes = crypto.getRandomValues(new Uint8Array(4))
-  for (let i = 0; i < 4; i++) {
-    code += chars[bytes[i] % chars.length]
+let inMemoryCounter = 1000
+
+async function getNextOrderId(db: D1Database | undefined): Promise<string> {
+  if (!db || typeof db.prepare !== "function") {
+    inMemoryCounter++
+    return `SWAD-${inMemoryCounter}`
   }
-  return `SWAD-${code}`
+
+  try {
+    const rows = await db
+      .prepare(`SELECT id FROM orders WHERE id LIKE 'SWAD-%' ORDER BY LENGTH(id) DESC, id DESC LIMIT 50`)
+      .all<{ id: string }>()
+
+    let maxNum = 1000
+    if (rows && rows.results) {
+      for (const row of rows.results) {
+        const match = row.id.match(/^SWAD-(\d+)$/)
+        if (match) {
+          const val = parseInt(match[1], 10)
+          if (!isNaN(val) && val > maxNum) {
+            maxNum = val
+          }
+        }
+      }
+    }
+
+    if (maxNum === 1000) {
+      const countResult = await db.prepare(`SELECT COUNT(*) as cnt FROM orders`).first<{ cnt: number }>()
+      const count = countResult?.cnt || 0
+      maxNum = 1000 + count
+    }
+
+    const next = maxNum + 1
+    return `SWAD-${next}`
+  } catch {
+    inMemoryCounter++
+    return `SWAD-${inMemoryCounter}`
+  }
 }
 
 function sameOrigin(request: Request): boolean {
@@ -210,7 +240,7 @@ export async function POST(request: Request) {
   const deliveryFee = 0
   const total = subtotal + deliveryFee
   const { db } = getCF()
-  const orderId = generateOrderId()
+  let orderId = await getNextOrderId(db)
 
   if (!db || typeof db.prepare !== "function") {
     return json(
@@ -229,39 +259,57 @@ export async function POST(request: Request) {
   }
 
   try {
-    const statements = [
-      db
-        .prepare(
-          `INSERT INTO orders (
-            id, customer_name, customer_phone, customer_address, pincode,
-            delivery_method, subtotal, delivery_fee, total, currency,
-            payment_status, order_status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'INR', 'pending', 'new')`,
-        )
-        .bind(
-          orderId, name, cleanCustomerPhone, address, pincode, delivery,
-          subtotal, deliveryFee, total,
-        ),
-      ...normalizedItems.map((item) =>
-        db
-          .prepare(
-            `INSERT INTO order_items (
-              order_id, product_id, product_name, weight, quantity, unit_price, line_total
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          )
-          .bind(
-            orderId,
-            item.productId,
-            item.productName,
-            item.weight,
-            item.quantity,
-            item.unitPrice,
-            item.lineTotal,
-          ),
-      ),
-    ]
+    let attempts = 0
+    let success = false
 
-    await db.batch(statements)
+    while (attempts < 3 && !success) {
+      try {
+        const statements = [
+          db
+            .prepare(
+              `INSERT INTO orders (
+                id, customer_name, customer_phone, customer_address, pincode,
+                delivery_method, subtotal, delivery_fee, total, currency,
+                payment_status, order_status
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'INR', 'pending', 'new')`,
+            )
+            .bind(
+              orderId, name, cleanCustomerPhone, address, pincode, delivery,
+              subtotal, deliveryFee, total,
+            ),
+          ...normalizedItems.map((item) =>
+            db
+              .prepare(
+                `INSERT INTO order_items (
+                  order_id, product_id, product_name, weight, quantity, unit_price, line_total
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              )
+              .bind(
+                orderId,
+                item.productId,
+                item.productName,
+                item.weight,
+                item.quantity,
+                item.unitPrice,
+                item.lineTotal,
+              ),
+          ),
+        ]
+
+        await db.batch(statements)
+        success = true
+      } catch (insertError: unknown) {
+        attempts++
+        const msg = insertError instanceof Error ? insertError.message : String(insertError)
+        if (attempts < 3 && (msg.includes("UNIQUE") || msg.includes("constraint") || msg.includes("PRIMARYKEY"))) {
+          const numPart = parseInt(orderId.replace("SWAD-", ""), 10)
+          const nextCandidate = isNaN(numPart) ? 1001 + attempts : numPart + attempts
+          orderId = `SWAD-${nextCandidate}`
+        } else {
+          throw insertError
+        }
+      }
+    }
 
     return json(
       {

@@ -1,6 +1,7 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare"
 import type { D1Database } from "@cloudflare/workers-types"
 import { jsPDF } from "jspdf"
+import { validateIndianMobile } from "@/lib/phone"
 
 export const dynamic = "force-dynamic"
 
@@ -91,7 +92,7 @@ export async function GET(
   const { id: rawId } = await params
   const orderId = (rawId || "").replace(/-P[A-Z0-9]+$/i, "").trim().toUpperCase()
 
-  if (!orderId || !/^(SWAD-[A-Z0-9]{4,8}|SWD-\d{8}-[A-Z0-9]{8})$/i.test(orderId)) {
+  if (!orderId || !/^(SWAD-[A-Z0-9]{4,16}|SWD-\d{8}-[A-Z0-9]{8})$/i.test(orderId)) {
     return new Response("Invalid order ID format.", { status: 400 })
   }
 
@@ -114,6 +115,25 @@ export async function GET(
 
   if (!order) {
     return new Response("Order not found.", { status: 404 })
+  }
+
+  const customerPhoneInput = request.headers.get("x-customer-phone") || new URL(request.url).searchParams.get("phone") || ""
+  const adminKey = request.headers.get("x-admin-key") || request.headers.get("authorization")?.replace("Bearer ", "") || ""
+  const isAdmin = Boolean(adminKey && process.env.ADMIN_SECRET_KEY && adminKey === process.env.ADMIN_SECRET_KEY)
+
+  const dbPhoneDigits = (order.customer_phone || "").replace(/\D/g, "")
+  const dbPhoneLast10 = dbPhoneDigits.slice(-10)
+
+  let isVerified = isAdmin
+  if (!isVerified && customerPhoneInput) {
+    const phoneValidation = validateIndianMobile(customerPhoneInput)
+    if (phoneValidation.isValid && phoneValidation.cleanPhone === dbPhoneLast10) {
+      isVerified = true
+    }
+  }
+
+  if (!isVerified) {
+    return new Response("Mobile number verification required to access tax invoice.", { status: 403 })
   }
 
   const itemsResult = await db
