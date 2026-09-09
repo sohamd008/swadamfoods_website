@@ -6,9 +6,12 @@ const PHONEPE_IDENTITY_BASE = "https://api.phonepe.com/apis/identity-manager"
 const PHONEPE_WEBHOOK_ID = "CF2609082315296637133700"
 const PAYMENT_EXPIRY_SECONDS = 1800
 
+let cachedToken: { token: string; expiresAt: number } | null = null
+
 type PhonePeTokenResponse = {
   access_token?: string
   expires_at?: number
+  expires_in?: number
   token_type?: string
 }
 
@@ -54,7 +57,19 @@ function required(value: string | undefined, name: string) {
 }
 
 async function fetchJson<T>(input: RequestInfo | URL, init: RequestInit): Promise<T> {
-  const response = await fetch(input, init)
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 12000)
+
+  let response: Response
+  try {
+    response = await fetch(input, {
+      ...init,
+      signal: init.signal ?? controller.signal,
+    })
+  } finally {
+    clearTimeout(timeout)
+  }
+
   const text = await response.text()
   let data: unknown = null
 
@@ -75,7 +90,12 @@ async function fetchJson<T>(input: RequestInfo | URL, init: RequestInit): Promis
   return data as T
 }
 
-export async function getPhonePeAccessToken() {
+export async function getPhonePeAccessToken(forceRefresh = false): Promise<string> {
+  const now = Date.now()
+  if (!forceRefresh && cachedToken && cachedToken.expiresAt > now + 60000) {
+    return cachedToken.token
+  }
+
   const env = getEnv()
   const clientId = required(env.PHONEPE_CLIENT_ID, "PHONEPE_CLIENT_ID")
   const clientSecret = required(env.PHONEPE_CLIENT_SECRET, "PHONEPE_CLIENT_SECRET")
@@ -98,7 +118,20 @@ export async function getPhonePeAccessToken() {
   )
 
   if (!token.access_token) throw new Error("PhonePe did not return an access token.")
-  return token.access_token
+
+  let expiryEpochMs = now + 3600 * 1000
+  if (typeof token.expires_at === "number") {
+    expiryEpochMs = token.expires_at < 10000000000 ? token.expires_at * 1000 : token.expires_at
+  } else if (typeof token.expires_in === "number") {
+    expiryEpochMs = now + token.expires_in * 1000
+  }
+
+  cachedToken = {
+    token: token.access_token,
+    expiresAt: expiryEpochMs,
+  }
+
+  return cachedToken.token
 }
 
 export async function createPhonePePayment(params: {
@@ -110,7 +143,11 @@ export async function createPhonePePayment(params: {
   const token = await getPhonePeAccessToken()
   const origin = "https://swadamfoods.eu.cc"
   const cleanOrderId = params.orderId || params.merchantOrderId
-  const body = {
+
+  const digits = params.phone.replace(/\D/g, "")
+  const cleanPhone = digits.length >= 10 ? digits.slice(-10) : ""
+
+  const body: Record<string, unknown> = {
     merchantOrderId: params.merchantOrderId,
     amount: Math.round(params.amountInRupees * 100),
     expireAfter: PAYMENT_EXPIRY_SECONDS,
@@ -120,9 +157,12 @@ export async function createPhonePePayment(params: {
         redirectUrl: `${origin}/checkout?payment=phonepe&orderId=${encodeURIComponent(cleanOrderId)}`,
       },
     },
-    prefillUserLoginDetails: {
-      phoneNumber: params.phone,
-    },
+  }
+
+  if (cleanPhone.length === 10) {
+    body.prefillUserLoginDetails = {
+      phoneNumber: cleanPhone,
+    }
   }
 
   return fetchJson<PhonePePaymentResponse>(`${PHONEPE_API_BASE}/checkout/v2/pay`, {
@@ -136,23 +176,42 @@ export async function createPhonePePayment(params: {
 }
 
 export async function getPhonePeOrderStatus(merchantOrderId: string) {
-  const token = await getPhonePeAccessToken()
+  let token = await getPhonePeAccessToken()
   const url = `${PHONEPE_API_BASE}/checkout/v2/order/${encodeURIComponent(merchantOrderId)}/status?details=false&errorContext=true`
 
-  return fetchJson<PhonePeStatusResponse>(url, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `O-Bearer ${token}`,
-    },
-  })
+  try {
+    return await fetchJson<PhonePeStatusResponse>(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `O-Bearer ${token}`,
+      },
+    })
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : ""
+    if (msg.includes("401") || msg.toLowerCase().includes("unauthorized")) {
+      token = await getPhonePeAccessToken(true)
+      return fetchJson<PhonePeStatusResponse>(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `O-Bearer ${token}`,
+        },
+      })
+    }
+    throw error
+  }
 }
 
 export async function verifyPhonePeWebhook(rawBody: string, headers: Headers) {
   const env = getEnv()
   const secret = required(env.PHONEPE_WEBHOOK_SECRET, "PHONEPE_WEBHOOK_SECRET")
   const keyId = headers.get("x-phonepe-checksum-key-id")?.trim()
-  const signature = (headers.get("phonepe-checksum-signature") ?? headers.get("x-phonepe-checksum-signature"))?.trim()
+  const signature = (
+    headers.get("x-phonepe-checksum-signature") ??
+    headers.get("phonepe-checksum-signature") ??
+    headers.get("x-phonepe-checksum")
+  )?.trim()
 
   if (!keyId || keyId !== PHONEPE_WEBHOOK_ID || !signature) return false
 

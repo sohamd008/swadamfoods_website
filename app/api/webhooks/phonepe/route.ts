@@ -67,14 +67,15 @@ export async function POST(request: Request) {
 
     if (payload.state !== "COMPLETED" && payload.state !== "FAILED") return json({ received: true })
 
+    const cleanOrderId = merchantOrderId.replace(/-P[A-Z0-9]+$/i, "").trim()
     const { env } = getCloudflareContext()
     const db = (env as CloudflareEnv & { DB: D1Database }).DB
     const order = await db
       .prepare(
         `SELECT id, total, currency, payment_status
-         FROM orders WHERE gateway_order_id = ? AND payment_gateway = 'phonepe' LIMIT 1`,
+         FROM orders WHERE (gateway_order_id = ? OR id = ?) AND payment_gateway = 'phonepe' LIMIT 1`,
       )
-      .bind(merchantOrderId)
+      .bind(merchantOrderId, cleanOrderId)
       .first<{
         id: string
         total: number

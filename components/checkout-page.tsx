@@ -490,7 +490,7 @@ export function CheckoutPage() {
   }
 
   return (
-    <main className="checkout-shell min-h-screen px-4 py-5 sm:px-6 sm:py-8">
+    <main className="checkout-shell min-h-screen px-4 py-5 sm:px-6 sm:py-8 pb-28 lg:pb-8">
       <Script
         src="https://mercury.phonepe.com/web/bundle/checkout.js"
         strategy="afterInteractive"
@@ -805,7 +805,7 @@ export function CheckoutPage() {
 
 function Field({ label, value, onChange, placeholder, error, autoComplete, inputMode, multiline = false }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; error?: string; autoComplete?: string; inputMode?: "text" | "tel" | "numeric"; multiline?: boolean }) {
   const id = `checkout-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`
-  return <label htmlFor={id} className="flex flex-col gap-1.5"><span className="text-sm font-bold text-foreground">{label}</span>{multiline ? <textarea id={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} autoComplete={autoComplete} rows={3} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} className={`min-h-24 resize-none rounded-2xl border bg-white/45 px-4 py-3.5 text-sm text-foreground shadow-inner outline-none backdrop-blur-xl placeholder:text-muted-foreground/70 dark:bg-white/5 ${error ? "border-destructive/45" : "border-white/70 focus:border-primary/50"}`} /> : <input id={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} autoComplete={autoComplete} inputMode={inputMode} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} className={`min-h-13 rounded-2xl border bg-white/45 px-4 py-3.5 text-sm text-foreground shadow-inner outline-none backdrop-blur-xl placeholder:text-muted-foreground/70 dark:bg-white/5 ${error ? "border-destructive/45" : "border-white/70 focus:border-primary/50"}`} />}{error && <span id={`${id}-error`} className="text-xs font-semibold text-destructive">{error}</span>}</label>
+  return <label htmlFor={id} className="flex flex-col gap-1.5"><span className="text-sm font-bold text-foreground">{label}</span>{multiline ? <textarea id={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} autoComplete={autoComplete} rows={3} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} className={`min-h-24 resize-none rounded-2xl border bg-white/45 px-4 py-3.5 text-base sm:text-sm text-foreground shadow-inner outline-none backdrop-blur-xl placeholder:text-muted-foreground/70 dark:bg-white/5 touch-manipulation ${error ? "border-destructive/45" : "border-white/70 focus:border-primary/50"}`} /> : <input id={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} autoComplete={autoComplete} inputMode={inputMode} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} className={`min-h-13 rounded-2xl border bg-white/45 px-4 py-3.5 text-base sm:text-sm text-foreground shadow-inner outline-none backdrop-blur-xl placeholder:text-muted-foreground/70 dark:bg-white/5 touch-manipulation ${error ? "border-destructive/45" : "border-white/70 focus:border-primary/50"}`} />}{error && <span id={`${id}-error`} className="text-xs font-semibold text-destructive">{error}</span>}</label>
 }
 
 function DeliveryCard({ selected, icon, title, detail, note, onClick }: { selected: boolean; icon: React.ReactNode; title: string; detail: string; note: string; onClick: () => void }) {
@@ -814,7 +814,7 @@ function DeliveryCard({ selected, icon, title, detail, note, onClick }: { select
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`rounded-3xl border p-4 text-left transition-all ${
+      className={`rounded-3xl border p-4 text-left transition-all touch-manipulation active:scale-[0.98] ${
         selected
           ? "border-primary bg-primary/10 shadow-lg shadow-primary/10 ring-2 ring-primary/30"
           : "border-white/70 bg-white/40 hover:bg-white/60 dark:border-white/10 dark:bg-white/5"

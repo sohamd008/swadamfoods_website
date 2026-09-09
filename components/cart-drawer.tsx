@@ -145,7 +145,7 @@ export function CartDrawer() {
                           <button
                             type="button"
                             onClick={() => removeItem(item.product.id)}
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-destructive"
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-destructive touch-manipulation active:scale-95 transition"
                             aria-label={`Remove ${item.product.name}`}
                           >
                             <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -153,20 +153,20 @@ export function CartDrawer() {
                         </div>
 
                         <div className="mt-3 flex items-center justify-between gap-3">
-                          <div className="flex items-center rounded-full border border-border/70 bg-background/25 p-0.5">
+                          <div className="flex items-center rounded-full border border-border/70 bg-background/25 p-1">
                             <button
                               type="button"
                               onClick={() => setQuantity(item.product.id, item.quantity - 1)}
-                              className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-secondary"
+                              className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-secondary touch-manipulation active:scale-95 transition"
                               aria-label={`Decrease ${item.product.name} quantity`}
                             >
                               <Minus className="h-3.5 w-3.5" aria-hidden="true" />
                             </button>
-                            <span className="min-w-7 text-center text-xs font-bold">{item.quantity}</span>
+                            <span className="min-w-8 text-center text-xs font-bold">{item.quantity}</span>
                             <button
                               type="button"
                               onClick={() => setQuantity(item.product.id, Math.min(item.quantity + 1, 99))}
-                              className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-secondary"
+                              className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-secondary touch-manipulation active:scale-95 transition"
                               aria-label={`Increase ${item.product.name} quantity`}
                             >
                               <Plus className="h-3.5 w-3.5" aria-hidden="true" />
@@ -183,7 +183,7 @@ export function CartDrawer() {
               </ul>
             </div>
 
-            <footer className="border-t border-white/40 bg-white/25 px-5 py-5 backdrop-blur-xl dark:border-white/10 dark:bg-black/10">
+            <footer className="border-t border-white/40 bg-white/25 px-5 pt-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] backdrop-blur-xl dark:border-white/10 dark:bg-black/10">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold text-muted-foreground">Subtotal</span>
                 <span className="font-heading text-2xl font-extrabold text-foreground">
@@ -193,7 +193,7 @@ export function CartDrawer() {
               <Link
                 href="/checkout"
                 onClick={closeCart}
-                className="mt-4 flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary px-6 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99]"
+                className="mt-4 flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary px-6 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] touch-manipulation"
               >
                 Continue to checkout
                 <ArrowRight className="h-5 w-5" aria-hidden="true" />

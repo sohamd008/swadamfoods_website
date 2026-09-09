@@ -107,19 +107,19 @@ export function TaxInvoiceModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/60 p-2 sm:p-4 backdrop-blur-sm print:p-0 print:bg-white print:static">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/60 p-2 sm:p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] backdrop-blur-sm print:p-0 print:bg-white print:static">
       <div className="relative my-6 w-full max-w-3xl rounded-3xl bg-white text-stone-900 shadow-2xl border border-stone-200 overflow-hidden print:shadow-none print:border-none print:m-0 print:rounded-none print:w-full print:max-w-none">
         
-        <div className="flex items-center justify-between border-b border-stone-200 px-6 py-4 bg-stone-50 print:hidden">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-amber-700" />
-            <span className="font-heading text-base font-extrabold text-stone-900">Tax Invoice / Bill of Supply</span>
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-stone-200 px-4 py-3 sm:px-6 sm:py-4 bg-stone-50/95 backdrop-blur-md print:hidden">
+          <div className="flex items-center gap-2 min-w-0">
+            <Building2 className="h-5 w-5 text-amber-700 shrink-0" />
+            <span className="font-heading text-sm sm:text-base font-extrabold text-stone-900 truncate">Tax Invoice / Bill of Supply</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-95 transition"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 sm:px-4 text-xs font-bold text-primary-foreground shadow-sm hover:opacity-90 active:scale-95 transition touch-manipulation"
             >
               <Printer className="h-3.5 w-3.5" />
               <span>Print / Save PDF</span>
@@ -127,7 +127,7 @@ export function TaxInvoiceModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl p-2 text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition"
+              className="rounded-xl p-2 text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition touch-manipulation"
               aria-label="Close invoice"
             >
               <X className="h-5 w-5" />
@@ -231,8 +231,8 @@ export function TaxInvoiceModal({
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+          <div className="overflow-x-auto -mx-2 sm:mx-0 px-2 sm:px-0">
+            <table className="w-full min-w-[540px] text-left text-xs border-collapse">
               <thead>
                 <tr className="border-y-2 border-stone-300 bg-stone-100 text-stone-700 uppercase tracking-wider font-extrabold text-[10px]">
                   <th className="py-2.5 px-3">#</th>

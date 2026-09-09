@@ -64,7 +64,7 @@ export function ProductCard({ product }: { product: Product }) {
               <button
                 type="button"
                 onClick={() => setIsPrepOpen(true)}
-                className="glass-pill flex w-full items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-left text-xs font-bold text-foreground transition-all hover:bg-white/80 active:scale-[0.98] dark:hover:bg-white/10"
+                className="glass-pill flex w-full items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-left text-xs font-bold text-foreground transition-all hover:bg-white/80 active:scale-[0.98] touch-manipulation dark:hover:bg-white/10"
                 aria-haspopup="dialog"
                 aria-expanded={isPrepOpen}
               >
@@ -106,7 +106,7 @@ export function ProductCard({ product }: { product: Product }) {
             role="dialog"
             aria-modal="true"
             aria-labelledby={`prep-title-${product.id}`}
-            className="ios-sheet relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 transition-all duration-200 transform-gpu"
+            className="ios-sheet relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:pb-6 transition-all duration-200 transform-gpu"
           >
             <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-foreground/20 sm:hidden" />
 

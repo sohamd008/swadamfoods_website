@@ -87,6 +87,8 @@
   }
   a, button, input, textarea, select, [tabindex] {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
   html {
     scroll-behavior: smooth;
