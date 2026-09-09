@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { MessageCircle, Phone, Mail, MapPin, ShieldCheck, CreditCard } from "lucide-react"
 import { WHATSAPP_NUMBER, business } from "@/lib/products"
+import { PhonePeIcon } from "@/components/phonepe-logo"
 
 export function SiteFooter() {
   const waLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
@@ -264,10 +265,24 @@ export function SiteFooter() {
               <CreditCard className="h-3.5 w-3.5" />
               <span>Secure Payment Modes</span>
             </span>
+
+            {/* Official PhonePe Trust Badge */}
+            <div className="glass-pill flex items-center gap-2.5 rounded-2xl p-2.5 border border-purple-500/25 bg-purple-500/10">
+              <PhonePeIcon className="h-7 w-7 shrink-0 rounded-lg shadow-xs" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-[11px] font-extrabold text-[#5F259F] dark:text-purple-300">
+                  Powered by PhonePe
+                </span>
+                <span className="text-[10px] text-muted-foreground truncate">
+                  RBI-Authorized · 256-bit SSL
+                </span>
+              </div>
+            </div>
+
             <p className="text-[11px] text-muted-foreground">
-              Encrypted online checkout powered by PhonePe with instant UPI verification.
+              Encrypted online checkout with instant UPI &amp; card verification.
             </p>
-            <div className="flex flex-wrap gap-1.5 pt-1">
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
               {paymentMethods.map((mode) => (
                 <span
                   key={mode}

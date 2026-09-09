@@ -1,5 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /checkout
+Disallow: /order/
 
 Content-Signal: ai-train=no, search=yes, ai-input=yes
 

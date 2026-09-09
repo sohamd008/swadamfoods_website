@@ -3,12 +3,14 @@
 import Image from "next/image"
 import Link from "next/link"
 import Script from "next/script"
+import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   ArrowLeft,
   Check,
   ChevronRight,
   CircleAlert,
+  ExternalLink,
   Loader2,
   LockKeyhole,
   MapPin,
@@ -26,6 +28,7 @@ import {
 import { useCart } from "@/lib/cart-context"
 import { trackEvent } from "@/lib/analytics"
 import { WHATSAPP_NUMBER } from "@/lib/products"
+import { PhonePeIcon, PhonePeLogo, PhonePeSecurityBadge } from "@/components/phonepe-logo"
 
 declare global {
   interface Window {
@@ -33,7 +36,7 @@ declare global {
       transact: (options: {
         tokenUrl: string
         callback?: (response: "USER_CANCEL" | "CONCLUDED") => void
-        type?: "IFRAME"
+        type?: "IFRAME" | "REDIRECT"
       }) => void
       closePage?: () => void
     }
@@ -84,6 +87,7 @@ function friendlyError(error: unknown) {
 }
 
 export function CheckoutPage() {
+  const router = useRouter()
   const { items, totalItems, totalPrice, setQuantity, removeItem, clear } = useCart()
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
@@ -97,6 +101,7 @@ export function CheckoutPage() {
   const [paymentState, setPaymentState] = useState<PaymentState>("idle")
   const [error, setError] = useState("")
   const [paymentMessage, setPaymentMessage] = useState("")
+  const [lastRedirectUrl, setLastRedirectUrl] = useState("")
   const [showCancelledModal, setShowCancelledModal] = useState(false)
   const [showMobileSummary, setShowMobileSummary] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -168,6 +173,7 @@ export function CheckoutPage() {
   const openPhonePePayment = useCallback(async (redirectUrl: string, orderId: string) => {
     setPaymentState("opening")
     setPaymentMessage("")
+    setLastRedirectUrl(redirectUrl)
 
     if (!redirectUrl) {
       setPaymentState("failed")
@@ -176,15 +182,32 @@ export function CheckoutPage() {
       return
     }
 
+    const isMobile =
+      typeof window !== "undefined" &&
+      (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+        window.innerWidth < 768 ||
+        ("ontouchstart" in window && window.innerWidth < 1024))
+
+    // On mobile devices, native redirect is essential so Chrome/Safari allows
+    // launching UPI apps (PhonePe, GPay, Paytm) with 1 tap, avoiding iframe blocks.
+    if (isMobile) {
+      setPaymentState("paying")
+      setPaymentMessage("Opening PhonePe secure payment...")
+      window.location.href = redirectUrl
+      return
+    }
+
+    // On desktop, attempt the PhonePe iframe overlay
     const startedAt = Date.now()
-    while (!window.PhonePeCheckout?.transact && Date.now() - startedAt < 7000) {
+    while (!window.PhonePeCheckout?.transact && Date.now() - startedAt < 4000) {
       await new Promise((resolve) => window.setTimeout(resolve, 100))
     }
 
     if (!window.PhonePeCheckout?.transact) {
-      setPaymentState("failed")
-      setPaymentMessage("Secure payment could not be loaded. Please refresh the page and try again.")
-      setShowCancelledModal(true)
+      // Fallback: If PhonePe script took too long or was blocked by browser extension
+      setPaymentState("paying")
+      setPaymentMessage("Opening PhonePe secure payment...")
+      window.location.href = redirectUrl
       return
     }
 
@@ -206,7 +229,11 @@ export function CheckoutPage() {
 
           for (let attempt = 0; attempt < 8; attempt += 1) {
             const result = await refreshPaymentStatus(orderId)
-            if (result === "paid" || result === "failed") return
+            if (result === "paid") {
+              router.replace(`/order/${encodeURIComponent(orderId)}`)
+              return
+            }
+            if (result === "failed") return
             await new Promise((resolve) => window.setTimeout(resolve, 1500))
           }
 
@@ -215,11 +242,10 @@ export function CheckoutPage() {
         },
       })
     } catch (sdkError) {
-      console.error("PhonePe SDK failed to open:", sdkError)
-      setPaymentState("failed")
-      setPaymentMessage("Secure payment could not be opened. Please refresh the page and try again.")
+      console.error("PhonePe SDK failed to open in iframe, redirecting directly:", sdkError)
+      window.location.href = redirectUrl
     }
-  }, [refreshPaymentStatus])
+  }, [refreshPaymentStatus, router])
 
   useEffect(() => {
     const handleOnline = () => void checkConnection()
@@ -240,16 +266,25 @@ export function CheckoutPage() {
     const callbackOrderId = params.get("orderId")
     const payment = params.get("payment")
     if (payment === "phonepe" && callbackOrderId) {
-      void refreshPaymentStatus(callbackOrderId)
+      void (async () => {
+        setPaymentState("opening")
+        const result = await refreshPaymentStatus(callbackOrderId)
+        if (result === "paid") {
+          router.replace(`/order/${encodeURIComponent(callbackOrderId)}`)
+        } else if (result === "failed") {
+          setPaymentState("failed")
+          setShowCancelledModal(true)
+        }
+      })()
     }
-  }, [refreshPaymentStatus])
+  }, [refreshPaymentStatus, router])
 
   const subtotal = useMemo(() => totalPrice, [totalPrice])
   const deliveryFee = 0
   const total = subtotal + deliveryFee
 
   const isSubmittingOrPaying = submitState === "submitting" || paymentState === "opening" || paymentState === "paying"
-  const canSubmitOrder = !isSubmittingOrPaying && isOnline && items.length > 0 && phonePeReady
+  const canSubmitOrder = !isSubmittingOrPaying && isOnline && items.length > 0
 
   const whatsappHref = useMemo(() => {
     const lines = [
@@ -563,11 +598,48 @@ export function CheckoutPage() {
               </div>
             </div>
 
-            <div className="mt-7"><div className="mb-3 flex items-center gap-2"><Smartphone className="h-4 w-4 text-primary" aria-hidden="true" /><h2 className="text-sm font-bold text-foreground">Secure Payment</h2></div>
-              <div className="rounded-3xl border border-primary/20 bg-white/40 p-4 backdrop-blur-xl dark:bg-white/[0.04]">
-                <div className="flex items-start gap-3.5"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/15"><LockKeyhole className="h-5 w-5" aria-hidden="true" /></span>
-                  <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-bold text-foreground">Encrypted Payment Checkout</p><p className="mt-0.5 text-xs leading-5 text-muted-foreground">Your payment details are entered securely with PhonePe.</p></div><span className="rounded-full bg-accent/12 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-accent">Secure</span></div>
-                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-muted-foreground"><span className="rounded-full bg-white/65 px-2.5 py-1 dark:bg-white/5">UPI / Cards / NetBanking</span><span className="rounded-full bg-white/65 px-2.5 py-1 dark:bg-white/5">256-bit SSL Protection</span></div>
+            <div className="mt-7">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Smartphone className="h-4 w-4 text-primary" aria-hidden="true" />
+                  <h2 className="text-sm font-bold text-foreground">Secure Payment Gateway</h2>
+                </div>
+                <div className="flex items-center gap-1.5 rounded-full bg-purple-500/10 px-2.5 py-1 border border-purple-500/20 text-[#5F259F] dark:text-purple-300">
+                  <PhonePeIcon className="h-3.5 w-3.5" />
+                  <span className="text-[10px] font-extrabold uppercase tracking-wide">PhonePe PG</span>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-purple-500/25 bg-white/60 p-4 shadow-sm backdrop-blur-xl dark:bg-white/[0.04] dark:border-purple-500/20">
+                <div className="flex items-start gap-3.5">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#5F259F] text-white shadow-md shadow-purple-500/20">
+                    <PhonePeIcon className="h-7 w-7" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-extrabold text-foreground">PhonePe Payment Gateway</p>
+                          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[9px] font-black uppercase text-emerald-700 dark:text-emerald-300">
+                            100% Verified
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                          Pay directly with UPI (PhonePe, Google Pay, Paytm, BHIM), Credit/Debit Cards, or NetBanking.
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-accent/12 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-accent">
+                        RBI Authorized
+                      </span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-muted-foreground">
+                      <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">PhonePe</span>
+                      <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">Google Pay</span>
+                      <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">Paytm</span>
+                      <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">BHIM UPI</span>
+                      <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">Visa / Mastercard / RuPay</span>
+                      <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">NetBanking</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -591,12 +663,16 @@ export function CheckoutPage() {
                   type="button"
                   onClick={() => void submitOrder()}
                   disabled={!canSubmitOrder}
-                  className="inline-flex min-h-13 items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary px-6 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0"
+                  className="inline-flex min-h-13 items-center justify-center gap-2.5 rounded-2xl border border-primary/20 bg-primary px-6 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0"
                 >
                   {isSubmittingOrPaying ? (
-                    <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />{paymentState === "paying" ? "Payment open…" : "Preparing secure payment…"}</>
+                    <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />{paymentState === "paying" ? "Opening PhonePe…" : "Preparing PhonePe secure checkout…"}</>
                   ) : (
-                    <>{order ? "Pay securely" : `Pay securely · ₹${total.toLocaleString("en-IN")}`}<ChevronRight className="h-5 w-5" aria-hidden="true" /></>
+                    <>
+                      <PhonePeIcon className="h-5 w-5 shrink-0 rounded-md" />
+                      <span>{order ? "Pay with PhonePe" : `Pay securely · ₹${total.toLocaleString("en-IN")}`}</span>
+                      <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                    </>
                   )}
                 </button>
               </div>
@@ -608,7 +684,20 @@ export function CheckoutPage() {
             {items.length === 0 ? <div className="mt-6 rounded-2xl border border-dashed border-border/80 p-6 text-center"><p className="text-sm font-bold text-foreground">Your cart is empty</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Add something delicious before checking out.</p><Link href="/#products" className="mt-4 inline-flex rounded-full bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground">Browse products</Link></div> : <>
               <ul className="mt-5 space-y-3">{items.map((item) => <li key={item.product.id} className="glass-panel rounded-2xl p-3"><div className="flex gap-3"><Image src={item.product.image || "/placeholder.svg"} alt={item.product.name} width={64} height={64} sizes="64px" className="h-16 w-16 shrink-0 rounded-xl object-cover" /><div className="min-w-0 flex-1"><p className="text-sm font-bold leading-tight text-foreground">{item.product.name}</p><p className="mt-1 text-xs text-muted-foreground">{item.product.weight} · ₹{item.product.price}</p><div className="mt-2 flex items-center justify-between gap-3"><div className="flex items-center rounded-full border border-border/70 bg-background/30 p-0.5"><button type="button" onClick={() => setQuantity(item.product.id, item.quantity - 1)} className="h-8 w-8 rounded-full text-base font-bold text-foreground hover:bg-secondary" aria-label={`Decrease ${item.product.name} quantity`}>−</button><span className="min-w-7 text-center text-xs font-bold text-foreground">{item.quantity}</span><button type="button" onClick={() => setQuantity(item.product.id, Math.min(item.quantity + 1, 99))} className="h-8 w-8 rounded-full text-base font-bold text-foreground hover:bg-secondary" aria-label={`Increase ${item.product.name} quantity`}>+</button></div><button type="button" onClick={() => removeItem(item.product.id)} className="text-[11px] font-bold text-muted-foreground hover:text-destructive">Remove</button></div></div></div></li>)}</ul>
               <div className="mt-5 space-y-2 border-t border-border/60 pt-4 text-sm"><div className="flex items-center justify-between text-muted-foreground"><span>Subtotal</span><span className="font-semibold text-foreground">₹{subtotal.toLocaleString("en-IN")}</span></div><div className="flex items-center justify-between text-muted-foreground"><span>Delivery</span><span className="font-semibold text-foreground">{delivery === "pune" ? "Free" : "Added later"}</span></div><div className="flex items-end justify-between border-t border-border/60 pt-3"><span className="text-sm font-bold text-foreground">Total</span><span className="font-heading text-3xl font-extrabold text-foreground">₹{total.toLocaleString("en-IN")}</span></div></div>
-              <div className="mt-5 space-y-2 text-xs text-muted-foreground"><div className="flex items-center gap-2"><LockKeyhole className="h-4 w-4 text-accent" aria-hidden="true" /> Secure encrypted payment</div><div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-accent" aria-hidden="true" /> Trusted payment providers</div><div className="flex items-center gap-2"><RefreshCw className="h-4 w-4 text-accent" aria-hidden="true" /> Payment confirmation handled securely</div></div>
+              <div className="mt-5 space-y-2.5 text-xs text-muted-foreground border-t border-border/60 pt-4">
+                <div className="flex items-center gap-2">
+                  <PhonePeIcon className="h-4 w-4 shrink-0" />
+                  <span className="font-semibold text-foreground">Secured by PhonePe Gateway</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <LockKeyhole className="h-4 w-4 text-accent shrink-0" aria-hidden="true" />
+                  <span>256-bit Bank-Grade SSL Encryption</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-accent shrink-0" aria-hidden="true" />
+                  <span>RBI-Authorized Merchant Checkout</span>
+                </div>
+              </div>
               {order && <div className="mt-4 rounded-2xl border border-primary/15 bg-primary/5 px-3 py-2.5 text-xs"><p className="font-bold text-foreground">Order {order.orderId}</p><p className="mt-0.5 text-muted-foreground">Your order is ready for secure payment.</p></div>}
             </>}
           </aside>
@@ -628,9 +717,13 @@ export function CheckoutPage() {
               className="flex min-h-13 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/25 transition-all active:scale-95 disabled:opacity-50"
             >
               {isSubmittingOrPaying ? (
-                <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> {paymentState === "paying" ? "Opening..." : "Processing..."}</>
+                <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> {paymentState === "paying" ? "Opening PhonePe..." : "Processing..."}</>
               ) : (
-                <>Pay securely <ChevronRight className="h-5 w-5" aria-hidden="true" /></>
+                <>
+                  <PhonePeIcon className="h-4 w-4 shrink-0 rounded-sm" />
+                  <span>Pay with PhonePe</span>
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </>
               )}
             </button>
           </div>
@@ -655,6 +748,26 @@ export function CheckoutPage() {
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 {paymentMessage || "Your payment process was cancelled. Your order and cart items remain saved so you can try again whenever you are ready."}
               </p>
+
+              {lastRedirectUrl && (
+                <div className="mt-4 w-full rounded-2xl border border-purple-500/25 bg-purple-500/10 p-3 text-left">
+                  <div className="flex items-center gap-2">
+                    <PhonePeIcon className="h-4 w-4 shrink-0" />
+                    <span className="text-xs font-bold text-foreground">Direct Payment Link</span>
+                  </div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                    If your browser or mobile app blocked the payment popup, you can open PhonePe directly:
+                  </p>
+                  <a
+                    href={lastRedirectUrl}
+                    className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#5F259F] px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:opacity-90 active:scale-95 transition-opacity"
+                  >
+                    <span>Open PhonePe Checkout</span>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              )}
+
               <div className="mt-6 flex w-full flex-col gap-2.5 sm:flex-row">
                 <button
                   type="button"

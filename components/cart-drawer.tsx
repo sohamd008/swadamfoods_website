@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react"
 import { ArrowRight, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react"
 import { useCart } from "@/lib/cart-context"
 import { trackEvent } from "@/lib/analytics"
+import { PhonePeIcon } from "@/components/phonepe-logo"
 
 export function CartDrawer() {
   const { items, isOpen, closeCart, totalItems, totalPrice, setQuantity, removeItem } = useCart()
@@ -197,9 +198,10 @@ export function CartDrawer() {
                 Continue to checkout
                 <ArrowRight className="h-5 w-5" aria-hidden="true" />
               </Link>
-              <p className="mt-2 text-center text-xs leading-5 text-muted-foreground">
-                Delivery and payment are completed on the secure checkout page.
-              </p>
+              <div className="mt-3 flex items-center justify-center gap-2 text-xs font-bold text-muted-foreground">
+                <PhonePeIcon className="h-4 w-4 shrink-0" />
+                <span>Secured by PhonePe · UPI &amp; Cards</span>
+              </div>
             </footer>
           </>
         )}

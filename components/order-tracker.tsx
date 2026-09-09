@@ -23,6 +23,7 @@ import {
   ShieldCheck,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { PhonePeIcon } from "@/components/phonepe-logo"
 import { WHATSAPP_NUMBER } from "@/lib/products"
 
 type OrderItem = {
@@ -426,6 +427,13 @@ export function OrderTracker({ orderId }: { orderId: string }) {
               <div className="flex justify-between font-bold text-sm text-foreground pt-1.5 border-t border-border/60">
                 <span>Grand Total</span>
                 <span className="font-mono text-emerald-600 dark:text-emerald-400 font-black">₹{order.total}</span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
+                <span>Payment Gateway</span>
+                <span className="flex items-center gap-1.5 font-bold text-[#5F259F] dark:text-purple-300">
+                  <PhonePeIcon className="h-3.5 w-3.5" />
+                  <span>PhonePe {order.paymentStatus === "paid" ? "(Verified Paid)" : "(Pending)"}</span>
+                </span>
               </div>
             </div>
           </div>
