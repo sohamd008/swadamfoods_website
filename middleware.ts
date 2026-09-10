@@ -61,11 +61,11 @@ const LINK_HEADERS = [
 
 const CSP_POLICY = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://mercury.phonepe.com https://*.phonepe.com https://phonepe.com https://www.googletagmanager.com https://www.google-analytics.com",
+  "script-src 'self' 'unsafe-inline' https://mercury.phonepe.com https://*.phonepe.com https://phonepe.com https://www.googletagmanager.com https://www.google-analytics.com https://static.cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https: https://www.google-analytics.com https://www.googletagmanager.com https://*.phonepe.com https://mercury.phonepe.com https://phonepe.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://api.phonepe.com https://mercury.phonepe.com https://*.phonepe.com https://phonepe.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com",
+  "connect-src 'self' https://api.phonepe.com https://mercury.phonepe.com https://*.phonepe.com https://phonepe.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://cloudflareinsights.com",
   "frame-src 'self' https://mercury.phonepe.com https://*.phonepe.com https://phonepe.com https://mercury-tst.phonepe.com upi: phonepe: tez: paytmmp:",
   "frame-ancestors 'none'",
   "object-src 'none'",
