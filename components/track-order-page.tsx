@@ -102,11 +102,17 @@ const STAGES = [
   },
 ]
 
-export function TrackOrderPage() {
-  const { addItem, openCart } = useCart()
+export function TrackOrderPage({
+  initialOrderId: initialOrderIdProp,
+  initialPhone: initialPhoneProp,
+}: {
+  initialOrderId?: string
+  initialPhone?: string
+} = {}) {
+  const { addItem, openCart, clear: clearCart } = useCart()
   const searchParams = useSearchParams()
-  const initialOrderId = searchParams.get("orderId") || searchParams.get("id") || ""
-  const initialPhone = searchParams.get("phone") || searchParams.get("mobile") || ""
+  const initialOrderId = initialOrderIdProp || searchParams?.get("orderId") || searchParams?.get("id") || ""
+  const initialPhone = initialPhoneProp || searchParams?.get("phone") || searchParams?.get("mobile") || ""
 
   const [orderId, setOrderId] = useState(initialOrderId.toUpperCase())
   const [phone, setPhone] = useState(initialPhone)
@@ -160,6 +166,9 @@ export function TrackOrderPage() {
             sessionStorage.setItem("swadam_track_verified_" + cleanId, phoneValidation.cleanPhone)
           } catch {}
           setOrder(data.order)
+          if (data.order?.paymentStatus === "paid") {
+            clearCart()
+          }
           setError("")
         } catch {
           setError("Failed to connect to the server. Please check your internet connection.")
@@ -216,6 +225,9 @@ export function TrackOrderPage() {
       } catch {}
 
       setOrder(data.order)
+      if (data.order?.paymentStatus === "paid") {
+        clearCart()
+      }
       setError("")
     } catch {
       setError("Failed to connect to the server. Please check your internet connection.")

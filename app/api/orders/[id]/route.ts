@@ -1,19 +1,9 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare"
-import type { D1Database } from "@cloudflare/workers-types"
+import { getDB } from "@/lib/db"
+import { jsonResponse as json } from "@/lib/api"
 import { getPhonePeOrderStatus } from "@/lib/phonepe"
 import { validateIndianMobile } from "@/lib/phone"
 
 export const dynamic = "force-dynamic"
-
-function json(data: unknown, status = 200) {
-  return Response.json(data, {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff",
-    },
-  })
-}
 
 type OrderRow = {
   id: string
@@ -42,16 +32,6 @@ type OrderItemRow = {
   line_total: number
 }
 
-function getCF() {
-  try {
-    const { env } = getCloudflareContext()
-    const db = (env as unknown as { DB?: D1Database })?.DB
-    return { db }
-  } catch {
-    return { db: undefined }
-  }
-}
-
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -62,7 +42,7 @@ export async function GET(
     return json({ error: "Invalid order ID format." }, 400)
   }
 
-  const { db } = getCF()
+  const db = getDB()
   if (!db || typeof db.prepare !== "function") {
     return json({ error: "Order details currently unavailable." }, 503)
   }

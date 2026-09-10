@@ -1,17 +1,8 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare"
-import type { D1Database } from "@cloudflare/workers-types"
+import { getDB } from "@/lib/db"
+import { jsonResponse as json } from "@/lib/api"
 
 export const dynamic = "force-dynamic"
-
-function json(data: unknown, status = 200) {
-  return Response.json(data, {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff",
-    },
-  })
-}
 
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false
@@ -22,15 +13,16 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0
 }
 
-function verifyAdminKey(request: Request, env: Record<string, string | undefined>): boolean {
-  const adminKey = env.ADMIN_SECRET_KEY || process.env.ADMIN_SECRET_KEY
-  if (!adminKey) {
-    return false
-  }
+function verifyAdminKey(request: Request): boolean {
+  let adminKey = process.env.ADMIN_SECRET_KEY
+  try {
+    const { env } = getCloudflareContext()
+    adminKey = (env as unknown as { ADMIN_SECRET_KEY?: string })?.ADMIN_SECRET_KEY || adminKey
+  } catch {}
+  if (!adminKey) return false
   const headerKey = request.headers.get("x-admin-key")?.trim()
   const authHeader = request.headers.get("authorization")?.replace("Bearer ", "").trim()
   const urlKey = new URL(request.url).searchParams.get("key")?.trim()
-
   return (
     (headerKey ? timingSafeEqual(headerKey, adminKey) : false) ||
     (authHeader ? timingSafeEqual(authHeader, adminKey) : false) ||
@@ -67,18 +59,6 @@ type OrderItemRow = {
   unit_price: number
   line_total: number
 }
-
-function getCF() {
-  try {
-    const { env } = getCloudflareContext()
-    const envMap = (env ?? {}) as unknown as Record<string, string | undefined>
-    const db = (env as unknown as { DB?: D1Database })?.DB
-    return { envMap, db }
-  } catch {
-    return { envMap: (process.env ?? {}) as Record<string, string | undefined>, db: undefined }
-  }
-}
-
 function filterOrders<T extends { id: string; customerName: string; customerPhone: string; pincode: string; orderStatus: string }>(
   orders: T[],
   statusFilter?: string | null,
@@ -130,35 +110,14 @@ let inMemoryOrders = [
       { id: 2, product_name: "Instant Kanda Poha Premix", weight: "250g", quantity: 2, unit_price: 80, line_total: 160 },
     ],
   },
-  {
-    id: "SWD-20260909-E5F6G7H8",
-    customerName: "Priya Kulkarni",
-    customerPhone: "9123456789",
-    customerAddress: "12, Garden View Apartments, Kothrud, Pune",
-    pincode: "411038",
-    deliveryMethod: "porter",
-    subtotal: 240,
-    deliveryFee: 0,
-    total: 240,
-    currency: "INR",
-    paymentGateway: null,
-    gatewayOrderId: null,
-    paymentStatus: "pending",
-    orderStatus: "new",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    items: [
-      { id: 3, product_name: "Patal Poha Chivda", weight: "500g", quantity: 1, unit_price: 160, line_total: 160 },
-      { id: 4, product_name: "Instant Upma Premix", weight: "250g", quantity: 1, unit_price: 80, line_total: 80 },
-    ],
-  },
 ]
 
 export async function GET(request: Request) {
-  const { envMap, db } = getCF()
-  if (!verifyAdminKey(request, envMap)) {
+  if (!verifyAdminKey(request)) {
     return json({ error: "Unauthorized. Invalid Admin Key." }, 401)
   }
+
+  const db = getDB()
 
   const searchParams = new URL(request.url).searchParams
   const statusFilter = searchParams.get("status")?.trim()
@@ -225,10 +184,10 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const { envMap, db } = getCF()
-  if (!verifyAdminKey(request, envMap)) {
+  if (!verifyAdminKey(request)) {
     return json({ error: "Unauthorized. Invalid Admin Key." }, 401)
   }
+  const db = getDB()
 
   let body: { orderId?: unknown; orderStatus?: unknown }
   try {

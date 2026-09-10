@@ -1,5 +1,5 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare"
-import type { D1Database } from "@cloudflare/workers-types"
+import { getDB } from "@/lib/db"
+import { jsonResponse as json, isSameOrigin as sameOrigin } from "@/lib/api"
 import {
   PAYMENT_EXPIRY_SECONDS,
   createPhonePePayment,
@@ -7,49 +7,6 @@ import {
 } from "@/lib/phonepe"
 
 export const dynamic = "force-dynamic"
-
-function json(data: unknown, status = 200) {
-  return Response.json(data, {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff",
-    },
-  })
-}
-
-function sameOrigin(request: Request): boolean {
-  const secFetchSite = request.headers.get("Sec-Fetch-Site")?.toLowerCase()
-  if (secFetchSite === "cross-site") {
-    return false
-  }
-
-  const origin = request.headers.get("Origin")
-  const requestOrigin = new URL(request.url).origin
-
-  if (origin) {
-    try {
-      return new URL(origin).origin === requestOrigin
-    } catch {
-      return false
-    }
-  }
-
-  const referer = request.headers.get("Referer")
-  if (referer) {
-    try {
-      return new URL(referer).origin === requestOrigin
-    } catch {
-      return false
-    }
-  }
-
-  if (secFetchSite === "same-origin" || secFetchSite === "same-site") {
-    return true
-  }
-
-  return process.env.NODE_ENV !== "production"
-}
 
 function generatePaymentMerchantOrderId(orderId: string) {
   const suffix = crypto.randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase()
@@ -77,8 +34,8 @@ export async function POST(request: Request) {
     return json({ error: "Invalid order ID." }, 400)
   }
 
-  const { env } = getCloudflareContext()
-  const db = (env as CloudflareEnv & { DB: D1Database }).DB
+  const db = getDB()
+  if (!db) return json({ error: "Database temporarily unavailable." }, 503)
 
   try {
     const result = await db

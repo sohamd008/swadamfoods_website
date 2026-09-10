@@ -1,17 +1,8 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare"
-import type { D1Database } from "@cloudflare/workers-types"
+import { getDB } from "@/lib/db"
+import { jsonResponse as json } from "@/lib/api"
 
 export const dynamic = "force-dynamic"
-
-function json(data: unknown, status = 200) {
-  return Response.json(data, {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff",
-    },
-  })
-}
 
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false
@@ -22,8 +13,12 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0
 }
 
-function verifyAdminKey(request: Request, env: Record<string, string | undefined>): boolean {
-  const adminKey = env.ADMIN_SECRET_KEY || process.env.ADMIN_SECRET_KEY
+function verifyAdminKey(request: Request): boolean {
+  let adminKey = process.env.ADMIN_SECRET_KEY
+  try {
+    const { env } = getCloudflareContext()
+    adminKey = (env as unknown as { ADMIN_SECRET_KEY?: string })?.ADMIN_SECRET_KEY || adminKey
+  } catch {}
   if (!adminKey) return false
   const headerKey = request.headers.get("x-admin-key")?.trim()
   const authHeader = request.headers.get("authorization")?.replace("Bearer ", "").trim()
@@ -40,22 +35,12 @@ type InventoryRow = {
   stock: number
 }
 
-function getCF() {
-  try {
-    const { env } = getCloudflareContext()
-    const envMap = (env ?? {}) as unknown as Record<string, string | undefined>
-    const db = (env as unknown as { DB?: D1Database })?.DB
-    return { envMap, db }
-  } catch {
-    return { envMap: (process.env ?? {}) as Record<string, string | undefined>, db: undefined }
-  }
-}
-
 export async function GET(request: Request) {
-  const { envMap, db } = getCF()
-  if (!verifyAdminKey(request, envMap)) {
+  if (!verifyAdminKey(request)) {
     return json({ error: "Unauthorized." }, 401)
   }
+
+  const db = getDB()
 
   if (!db || typeof db.prepare !== "function") {
     return json({ inventory: [] })
@@ -78,10 +63,11 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const { envMap, db } = getCF()
-  if (!verifyAdminKey(request, envMap)) {
+  if (!verifyAdminKey(request)) {
     return json({ error: "Unauthorized." }, 401)
   }
+
+  const db = getDB()
 
   let body: { productId?: unknown; stock?: unknown }
   try {

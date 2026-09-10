@@ -1,5 +1,6 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare"
 import type { D1Database } from "@cloudflare/workers-types"
+import { getDB } from "@/lib/db"
+import { jsonResponse as json, isSameOrigin as sameOrigin } from "@/lib/api"
 import { products } from "@/lib/products"
 import { validateIndianMobile } from "@/lib/phone"
 
@@ -81,62 +82,6 @@ async function getNextOrderId(db: D1Database | undefined): Promise<string> {
     return `SWAD-${inMemoryCounter}`
   }
 }
-
-function sameOrigin(request: Request): boolean {
-  const secFetchSite = request.headers.get("Sec-Fetch-Site")?.toLowerCase()
-  if (secFetchSite === "cross-site") {
-    return false
-  }
-
-  const origin = request.headers.get("Origin")
-  const requestOrigin = new URL(request.url).origin
-
-  if (origin) {
-    try {
-      return new URL(origin).origin === requestOrigin
-    } catch {
-      return false
-    }
-  }
-
-  const referer = request.headers.get("Referer")
-  if (referer) {
-    try {
-      return new URL(referer).origin === requestOrigin
-    } catch {
-      return false
-    }
-  }
-
-  if (secFetchSite === "same-origin" || secFetchSite === "same-site") {
-    return true
-  }
-
-  return process.env.NODE_ENV !== "production"
-}
-
-function json(data: unknown, status = 200, extraHeaders?: Record<string, string>): Response {
-  return Response.json(data, {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff",
-      ...extraHeaders,
-    },
-  })
-}
-
-function getCF() {
-  try {
-    const { env } = getCloudflareContext()
-    const envMap = (env ?? {}) as unknown as Record<string, string | undefined>
-    const db = (env as unknown as { DB?: D1Database })?.DB
-    return { envMap, db }
-  } catch {
-    return { envMap: (process.env ?? {}) as Record<string, string | undefined>, db: undefined }
-  }
-}
-
 export async function POST(request: Request) {
   if (!sameOrigin(request)) {
     return json({ error: "Invalid request origin." }, 403)
@@ -240,7 +185,7 @@ export async function POST(request: Request) {
   const subtotal = normalizedItems.reduce((sum, item) => sum + item.lineTotal, 0)
   const deliveryFee = 0
   const total = subtotal + deliveryFee
-  const { db } = getCF()
+  const db = getDB()
   let orderId = await getNextOrderId(db)
 
   if (!db || typeof db.prepare !== "function") {

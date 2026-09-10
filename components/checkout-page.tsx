@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import Script from "next/script"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ArrowLeft,
   Check,
@@ -73,10 +73,6 @@ type PaymentStatusResponse = {
   paymentMode?: string | null
 }
 
-function normalizePhone(value: string) {
-  return value.replace(/[^0-9+]/g, "").trim()
-}
-
 function friendlyError(error: unknown) {
   if (error instanceof DOMException && error.name === "AbortError") {
     return "The connection took too long. Please check your internet and try again."
@@ -107,6 +103,10 @@ export function CheckoutPage() {
   const [showMobileSummary, setShowMobileSummary] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [order, setOrder] = useState<OrderResponse | null>(null)
+  const orderRef = useRef<OrderResponse | null>(null)
+  const itemsRef = useRef(items)
+  orderRef.current = order
+  itemsRef.current = items
 
   const checkConnection = useCallback(async () => {
     if (typeof window === "undefined") return false
@@ -153,12 +153,14 @@ export function CheckoutPage() {
       if (status.paymentStatus === "paid" || status.state === "COMPLETED") {
         setPaymentState("paid")
         setSubmitState("success")
-        if (order) {
+        const currentOrder = orderRef.current
+        const currentItems = itemsRef.current
+        if (currentOrder) {
           trackEvent("purchase", {
-            transaction_id: order.orderId,
-            currency: order.currency || "INR",
-            value: order.total,
-            items: items.map((item) => ({
+            transaction_id: currentOrder.orderId,
+            currency: currentOrder.currency || "INR",
+            value: currentOrder.total,
+            items: currentItems.map((item) => ({
               item_id: item.product.id,
               item_name: item.product.name,
               price: item.product.price,

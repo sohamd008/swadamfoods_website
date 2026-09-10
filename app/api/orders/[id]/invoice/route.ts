@@ -1,55 +1,9 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare"
-import type { D1Database } from "@cloudflare/workers-types"
 import { jsPDF } from "jspdf"
+import { getDB } from "@/lib/db"
 import { validateIndianMobile } from "@/lib/phone"
+import { numberToWordsINR } from "@/lib/invoice"
 
 export const dynamic = "force-dynamic"
-
-function numberToWordsINR(amount: number): string {
-  const ones = [
-    "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
-    "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
-    "Seventeen", "Eighteen", "Nineteen"
-  ]
-  const tens = [
-    "", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"
-  ]
-
-  function convertTwoDigits(n: number): string {
-    if (n === 0) return ""
-    if (n < 20) return ones[n]
-    return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + ones[n % 10] : "")
-  }
-
-  function convertThreeDigits(n: number): string {
-    const hundred = Math.floor(n / 100)
-    const rest = n % 100
-    let res = ""
-    if (hundred > 0) res += ones[hundred] + " Hundred"
-    if (rest > 0) res += (res ? " " : "") + convertTwoDigits(rest)
-    return res
-  }
-
-  const rounded = Math.round(amount)
-  if (rounded === 0) return "Zero Rupees Only"
-
-  let num = rounded
-  const crore = Math.floor(num / 10000000)
-  num %= 10000000
-  const lakh = Math.floor(num / 100000)
-  num %= 100000
-  const thousand = Math.floor(num / 1000)
-  num %= 1000
-  const remainder = num
-
-  let words = ""
-  if (crore > 0) words += convertTwoDigits(crore) + " Crore "
-  if (lakh > 0) words += convertTwoDigits(lakh) + " Lakh "
-  if (thousand > 0) words += convertTwoDigits(thousand) + " Thousand "
-  if (remainder > 0) words += convertThreeDigits(remainder)
-
-  return words.trim() + " Rupees Only"
-}
 
 type OrderRow = {
   id: string
@@ -75,16 +29,6 @@ type OrderItemRow = {
   line_total: number
 }
 
-function getCF() {
-  try {
-    const { env } = getCloudflareContext()
-    const db = (env as unknown as { DB?: D1Database })?.DB
-    return { db }
-  } catch {
-    return { db: undefined }
-  }
-}
-
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -96,7 +40,7 @@ export async function GET(
     return new Response("Invalid order ID format.", { status: 400 })
   }
 
-  const { db } = getCF()
+  const db = getDB()
   if (!db || typeof db.prepare !== "function") {
     return new Response("Database temporarily unavailable.", { status: 503 })
   }

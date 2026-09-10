@@ -1,19 +1,9 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare"
-import type { D1Database } from "@cloudflare/workers-types"
+import { getDB } from "@/lib/db"
+import { jsonResponse as json } from "@/lib/api"
 import { getPhonePeOrderStatus } from "@/lib/phonepe"
 import { validateIndianMobile } from "@/lib/phone"
 
 export const dynamic = "force-dynamic"
-
-function json(data: unknown, status = 200) {
-  return Response.json(data, {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff",
-    },
-  })
-}
 
 type OrderRow = {
   id: string
@@ -42,15 +32,6 @@ type OrderItemRow = {
   line_total: number
 }
 
-function getCF() {
-  try {
-    const { env } = getCloudflareContext()
-    const db = (env as unknown as { DB?: D1Database })?.DB
-    return { db }
-  } catch {
-    return { db: undefined }
-  }
-}
 
 export async function POST(request: Request) {
   try {
@@ -79,7 +60,7 @@ export async function POST(request: Request) {
     }
     const inputPhoneLast10 = phoneValidation.cleanPhone
 
-    const { db } = getCF()
+    const db = getDB()
     if (!db || typeof db.prepare !== "function") {
       return json({ error: "Database service currently unavailable. Please try again in a few moments." }, 503)
     }

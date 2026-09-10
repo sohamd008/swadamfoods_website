@@ -1457,7 +1457,7 @@ export function AdminDashboard() {
             onChange={(e) => setBulkStatus(e.target.value)}
             className="rounded-xl border border-stone-600 bg-stone-800 px-2 py-1.5 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-primary"
           >
-            {Object.entries(STATUS_CONFIG).filter(([, v]) => v.nextStatus !== null || ["accepted","preparing","packed","shipped","delivered"].includes(["accepted","preparing","packed","shipped","delivered"].find(s => s) ?? "")).map(([key, val]) => (
+            {Object.entries(STATUS_CONFIG).filter(([key]) => ["accepted", "preparing", "packed", "shipped", "delivered", "cancelled"].includes(key)).map(([key, val]) => (
               <option key={key} value={key}>{val.label}</option>
             ))}
           </select>
