@@ -21,7 +21,6 @@
   ],
   "x-payment-protocols": [
     "mpp",
-    "x402",
     "acp",
     "ucp"
   ],
@@ -85,18 +84,7 @@
             }
           },
           "402": {
-            "description": "Payment Required via MPP or x402"
-          }
-        }
-      }
-    },
-    "/api/x402": {
-      "get": {
-        "summary": "x402 Payment Challenge Probe",
-        "operationId": "x402Probe",
-        "responses": {
-          "402": {
-            "description": "Payment Required (x402)"
+            "description": "Payment Required via MPP"
           }
         }
       }

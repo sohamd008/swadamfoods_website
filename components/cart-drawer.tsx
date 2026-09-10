@@ -62,7 +62,7 @@ export function CartDrawer() {
   }, [closeCart, isOpen, items, totalPrice])
 
   return (
-    <div className="fixed inset-0 z-50" inert={!isOpen ? true : undefined}>
+    <div className={`fixed inset-0 z-50 ${isOpen ? "" : "pointer-events-none"}`} inert={!isOpen ? true : undefined}>
       {isOpen && (
         <button
           type="button"

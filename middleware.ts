@@ -28,14 +28,14 @@ const SWADAM_MARKDOWN = `# Swadam Foods — Authentic Homemade Delicacies & Inst
 ## Business Certifications & Trust
 - **FSSAI License No.**: 21526080002094 (Food Safety and Standards Authority of India)
 - **UDYAM Registration No.**: UDYAM-MH-26-1188295 (Ministry of MSME, Govt. of India)
-- **Proprietorship**: DANDEKAR VIDYA AJIT
+- **Entity**: Swadam Foods (Women-Owned Enterprise)
 - **Location**: Lane No. 30/31 B, Ganesh Nagar, Dhayari, Pune 411041, Maharashtra, India
 
 ## Ordering & Payment
 - **Online Checkout**: https://swadamfoods.eu.cc/checkout
 - **WhatsApp Live Orders**: +91 88888 51522 (https://wa.me/918888851522)
 - **Payment Options**: PhonePe Payment Gateway (UPI, Google Pay, Paytm, BHIM, Credit/Debit Cards, NetBanking).
-- **Delivery**: Flat ₹50 across Pune; Porter courier available for out-of-area delivery.
+- **Delivery**: Free delivery across Pune; Porter courier available for out-of-area delivery.
 
 ## Agent & Machine Discovery Surfaces
 - **API Catalog**: https://swadamfoods.eu.cc/.well-known/api-catalog
@@ -44,7 +44,6 @@ const SWADAM_MARKDOWN = `# Swadam Foods — Authentic Homemade Delicacies & Inst
 - **Agent Skills Discovery**: https://swadamfoods.eu.cc/.well-known/agent-skills/index.json
 - **Universal Commerce Protocol (UCP)**: https://swadamfoods.eu.cc/.well-known/ucp
 - **Agentic Commerce Protocol (ACP)**: https://swadamfoods.eu.cc/.well-known/acp.json
-- **x402 Payment Protocol**: https://swadamfoods.eu.cc/.well-known/x402
 - **Agent Registration (Auth.md)**: https://swadamfoods.eu.cc/auth.md
 - **OAuth Protected Resource (RFC 9728)**: https://swadamfoods.eu.cc/.well-known/oauth-protected-resource
 - **OAuth Authorization Server**: https://swadamfoods.eu.cc/.well-known/oauth-authorization-server
@@ -83,7 +82,6 @@ const CORS_ALLOWED_PATHS = new Set([
   "/.well-known/mcp",
   "/.well-known/agent-skills",
   "/.well-known/ucp",
-  "/.well-known/x402",
   "/.well-known/oauth-authorization-server",
   "/.well-known/oauth-protected-resource",
   "/.well-known/openid-configuration",

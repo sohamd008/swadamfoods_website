@@ -27,7 +27,7 @@ AI agents should read discovery documents in the following order:
 
 ## Identity & Operator
 
-- Operator: DANDEKAR VIDYA AJIT (Proprietorship)
+- Operator: Swadam Foods (Women-Owned Enterprise)
 - Brand: Swadam Foods
 - Location: Pune, Maharashtra, India
 - Registration: FSSAI License `21526080002094`, UDYAM `UDYAM-MH-26-1188295`
@@ -62,4 +62,3 @@ Registration is handled asynchronously via email to <mailto:swadamfoodsindia@gma
 - Agentic Commerce Protocol: `https://swadamfoods.eu.cc/.well-known/acp.json`
 - OpenAPI Specification: `https://swadamfoods.eu.cc/openapi.json`
 - Machine Payment Protocol (MPP): `https://swadamfoods.eu.cc/openapi.json`
-- x402 Protocol: `https://swadamfoods.eu.cc/.well-known/x402`

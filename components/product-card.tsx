@@ -109,7 +109,7 @@ export function ProductCard({ product, stock }: { product: Product; stock?: numb
       {hasPrep && isPrepOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity duration-200"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-200"
             onClick={() => setIsPrepOpen(false)}
             aria-hidden="true"
           />

@@ -189,19 +189,7 @@ export async function POST(request: Request) {
   let orderId = await getNextOrderId(db)
 
   if (!db || typeof db.prepare !== "function") {
-    return json(
-      {
-        orderId,
-        currency: "INR",
-        subtotal,
-        deliveryFee,
-        total,
-        paymentStatus: "pending",
-        orderStatus: "new",
-        items: normalizedItems,
-      },
-      201,
-    )
+    return json({ error: "Order processing service is temporarily unavailable. Please try again in a few moments." }, 503)
   }
 
   try {
@@ -263,7 +251,7 @@ export async function POST(request: Request) {
       } catch (insertError: unknown) {
         attempts++
         const msg = insertError instanceof Error ? insertError.message : String(insertError)
-        if (attempts < 3 && (msg.includes("UNIQUE") || msg.includes("constraint") || msg.includes("PRIMARYKEY"))) {
+        if (attempts < 3 && /unique|constraint|primary\s*key/i.test(msg)) {
           const numPart = parseInt(orderId.replace("SWAD-", ""), 10)
           const nextCandidate = isNaN(numPart) ? 1001 + attempts : numPart + attempts
           orderId = `SWAD-${nextCandidate}`

@@ -64,10 +64,6 @@
   Content-Type: application/json
   Access-Control-Allow-Origin: *
 
-/.well-known/x402
-  Content-Type: application/json
-  Access-Control-Allow-Origin: *
-
 /openapi.json
   Content-Type: application/json
   Access-Control-Allow-Origin: *
@@ -81,10 +77,6 @@
   Access-Control-Allow-Origin: *
 
 /api/status
-  Content-Type: application/json
-  Access-Control-Allow-Origin: *
-
-/api/x402
   Content-Type: application/json
   Access-Control-Allow-Origin: *
 

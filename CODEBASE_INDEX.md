@@ -39,7 +39,7 @@ Use this index to quickly locate code symbols, components, routes, and features:
 | **Admin Authentication** | [`admin/orders/route.ts`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/app/api/admin/orders/route.ts) | Timing-safe admin secret key verification |
 | **Admin Dashboard UI** | [`admin-dashboard.tsx`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/components/admin-dashboard.tsx) | Merchant portal with KPI metrics, status updates, live inventory |
 | **Admin Page Route** | [`app/admin/page.tsx`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/app/admin/page.tsx) | Admin entry page rendering the admin dashboard |
-| **Agent Protocols (UCP/ACP/MCP)** | [`middleware.ts`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/middleware.ts) | Markdown negotiation, MCP server card, UCP, x402 endpoints |
+| **Agent Protocols (UCP/ACP/MCP)** | [`middleware.ts`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/middleware.ts) | Markdown negotiation, MCP server card, UCP endpoints |
 | **Analytics (Google)** | [`analytics.ts`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/lib/analytics.ts) | GA4 e-commerce events: view_item, add_to_cart, begin_checkout, purchase |
 | **API Helpers** | [`api.ts`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/lib/api.ts) | Centralized `jsonResponse` and `isSameOrigin` validation |
 | **Bulk Status Updates** | [`admin-dashboard.tsx`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/components/admin-dashboard.tsx) | Batch transition of multiple orders with WhatsApp dispatch |
@@ -75,7 +75,6 @@ Use this index to quickly locate code symbols, components, routes, and features:
 | **Product Card UI** | [`product-card.tsx`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/components/product-card.tsx) | Item card with image, price, stock badge, prep drawer trigger |
 | **Products Catalog** | [`products.ts`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/lib/products.ts) | Product definitions (Chivda, Poha, Upma), pricing, weights, WhatsApp |
 | **Products Section** | [`products-section.tsx`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/components/products-section.tsx) | Responsive 3-column product showcase section |
-| **Security Protection** | [`security-protection.tsx`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/components/security-protection.tsx) | Right-click/inspect protections and anti-tamper utilities |
 | **Tax Invoice PDF API** | [`orders/[id]/invoice/route.ts`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/app/api/orders/%5Bid%5D/invoice/route.ts) | Server-side jsPDF tax invoice generation and download |
 | **Tax Invoice Modal UI** | [`tax-invoice.tsx`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/components/tax-invoice.tsx) | Client-side invoice view, browser print, and PDF download |
 | **Theme Provider** | [`theme-provider.tsx`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/components/theme-provider.tsx) | Next-themes provider wrapper for dark/light themes |
@@ -189,7 +188,6 @@ Use this index to quickly locate code symbols, components, routes, and features:
 - [`components/faq-section.tsx`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/components/faq-section.tsx): Expandable accordion answering common questions regarding orders, storage, and preparation.
 - [`components/legal-page.tsx`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/components/legal-page.tsx): Template for policy and legal documentation.
 - [`components/phonepe-logo.tsx`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/components/phonepe-logo.tsx): Clean SVG icons and badges for PhonePe Payment Gateway.
-- [`components/security-protection.tsx`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/components/security-protection.tsx): Client-side anti-tampering and interaction safeguards.
 
 #### Shopping Cart & Checkout
 - [`components/cart-drawer.tsx`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/components/cart-drawer.tsx): Floating slide-over cart drawer with live subtotal calculation, quantity stepper, empty state, and checkout link.
@@ -275,7 +273,6 @@ Use this index to quickly locate code symbols, components, routes, and features:
 | [`app/api/admin/inventory/route.ts`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/app/api/admin/inventory/route.ts) | `GET`, `PATCH` | Protected admin endpoint to inspect stock counts and update product inventory quantities in D1. Requires timing-safe admin secret key. |
 | [`app/api/admin/orders/route.ts`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/app/api/admin/orders/route.ts) | `GET`, `PATCH` | Protected admin endpoint. `GET` returns all orders with customer details and line items. `PATCH` updates order status (`accepted`, `preparing`, `packed`, `shipped`, `delivered`, `cancelled`). |
 | [`app/api/health/route.ts`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/app/api/health/route.ts) | `GET` | Light connectivity health check called by checkout page before initiating payment. |
-| [`app/api/x402/route.ts`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/app/api/x402/route.ts) | `GET`, `POST` | Implements x402 payment and agent discovery protocol endpoints. |
 
 ---
 

@@ -413,8 +413,8 @@ export function CheckoutPage() {
       return
     }
 
-    const connected = await checkConnection()
-    if (!connected) {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setIsOnline(false)
       setError("You're offline or Swadam Foods could not be reached. Please reconnect and try again.")
       setSubmitState("error")
       return
@@ -820,7 +820,7 @@ export function CheckoutPage() {
           aria-modal="true"
           aria-labelledby="cancelled-dialog-title"
           onClick={() => setShowCancelledModal(false)}
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
         >
           <div
             onClick={(e) => e.stopPropagation()}

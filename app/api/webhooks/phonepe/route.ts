@@ -1,18 +1,8 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare"
-import type { D1Database } from "@cloudflare/workers-types"
+import { getDB } from "@/lib/db"
+import { jsonResponse as json, cleanOrderId } from "@/lib/api"
 import { verifyPhonePeWebhook } from "@/lib/phonepe"
 
 export const dynamic = "force-dynamic"
-
-function json(data: unknown, status = 200) {
-  return Response.json(data, {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff",
-    },
-  })
-}
 
 async function sha256(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))
@@ -67,15 +57,15 @@ export async function POST(request: Request) {
 
     if (payload.state !== "COMPLETED" && payload.state !== "FAILED") return json({ received: true })
 
-    const cleanOrderId = merchantOrderId.replace(/-P[A-Z0-9]+$/i, "").trim()
-    const { env } = getCloudflareContext()
-    const db = (env as CloudflareEnv & { DB: D1Database }).DB
+    const sanitizedOrderId = cleanOrderId(merchantOrderId)
+    const db = getDB()
+    if (!db) return json({ error: "Database unavailable." }, 503)
     const order = await db
       .prepare(
         `SELECT id, total, currency, payment_status
          FROM orders WHERE (gateway_order_id = ? OR id = ?) AND payment_gateway = 'phonepe' LIMIT 1`,
       )
-      .bind(merchantOrderId, cleanOrderId)
+      .bind(merchantOrderId, sanitizedOrderId)
       .first<{
         id: string
         total: number

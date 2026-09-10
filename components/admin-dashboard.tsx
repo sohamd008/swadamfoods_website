@@ -840,6 +840,11 @@ export function AdminDashboard() {
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6)
         osc.start(ctx.currentTime)
         osc.stop(ctx.currentTime + 0.6)
+        setTimeout(() => {
+          try {
+            ctx.close()
+          } catch {}
+        }, 1000)
       } catch {}
     }
     prevOrderCountRef.current = newCount
@@ -1047,7 +1052,7 @@ export function AdminDashboard() {
               <Image
                 src="/images/swadam-logo.webp"
                 alt="Swadam Foods"
-                width={120}
+                width={73}
                 height={40}
                 className="h-10 w-auto"
                 priority
@@ -1110,7 +1115,7 @@ export function AdminDashboard() {
               <Image
                 src="/images/swadam-logo.webp"
                 alt="Swadam Foods"
-                width={100}
+                width={59}
                 height={32}
                 className="h-8 w-auto"
                 priority

@@ -82,14 +82,14 @@ export function Hero() {
             />
           </div>
 
-          <div className="absolute top-4 right-4 rounded-lg border border-border/80 bg-card/95 px-3 py-1.5 shadow-sm backdrop-blur-xs">
+          <div className="absolute top-4 right-4 rounded-lg border border-border/80 bg-card/95 px-3 py-1.5 shadow-sm backdrop-blur-sm">
             <p className="flex items-center gap-1.5 text-xs font-semibold text-primary">
               <Leaf className="h-3.5 w-3.5" />
               <span>100% Clean Ingredients</span>
             </p>
           </div>
 
-          <div className="absolute bottom-4 left-4 right-4 rounded-xl border border-border/80 bg-card/95 p-3.5 shadow-lg backdrop-blur-xs sm:right-auto sm:max-w-xs">
+          <div className="absolute bottom-4 left-4 right-4 rounded-xl border border-border/80 bg-card/95 p-3.5 shadow-lg backdrop-blur-sm sm:right-auto sm:max-w-xs">
             <p className="font-heading font-serif text-base font-bold text-foreground">
               Patal Poha Chivda
             </p>

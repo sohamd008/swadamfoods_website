@@ -285,7 +285,6 @@ export function SiteFooter() {
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-center text-xs text-muted-foreground sm:text-left">
               <p>© {new Date().getFullYear()} {business.name}. All rights reserved. · Women-owned &amp; operated in Pune, Maharashtra.</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground/80">Proprietorship: DANDEKAR VIDYA AJIT</p>
             </div>
             <nav className="flex flex-wrap justify-center sm:justify-end gap-x-5 gap-y-2" aria-label="Legal navigation">
               <Link href="/track" className="text-xs font-bold text-primary transition-colors hover:underline">Track Order</Link>
