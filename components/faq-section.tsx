@@ -41,10 +41,10 @@ export function FaqSection() {
     <section id="faq" className="relative scroll-mt-20 py-16 md:py-24">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <div className="mb-12 text-center">
-          <span className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary shadow-xs">
-            Questions & Answers
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card/80 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary shadow-xs">
+            Pantry FAQ
           </span>
-          <h2 className="mt-4 text-balance font-heading text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+          <h2 className="mt-3 text-balance font-heading font-serif text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
             Frequently asked questions
           </h2>
           <p className="mt-3 text-pretty text-muted-foreground">
@@ -52,13 +52,13 @@ export function FaqSection() {
           </p>
         </div>
 
-        <div className="overflow-hidden rounded-[2.2rem] border border-white/70 bg-white/40 shadow-xl backdrop-blur-2xl divide-y divide-border/60 dark:border-white/10 dark:bg-white/5">
+        <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm divide-y divide-border/60">
           {faqs.map((faq, idx) => (
             <div
               key={idx}
-              className="p-6 transition-colors hover:bg-white/30 dark:hover:bg-white/[0.03]"
+              className="p-6 transition-colors hover:bg-secondary/30"
             >
-              <h3 className="flex items-center gap-2.5 font-heading text-base font-bold text-foreground">
+              <h3 className="flex items-center gap-2.5 font-heading font-serif text-base font-bold text-foreground">
                 <HelpCircle className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
                 <span>{faq.question}</span>
               </h3>

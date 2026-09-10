@@ -89,10 +89,10 @@ export function TrustSection() {
     <section id="trust" className="relative scroll-mt-20 py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto mb-14 max-w-2xl text-center space-y-3">
-          <span className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary shadow-xs">
-            Official Certifications
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card/80 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary shadow-xs">
+            Official Compliance
           </span>
-          <h2 className="text-balance font-heading text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+          <h2 className="text-balance font-heading font-serif text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
             Certified purity &amp; official compliance
           </h2>
           <p className="text-pretty text-sm sm:text-base leading-relaxed text-muted-foreground">
@@ -104,19 +104,19 @@ export function TrustSection() {
           {credentials.map(({ logo, title, badgeText, description, status, regLabel, regNumber }) => (
             <div
               key={title}
-              className="glass-card flex flex-col justify-between rounded-[2.2rem] p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+              className="flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
             >
               <div>
-                <div className="flex items-start justify-between gap-4 border-b border-border/40 pb-4">
-                  <div className="flex h-16 w-36 items-center justify-center overflow-hidden rounded-2xl bg-white p-2 shadow-xs border border-slate-100 dark:border-white/20">
+                <div className="flex items-start justify-between gap-4 border-b border-border/70 pb-4">
+                  <div className="flex h-16 w-36 items-center justify-center overflow-hidden rounded-xl bg-white p-2 shadow-xs border border-border/40">
                     {logo}
                   </div>
-                  <span className="glass-pill rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-accent shrink-0">
+                  <span className="inline-flex items-center rounded-full border border-border/70 bg-secondary/60 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary shrink-0">
                     {badgeText}
                   </span>
                 </div>
 
-                <h3 className="mt-5 font-heading text-xl font-extrabold text-foreground">
+                <h3 className="mt-5 font-heading font-serif text-xl font-bold text-foreground">
                   {title}
                 </h3>
                 <p className="mt-2 text-xs sm:text-base leading-relaxed text-muted-foreground">
@@ -124,18 +124,18 @@ export function TrustSection() {
                 </p>
 
                 {regNumber && (
-                  <div className="mt-4 rounded-2xl border border-white/60 bg-white/50 px-4 py-2.5 shadow-xs backdrop-blur-md dark:border-white/10 dark:bg-white/5">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground block">
+                  <div className="mt-4 rounded-xl border border-border/70 bg-secondary/30 px-4 py-2.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
                       {regLabel}
                     </span>
-                    <span className="font-mono text-xs sm:text-sm font-black text-foreground tracking-wide select-all">
+                    <span className="font-mono text-xs sm:text-sm font-bold text-foreground tracking-wide select-all">
                       {regNumber}
                     </span>
                   </div>
                 )}
               </div>
 
-              <div className="mt-6 flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+              <div className="mt-6 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-50/80 p-3 text-xs font-semibold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 <span>{status}</span>
               </div>

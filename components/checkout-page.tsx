@@ -19,7 +19,6 @@ import {
   ShieldCheck,
   ShoppingBag,
   Smartphone,
-  Sparkles,
   Truck,
   Wifi,
   WifiOff,
@@ -611,14 +610,14 @@ export function CheckoutPage() {
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <section className="rounded-[2rem] border border-white/70 bg-white/50 p-5 shadow-[0_24px_70px_rgba(67,48,22,0.10)] backdrop-blur-2xl dark:border-white/10 dark:bg-black/20 sm:p-7">
+          <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="flex flex-wrap items-center gap-2"><p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Swadam Foods</p><span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-primary"><Sparkles className="h-3 w-3" aria-hidden="true" /> Almost there</span></div>
-                <h1 className="mt-1 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-5xl">Checkout</h1>
-                <p className="mt-1.5 max-w-xl text-sm leading-6 text-muted-foreground">One calm final step between you and the good stuff.</p>
+                <div className="flex flex-wrap items-center gap-2"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Swadam Foods</p><span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-secondary/60 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-foreground">Secure Checkout</span></div>
+                <h1 className="mt-1 font-heading font-serif text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Checkout</h1>
+                <p className="mt-1.5 max-w-xl text-sm leading-6 text-muted-foreground">Provide your delivery address below to complete your order.</p>
               </div>
-              <div className="hidden h-12 w-12 items-center justify-center rounded-2xl border border-white/70 bg-white/45 shadow-inner backdrop-blur-xl dark:border-white/10 dark:bg-white/5 sm:flex"><LockKeyhole className="h-5 w-5 text-primary" aria-hidden="true" /></div>
+              <div className="hidden h-11 w-11 items-center justify-center rounded-xl border border-border bg-secondary/50 sm:flex"><LockKeyhole className="h-5 w-5 text-primary" aria-hidden="true" /></div>
             </div>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -679,7 +678,7 @@ export function CheckoutPage() {
 
             <div className="mt-7"><div className="mb-3 flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" aria-hidden="true" /><h2 className="text-sm font-bold text-foreground">Delivery Method</h2></div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <DeliveryCard selected={delivery === "pune"} icon={<Package className="h-5 w-5" aria-hidden="true" />} title="Home delivery in Pune" detail="FREE" note="From our kitchen to your doorstep. 🍽️" onClick={() => setDelivery("pune")} />
+                <DeliveryCard selected={delivery === "pune"} icon={<Package className="h-5 w-5" aria-hidden="true" />} title="Home delivery in Pune" detail="FREE" note="Fresh kitchen dispatch with free home delivery across Pune." onClick={() => setDelivery("pune")} />
                 <DeliveryCard selected={delivery === "porter"} icon={<Truck className="h-5 w-5" aria-hidden="true" />} title="Outside Pune" detail="Porter" note="Delivery charge is confirmed before dispatch." onClick={() => setDelivery("porter")} />
               </div>
             </div>
@@ -696,17 +695,17 @@ export function CheckoutPage() {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-purple-500/25 bg-white/60 p-4 shadow-sm backdrop-blur-xl dark:bg-white/[0.04] dark:border-purple-500/20">
+              <div className="rounded-2xl border border-purple-500/25 bg-card p-4 shadow-xs">
                 <div className="flex items-start gap-3.5">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#5F259F] text-white shadow-md shadow-purple-500/20">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#5F259F] text-white shadow-xs">
                     <PhonePeIcon className="h-7 w-7" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-extrabold text-foreground">PhonePe Payment Gateway</p>
-                          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[9px] font-black uppercase text-emerald-700 dark:text-emerald-300">
+                          <p className="text-sm font-bold text-foreground">PhonePe Payment Gateway</p>
+                          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-800 dark:text-emerald-300">
                             100% Verified
                           </span>
                         </div>
@@ -714,17 +713,17 @@ export function CheckoutPage() {
                           Pay directly with UPI (PhonePe, Google Pay, Paytm, BHIM), Credit/Debit Cards, or NetBanking.
                         </p>
                       </div>
-                      <span className="rounded-full bg-accent/12 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-accent">
+                      <span className="rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
                         RBI Authorized
                       </span>
                     </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-muted-foreground">
-                      <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">PhonePe Payment Gateway</span>
-                      <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">Google Pay</span>
-                      <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">Paytm</span>
-                      <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">BHIM UPI</span>
-                      <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">Visa / Mastercard / RuPay</span>
-                      <span className="rounded-lg border border-border/60 bg-white/85 px-2.5 py-1 text-[10px] dark:bg-white/5 font-semibold">NetBanking</span>
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                      <span className="rounded-lg border border-border bg-background px-2.5 py-1 text-[10px] font-semibold text-foreground">PhonePe</span>
+                      <span className="rounded-lg border border-border bg-background px-2.5 py-1 text-[10px] font-semibold text-foreground">Google Pay</span>
+                      <span className="rounded-lg border border-border bg-background px-2.5 py-1 text-[10px] font-semibold text-foreground">Paytm</span>
+                      <span className="rounded-lg border border-border bg-background px-2.5 py-1 text-[10px] font-semibold text-foreground">BHIM UPI</span>
+                      <span className="rounded-lg border border-border bg-background px-2.5 py-1 text-[10px] font-semibold text-foreground">Visa / Mastercard / RuPay</span>
+                      <span className="rounded-lg border border-border bg-background px-2.5 py-1 text-[10px] font-semibold text-foreground">NetBanking</span>
                     </div>
                   </div>
                 </div>
@@ -732,24 +731,24 @@ export function CheckoutPage() {
             </div>
 
             {paymentMessage && (
-              <div role="status" className={`mt-5 flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm ${paymentState === "failed" ? "border-destructive/20 bg-destructive/8" : "border-primary/15 bg-primary/5"}`}>
+              <div role="status" className={`mt-5 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${paymentState === "failed" ? "border-destructive/20 bg-destructive/8" : "border-primary/20 bg-primary/5"}`}>
                 {paymentState === "failed" ? <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" /> : <RefreshCw className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />}
                 <p className="flex-1 leading-5 text-muted-foreground">{paymentMessage}</p>
                 <button type="button" onClick={() => setPaymentMessage("")} className="rounded-full p-1 text-muted-foreground hover:bg-secondary hover:text-foreground" aria-label="Dismiss message"><X className="h-4 w-4" aria-hidden="true" /></button>
               </div>
             )}
 
-            {error && (<div role="alert" className="mt-5 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm"><CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" /><div className="flex-1"><p className="font-bold text-foreground">We couldn't complete that</p><p className="mt-0.5 text-muted-foreground">{error}</p></div><button type="button" onClick={() => setError("")} className="text-xs font-bold text-muted-foreground hover:text-foreground">Dismiss</button></div>)}
+            {error && (<div role="alert" className="mt-5 flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/8 px-4 py-3 text-sm"><CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" /><div className="flex-1"><p className="font-bold text-foreground">We couldn't complete that</p><p className="mt-0.5 text-muted-foreground">{error}</p></div><button type="button" onClick={() => setError("")} className="text-xs font-bold text-muted-foreground hover:text-foreground">Dismiss</button></div>)}
 
             <div className="mt-7 flex flex-col gap-4">
-              <div className="flex items-center gap-3 rounded-2xl border border-accent/15 bg-accent/7 px-4 py-3"><ShieldCheck className="h-5 w-5 shrink-0 text-accent" aria-hidden="true" /><p className="text-xs leading-5 text-foreground"><span className="font-bold">Your payment is protected.</span> We never need your UPI PIN, OTP, CVV or banking password.</p></div>
+              <div className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-50/80 px-4 py-3 dark:border-emerald-500/30 dark:bg-emerald-950/40"><ShieldCheck className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" /><p className="text-xs leading-5 text-foreground"><span className="font-semibold">Your payment is protected.</span> We never ask for your UPI PIN, OTP, CVV or net banking password.</p></div>
               <div className="hidden sm:flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex max-w-md items-start gap-2 text-xs leading-5 text-muted-foreground"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" /><p>Fill in your details, take one secure payment step, then get back to eating.</p></div>
+                <div className="flex max-w-md items-start gap-2 text-xs leading-5 text-muted-foreground"><p>Orders are dispatched fresh from our kitchen. You will receive tracking details immediately.</p></div>
                 <button
                   type="button"
                   onClick={() => void submitOrder()}
                   disabled={!canSubmitOrder}
-                  className="inline-flex min-h-13 items-center justify-center gap-2.5 rounded-2xl border border-primary/20 bg-primary px-6 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0"
+                  className="inline-flex min-h-13 items-center justify-center gap-2.5 rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-md transition-all hover:bg-primary/95 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSubmittingOrPaying ? (
                     <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />{paymentState === "paying" ? "Opening PhonePe Payment Gateway…" : "Preparing PhonePe Payment Gateway…"}</>
@@ -765,26 +764,26 @@ export function CheckoutPage() {
             </div>
           </section>
 
-          <aside className="hidden lg:block h-fit rounded-[2rem] border border-white/70 bg-white/45 p-5 shadow-[0_24px_70px_rgba(67,48,22,0.10)] backdrop-blur-2xl dark:border-white/10 dark:bg-black/20 sticky top-24">
-            <div className="flex items-center gap-2"><ShoppingBag className="h-5 w-5 text-primary" aria-hidden="true" /><h2 className="font-heading text-xl font-bold text-foreground">Your order</h2><span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-bold text-muted-foreground">{totalItems}</span></div>
-            {items.length === 0 ? <div className="mt-6 rounded-2xl border border-dashed border-border/80 p-6 text-center"><p className="text-sm font-bold text-foreground">Your cart is empty</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Add something delicious before checking out.</p><Link href="/#products" className="mt-4 inline-flex rounded-full bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground">Browse products</Link></div> : <>
-              <ul className="mt-5 space-y-3">{items.map((item) => <li key={item.product.id} className="glass-panel rounded-2xl p-3"><div className="flex gap-3"><Image src={item.product.image || "/placeholder.svg"} alt={item.product.name} width={64} height={64} sizes="64px" className="h-16 w-16 shrink-0 rounded-xl object-cover" /><div className="min-w-0 flex-1"><p className="text-sm font-bold leading-tight text-foreground">{item.product.name}</p><p className="mt-1 text-xs text-muted-foreground">{item.product.weight} · ₹{item.product.price}</p><div className="mt-2 flex items-center justify-between gap-3"><div className="flex items-center rounded-full border border-border/70 bg-background/30 p-0.5"><button type="button" onClick={() => setQuantity(item.product.id, item.quantity - 1)} className="h-8 w-8 rounded-full text-base font-bold text-foreground hover:bg-secondary" aria-label={`Decrease ${item.product.name} quantity`}>−</button><span className="min-w-7 text-center text-xs font-bold text-foreground">{item.quantity}</span><button type="button" onClick={() => setQuantity(item.product.id, Math.min(item.quantity + 1, 99))} className="h-8 w-8 rounded-full text-base font-bold text-foreground hover:bg-secondary" aria-label={`Increase ${item.product.name} quantity`}>+</button></div><button type="button" onClick={() => removeItem(item.product.id)} className="text-[11px] font-bold text-muted-foreground hover:text-destructive">Remove</button></div></div></div></li>)}</ul>
-              <div className="mt-5 space-y-2 border-t border-border/60 pt-4 text-sm"><div className="flex items-center justify-between text-muted-foreground"><span>Subtotal</span><span className="font-semibold text-foreground">₹{subtotal.toLocaleString("en-IN")}</span></div><div className="flex items-center justify-between text-muted-foreground"><span>Delivery</span><span className="font-semibold text-foreground">{delivery === "pune" ? "Free" : "Added later"}</span></div><div className="flex items-end justify-between border-t border-border/60 pt-3"><span className="text-sm font-bold text-foreground">Total</span><span className="font-heading text-3xl font-extrabold text-foreground">₹{total.toLocaleString("en-IN")}</span></div></div>
-              <div className="mt-5 space-y-2.5 text-xs text-muted-foreground border-t border-border/60 pt-4">
+          <aside className="hidden lg:block h-fit rounded-2xl border border-border bg-card p-5 shadow-sm sticky top-24">
+            <div className="flex items-center gap-2"><ShoppingBag className="h-5 w-5 text-primary" aria-hidden="true" /><h2 className="font-heading font-serif text-xl font-bold text-foreground">Order Summary</h2><span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">{totalItems}</span></div>
+            {items.length === 0 ? <div className="mt-6 rounded-xl border border-dashed border-border p-6 text-center"><p className="text-sm font-semibold text-foreground">Your cart is empty</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Add something delicious before checking out.</p><Link href="/#products" className="mt-4 inline-flex rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground">Browse products</Link></div> : <>
+              <ul className="mt-5 space-y-3">{items.map((item) => <li key={item.product.id} className="rounded-xl border border-border/70 bg-secondary/30 p-3"><div className="flex gap-3"><Image src={item.product.image || "/placeholder.svg"} alt={item.product.name} width={64} height={64} sizes="64px" className="h-16 w-16 shrink-0 rounded-xl object-cover" /><div className="min-w-0 flex-1"><p className="text-sm font-heading font-serif font-bold leading-tight text-foreground">{item.product.name}</p><p className="mt-1 text-xs text-muted-foreground">{item.product.weight} · ₹{item.product.price}</p><div className="mt-2 flex items-center justify-between gap-3"><div className="flex items-center rounded-lg border border-border/80 bg-background p-0.5"><button type="button" onClick={() => setQuantity(item.product.id, item.quantity - 1)} className="h-7 w-7 rounded-md text-base font-bold text-foreground hover:bg-secondary" aria-label={`Decrease ${item.product.name} quantity`}>−</button><span className="min-w-7 text-center text-xs font-bold text-foreground">{item.quantity}</span><button type="button" onClick={() => setQuantity(item.product.id, Math.min(item.quantity + 1, 99))} className="h-7 w-7 rounded-md text-base font-bold text-foreground hover:bg-secondary" aria-label={`Increase ${item.product.name} quantity`}>+</button></div><button type="button" onClick={() => removeItem(item.product.id)} className="text-[11px] font-semibold text-muted-foreground hover:text-destructive">Remove</button></div></div></div></li>)}</ul>
+              <div className="mt-5 space-y-2 border-t border-border pt-4 text-sm"><div className="flex items-center justify-between text-muted-foreground"><span>Subtotal</span><span className="font-semibold text-foreground">₹{subtotal.toLocaleString("en-IN")}</span></div><div className="flex items-center justify-between text-muted-foreground"><span>Delivery</span><span className="font-semibold text-foreground">{delivery === "pune" ? "Free" : "Added later"}</span></div><div className="flex items-end justify-between border-t border-border pt-3"><span className="text-sm font-bold text-foreground">Total</span><span className="font-heading font-serif text-3xl font-bold text-foreground">₹{total.toLocaleString("en-IN")}</span></div></div>
+              <div className="mt-5 space-y-2.5 text-xs text-muted-foreground border-t border-border pt-4">
                 <div className="flex items-center gap-2">
                   <PhonePeIcon className="h-4 w-4 shrink-0" />
                   <span className="font-semibold text-foreground">Secured by PhonePe Payment Gateway</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <LockKeyhole className="h-4 w-4 text-accent shrink-0" aria-hidden="true" />
+                  <LockKeyhole className="h-4 w-4 text-emerald-600 shrink-0" aria-hidden="true" />
                   <span>256-bit Bank-Grade SSL Encryption</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-accent shrink-0" aria-hidden="true" />
+                  <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" aria-hidden="true" />
                   <span>RBI-Authorized Merchant Checkout</span>
                 </div>
               </div>
-              {order && <div className="mt-4 rounded-2xl border border-primary/15 bg-primary/5 px-3 py-2.5 text-xs"><p className="font-bold text-foreground">Order {order.orderId}</p><p className="mt-0.5 text-muted-foreground">Your order is ready for secure payment.</p></div>}
+              {order && <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 text-xs"><p className="font-bold text-foreground">Order {order.orderId}</p><p className="mt-0.5 text-muted-foreground">Your order is ready for secure payment.</p></div>}
             </>}
           </aside>
         </div>
@@ -792,14 +791,14 @@ export function CheckoutPage() {
         <div className="mobile-bottom-bar px-4 pt-3.5 lg:hidden">
           <div className="mx-auto flex max-w-md items-center justify-between gap-4">
             <div className="flex flex-col">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">Total amount</span>
-              <span className="font-heading text-2xl font-black text-foreground">₹{total.toLocaleString("en-IN")}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total amount</span>
+              <span className="font-heading font-serif text-2xl font-bold text-foreground">₹{total.toLocaleString("en-IN")}</span>
             </div>
             <button
               type="button"
               onClick={() => void submitOrder()}
               disabled={!canSubmitOrder}
-              className="flex min-h-13 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/25 transition-all active:scale-95 disabled:opacity-50"
+              className="flex min-h-13 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground shadow-md transition-all active:scale-95 disabled:opacity-50"
             >
               {isSubmittingOrPaying ? (
                 <><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> {paymentState === "paying" ? "Opening PhonePe..." : "Processing..."}</>
@@ -821,17 +820,17 @@ export function CheckoutPage() {
           aria-modal="true"
           aria-labelledby="cancelled-dialog-title"
           onClick={() => setShowCancelledModal(false)}
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-in fade-in duration-200"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-[2rem] border border-white/70 bg-white/95 p-6 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-zinc-900/95 sm:p-8"
+            className="w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl sm:p-8"
           >
             <div className="flex flex-col items-center text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-400">
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-400">
                 <CircleAlert className="h-7 w-7" aria-hidden="true" />
               </div>
-              <h3 id="cancelled-dialog-title" className="mt-4 font-heading text-2xl font-bold text-foreground">
+              <h3 id="cancelled-dialog-title" className="mt-4 font-heading font-serif text-2xl font-bold text-foreground">
                 Payment Cancelled
               </h3>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -839,7 +838,7 @@ export function CheckoutPage() {
               </p>
 
               {lastRedirectUrl && (
-                <div className="mt-4 w-full rounded-2xl border border-purple-500/25 bg-purple-500/10 p-3 text-left">
+                <div className="mt-4 w-full rounded-xl border border-purple-500/25 bg-purple-500/10 p-3 text-left">
                   <div className="flex items-center gap-2">
                     <PhonePeIcon className="h-4 w-4 shrink-0" />
                     <span className="text-xs font-bold text-foreground">Direct Payment Link</span>
@@ -864,7 +863,7 @@ export function CheckoutPage() {
                     setShowCancelledModal(false)
                     void submitOrder()
                   }}
-                  className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-extrabold text-primary-foreground shadow-lg shadow-primary/20 transition-transform hover:-translate-y-0.5 active:scale-[0.99]"
+                  className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-sm transition-transform hover:-translate-y-0.5 active:scale-[0.99]"
                 >
                   <RefreshCw className="h-4 w-4" aria-hidden="true" />
                   Try Payment Again
@@ -872,7 +871,7 @@ export function CheckoutPage() {
                 <button
                   type="button"
                   onClick={() => setShowCancelledModal(false)}
-                  className="flex min-h-12 flex-1 items-center justify-center rounded-2xl border border-border bg-secondary/50 px-4 py-3 text-sm font-bold text-foreground transition-colors hover:bg-secondary"
+                  className="flex min-h-12 flex-1 items-center justify-center rounded-xl border border-border bg-secondary/50 px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
                 >
                   Review Order
                 </button>
@@ -924,8 +923,8 @@ function Field({
           rows={3}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${id}-error` : undefined}
-          className={`min-h-24 resize-none rounded-2xl border bg-white/45 px-4 py-3.5 text-base sm:text-sm text-foreground shadow-inner outline-none backdrop-blur-xl placeholder:text-muted-foreground/70 dark:bg-white/5 touch-manipulation ${
-            error ? "border-destructive/45" : "border-white/70 focus:border-primary/50"
+          className={`min-h-24 resize-none rounded-xl border bg-background px-4 py-3.5 text-base sm:text-sm text-foreground shadow-xs outline-none transition-colors placeholder:text-muted-foreground/60 touch-manipulation ${
+            error ? "border-destructive ring-1 ring-destructive" : "border-input hover:border-border focus:border-primary focus:ring-1 focus:ring-primary"
           }`}
         />
       ) : (
@@ -941,8 +940,8 @@ function Field({
           pattern={pattern}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${id}-error` : undefined}
-          className={`min-h-13 rounded-2xl border bg-white/45 px-4 py-3.5 text-base sm:text-sm text-foreground shadow-inner outline-none backdrop-blur-xl placeholder:text-muted-foreground/70 dark:bg-white/5 touch-manipulation ${
-            error ? "border-destructive/45" : "border-white/70 focus:border-primary/50"
+          className={`min-h-13 rounded-xl border bg-background px-4 py-3.5 text-base sm:text-sm text-foreground shadow-xs outline-none transition-colors placeholder:text-muted-foreground/60 touch-manipulation ${
+            error ? "border-destructive ring-1 ring-destructive" : "border-input hover:border-border focus:border-primary focus:ring-1 focus:ring-primary"
           }`}
         />
       )}
@@ -961,20 +960,20 @@ function DeliveryCard({ selected, icon, title, detail, note, onClick }: { select
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`rounded-3xl border p-4 text-left transition-all touch-manipulation active:scale-[0.98] ${
+      className={`rounded-xl border p-4 text-left transition-all touch-manipulation active:scale-[0.99] ${
         selected
-          ? "border-primary bg-primary/10 shadow-lg shadow-primary/10 ring-2 ring-primary/30"
-          : "border-white/70 bg-white/40 hover:bg-white/60 dark:border-white/10 dark:bg-white/5"
+          ? "border-primary bg-primary/10 shadow-xs ring-1 ring-primary/40"
+          : "border-border bg-card hover:bg-secondary/40"
       }`}
     >
       <div className="flex items-start gap-3.5">
-        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${selected ? "bg-primary text-primary-foreground shadow-md" : "bg-secondary text-muted-foreground"}`}>
+        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${selected ? "bg-primary text-primary-foreground shadow-sm" : "bg-secondary text-muted-foreground"}`}>
           {icon}
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center justify-between gap-2">
-            <span className="text-sm font-extrabold text-foreground">{title}</span>
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${selected ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
+            <span className="text-sm font-bold text-foreground">{title}</span>
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${selected ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
               {detail}
             </span>
           </span>

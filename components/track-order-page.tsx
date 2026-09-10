@@ -15,7 +15,7 @@ import {
   Truck,
   ChefHat,
   PackageCheck,
-  Sparkles,
+  CheckCircle2,
   Copy,
   Check,
   FileText,
@@ -98,7 +98,7 @@ const STAGES = [
     id: "delivered",
     label: "Delivered",
     subtitle: "Delivered to your doorstep!",
-    icon: Sparkles,
+    icon: CheckCircle2,
   },
 ]
 
@@ -268,7 +268,7 @@ export function TrackOrderPage({
     : encodeURIComponent(`Namaste Swadam Foods! I need help tracking my order.`)
 
   return (
-    <div className="ambient-bg min-h-screen pb-16 pt-4">
+    <div className="min-h-screen bg-background pb-16 pt-4">
       <header className="sticky top-3 z-40 mx-auto max-w-4xl px-4 sm:px-6">
         <div className="glass-header flex h-16 items-center justify-between gap-4 rounded-full px-4 sm:px-6">
           <Link
@@ -287,7 +287,7 @@ export function TrackOrderPage({
               />
             </span>
             <div className="flex flex-col min-w-0">
-              <span className="font-heading text-sm sm:text-base font-extrabold tracking-tight text-foreground truncate">
+              <span className="font-heading font-serif text-base font-bold tracking-tight text-foreground truncate">
                 Swadam Foods
               </span>
               <span className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase truncate">
@@ -300,7 +300,7 @@ export function TrackOrderPage({
             <ThemeToggle />
             <Link
               href="/"
-              className="glass-pill inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold text-foreground transition-all hover:bg-white/60 dark:hover:bg-white/10 active:scale-95"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/80 px-4 py-2 text-xs font-semibold text-foreground transition-all hover:bg-card active:scale-95"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Store</span>
@@ -312,13 +312,13 @@ export function TrackOrderPage({
       <main className="mx-auto max-w-4xl px-4 pt-6 sm:px-6">
         {!order ? (
           <div className="mx-auto max-w-lg space-y-6 pt-4">
-            <div className="glass-card rounded-[2.5rem] border border-white/70 bg-white/70 p-6 sm:p-9 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-stone-900/80">
+            <div className="rounded-2xl border border-border bg-card p-6 sm:p-9 shadow-sm">
               <div className="flex items-center gap-3">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary text-primary">
                   <Truck className="h-6 w-6" />
                 </span>
                 <div>
-                  <h1 className="font-heading text-2xl font-black text-foreground">Track Your Order</h1>
+                  <h1 className="font-heading font-serif text-2xl font-bold text-foreground">Track Your Order</h1>
                   <p className="text-xs text-muted-foreground">Verify identity with your mobile number</p>
                 </div>
               </div>
@@ -329,7 +329,7 @@ export function TrackOrderPage({
 
               <form onSubmit={(e) => handleVerify(e)} className="mt-6 space-y-4">
                 <div className="space-y-1.5">
-                  <label htmlFor="order-id" className="text-xs font-extrabold uppercase tracking-wide text-foreground">
+                  <label htmlFor="order-id" className="text-xs font-bold uppercase tracking-wide text-foreground">
                     Order ID
                   </label>
                   <div className="relative">
@@ -339,14 +339,14 @@ export function TrackOrderPage({
                       value={orderId}
                       onChange={(e) => setOrderId(e.target.value.toUpperCase())}
                       placeholder="SWAD-1001 or SWAD-XXXX"
-                      className="w-full rounded-2xl border border-stone-200 bg-stone-50/80 px-4 py-3.5 font-mono text-base sm:text-sm font-bold text-foreground placeholder:text-stone-400 focus:border-amber-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 dark:border-stone-800 dark:bg-stone-950/50 dark:focus:bg-stone-950"
+                      className="w-full rounded-xl border border-input bg-background px-4 py-3.5 font-mono text-base sm:text-sm font-bold text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
                       autoComplete="off"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="mobile-number" className="text-xs font-extrabold uppercase tracking-wide text-foreground">
+                  <label htmlFor="mobile-number" className="text-xs font-bold uppercase tracking-wide text-foreground">
                     Mobile Number
                   </label>
                   <div className="relative flex items-center">
@@ -363,14 +363,14 @@ export function TrackOrderPage({
                       value={phone}
                       onChange={(e) => setPhone(sanitizePhone(e.target.value))}
                       placeholder="10-digit mobile number"
-                      className="w-full rounded-2xl border border-stone-200 bg-stone-50/80 py-3.5 pl-16 pr-4 font-mono text-base sm:text-sm font-bold text-foreground placeholder:text-stone-400 focus:border-amber-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 dark:border-stone-800 dark:bg-stone-950/50 dark:focus:bg-stone-950"
+                      className="w-full rounded-xl border border-input bg-background py-3.5 pl-16 pr-4 font-mono text-base sm:text-sm font-bold text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
                       autoComplete="tel"
                     />
                   </div>
                 </div>
 
                 {error && (
-                  <div className="flex items-start gap-2.5 rounded-2xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300 animate-in fade-in">
+                  <div className="flex items-start gap-2.5 rounded-xl border border-destructive/20 bg-destructive/10 p-3.5 text-xs font-semibold text-destructive animate-in fade-in">
                     <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                     <span className="leading-snug">{error}</span>
                   </div>
@@ -379,7 +379,7 @@ export function TrackOrderPage({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-sm font-extrabold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:opacity-95 active:scale-[0.98] disabled:opacity-60 touch-manipulation"
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-sm font-bold text-primary-foreground shadow-md transition-all hover:bg-primary/95 active:scale-[0.98] disabled:opacity-50 touch-manipulation"
                 >
                   {loading ? (
                     <>
@@ -395,7 +395,7 @@ export function TrackOrderPage({
                 </button>
               </form>
 
-              <div className="mt-6 border-t border-stone-100 pt-5 dark:border-stone-800/80">
+              <div className="mt-6 border-t border-border pt-5">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span className="flex items-center gap-1.5">
                     <Lock className="h-3.5 w-3.5 text-emerald-600" />
@@ -419,7 +419,7 @@ export function TrackOrderPage({
               <button
                 type="button"
                 onClick={handleReset}
-                className="inline-flex items-center gap-1.5 rounded-2xl border border-stone-200 bg-white/80 px-4 py-2 text-xs font-bold text-foreground shadow-sm hover:bg-white active:scale-95 transition dark:border-stone-800 dark:bg-stone-900/80"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground shadow-xs hover:bg-secondary active:scale-95 transition"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 <span>Track another order</span>
@@ -429,26 +429,26 @@ export function TrackOrderPage({
                 type="button"
                 onClick={() => handleVerify(undefined, true)}
                 disabled={refreshing}
-                className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white/80 px-4 py-2 text-xs font-bold text-foreground shadow-sm hover:bg-white active:scale-95 transition dark:border-stone-800 dark:bg-stone-900/80 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground shadow-xs hover:bg-secondary active:scale-95 transition disabled:opacity-50"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin text-primary" : ""}`} />
                 <span>{refreshing ? "Refreshing..." : "Refresh Status"}</span>
               </button>
             </div>
 
-            <div className="glass-card rounded-[2.5rem] border border-white/70 bg-white/70 p-6 sm:p-8 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-stone-900/80">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-stone-200/80 pb-6 dark:border-stone-800/80">
+            <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-sm">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-6">
                 <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-extrabold uppercase tracking-widest text-primary">
+                    <span className="text-xs font-semibold uppercase tracking-widest text-primary">
                       Verified Customer Order
                     </span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
                       <ShieldCheck className="h-3 w-3" />
                       <span>Authenticated</span>
                     </span>
                   </div>
-                  <h1 className="font-heading text-2xl sm:text-3xl font-black text-foreground">
+                  <h1 className="font-heading font-serif text-2xl sm:text-3xl font-bold text-foreground">
                     Namaste, {order.customerName}!
                   </h1>
                   <p className="text-xs text-muted-foreground">
@@ -460,7 +460,7 @@ export function TrackOrderPage({
                   <button
                     type="button"
                     onClick={copyOrderId}
-                    className="inline-flex items-center gap-1.5 rounded-2xl border border-stone-200 bg-white px-3.5 py-2 text-xs font-bold text-foreground shadow-xs hover:bg-stone-50 active:scale-95 transition dark:border-stone-800 dark:bg-stone-950"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-secondary/40 px-3.5 py-2 text-xs font-bold text-foreground shadow-xs hover:bg-secondary active:scale-95 transition"
                   >
                     {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
                     <span className="font-mono">{order.id}</span>
@@ -469,7 +469,7 @@ export function TrackOrderPage({
                   <button
                     type="button"
                     onClick={() => setIsInvoiceOpen(true)}
-                    className="inline-flex items-center gap-1.5 rounded-2xl bg-primary px-4 py-2 text-xs font-extrabold text-primary-foreground shadow-sm hover:opacity-95 active:scale-95 transition touch-manipulation"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/95 active:scale-95 transition touch-manipulation"
                   >
                     <FileText className="h-3.5 w-3.5" />
                     <span>Download Tax Invoice</span>
@@ -478,7 +478,7 @@ export function TrackOrderPage({
               </div>
 
               {isCancelled ? (
-                <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50/80 p-5 text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
+                <div className="mt-6 rounded-xl border border-destructive/20 bg-destructive/10 p-5 text-destructive">
                   <div className="flex items-center gap-3">
                     <AlertCircle className="h-6 w-6 shrink-0" />
                     <div>
@@ -490,7 +490,7 @@ export function TrackOrderPage({
               ) : (
                 <div className="mt-8 space-y-6">
                   <div>
-                    <h2 className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">
+                    <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                       Preparation &amp; Delivery Progress
                     </h2>
                   </div>
@@ -505,21 +505,21 @@ export function TrackOrderPage({
                         return (
                           <div
                             key={stage.id}
-                            className={`relative flex items-start gap-3 rounded-2xl border p-4 transition-all ${
+                            className={`relative flex items-start gap-3 rounded-xl border p-4 transition-all ${
                               isCurrent
-                                ? "border-amber-500 bg-amber-500/10 shadow-md ring-2 ring-amber-500/20 dark:bg-amber-500/15"
+                                ? "border-primary bg-primary/10 shadow-xs ring-1 ring-primary/40"
                                 : isDone
-                                ? "border-emerald-500/30 bg-emerald-500/5 text-foreground"
-                                : "border-stone-200/60 bg-stone-50/40 text-stone-400 opacity-60 dark:border-stone-800 dark:bg-stone-900/20"
+                                ? "border-emerald-500/30 bg-emerald-50/50 text-foreground dark:bg-emerald-950/20"
+                                : "border-border/60 bg-secondary/20 text-muted-foreground opacity-60"
                             }`}
                           >
                             <span
                               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
                                 isCurrent
-                                  ? "bg-amber-500 text-white shadow-sm"
+                                  ? "bg-primary text-primary-foreground shadow-xs"
                                   : isDone
-                                  ? "bg-emerald-500 text-white"
-                                  : "bg-stone-200 text-stone-500 dark:bg-stone-800 dark:text-stone-400"
+                                  ? "bg-emerald-600 text-white"
+                                  : "bg-secondary text-muted-foreground"
                               }`}
                             >
                               <Icon className="h-5 w-5" />
@@ -528,7 +528,7 @@ export function TrackOrderPage({
                               <div className="flex items-center gap-1.5">
                                 <p className="text-xs font-bold text-foreground truncate">{stage.label}</p>
                                 {isCurrent && (
-                                  <span className="rounded-md bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-black text-amber-700 dark:text-amber-300">
+                                  <span className="rounded-md bg-primary/20 px-1.5 py-0.5 text-[9px] font-bold text-primary">
                                     Current
                                   </span>
                                 )}
@@ -543,12 +543,12 @@ export function TrackOrderPage({
                 </div>
               )}
 
-              <div className="mt-8 grid gap-6 border-t border-stone-200/80 pt-6 dark:border-stone-800/80 sm:grid-cols-2">
+              <div className="mt-8 grid gap-6 border-t border-border pt-6 sm:grid-cols-2">
                 <div className="space-y-4">
-                  <h3 className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                     Delivery Address
                   </h3>
-                  <div className="rounded-2xl border border-stone-200/80 bg-stone-50/50 p-4 dark:border-stone-800 dark:bg-stone-900/30">
+                  <div className="rounded-xl border border-border bg-secondary/30 p-4">
                     <div className="flex items-start gap-2.5">
                       <MapPin className="h-4 w-4 shrink-0 text-primary mt-0.5" />
                       <div className="text-xs space-y-1">
@@ -562,7 +562,7 @@ export function TrackOrderPage({
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-purple-500/20 bg-purple-500/5 p-4 flex items-center justify-between gap-3">
+                  <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
                       <PhonePeIcon className="h-6 w-6 shrink-0 rounded-md" />
                       <div className="text-xs">
@@ -573,10 +573,10 @@ export function TrackOrderPage({
                       </div>
                     </div>
                     <span
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-black ${
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
                         order.paymentStatus === "paid"
-                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                          : "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                          ? "bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
+                          : "bg-amber-500/10 text-amber-800 dark:text-amber-300"
                       }`}
                     >
                       {order.paymentStatus === "paid" ? "Paid" : "Pending"}
@@ -585,14 +585,14 @@ export function TrackOrderPage({
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                     Items in Order ({order.items.length})
                   </h3>
-                  <div className="rounded-2xl border border-stone-200/80 bg-stone-50/50 p-4 divide-y divide-stone-200/60 dark:border-stone-800 dark:bg-stone-900/30 dark:divide-stone-800">
+                  <div className="rounded-xl border border-border bg-secondary/30 p-4 divide-y divide-border">
                     {order.items.map((item, idx) => (
                       <div key={idx} className="flex items-center justify-between py-2 text-xs">
                         <div>
-                          <p className="font-bold text-foreground">{item.productName}</p>
+                          <p className="font-bold font-serif text-foreground">{item.productName}</p>
                           <p className="text-[11px] text-muted-foreground">
                             {item.weight} &times; {item.quantity}
                           </p>
@@ -607,19 +607,19 @@ export function TrackOrderPage({
                     </div>
                     <div className="py-1.5 flex items-center justify-between text-xs">
                       <span className="font-bold text-muted-foreground">Delivery</span>
-                      <span className="font-bold text-emerald-600">
+                      <span className="font-bold text-emerald-700 dark:text-emerald-400">
                         {order.deliveryFee === 0 ? "FREE" : `₹${order.deliveryFee}`}
                       </span>
                     </div>
-                    <div className="pt-2 flex items-center justify-between text-sm border-t border-stone-300 dark:border-stone-700">
-                      <span className="font-extrabold text-foreground">Total Paid</span>
-                      <span className="font-mono font-black text-foreground text-base">₹{order.total}</span>
+                    <div className="pt-2 flex items-center justify-between text-sm border-t border-border">
+                      <span className="font-bold text-foreground">Total Paid</span>
+                      <span className="font-mono font-bold text-foreground text-base">₹{order.total}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-stone-200/80 pt-6 dark:border-stone-800/80">
+              <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
                 {order.orderStatus === "delivered" && (
                   <button
                     type="button"
@@ -632,7 +632,7 @@ export function TrackOrderPage({
                       })
                       openCart()
                     }}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-xs font-bold text-primary-foreground shadow-md hover:opacity-90 active:scale-95 transition"
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/95 active:scale-95 transition"
                   >
                     <ShoppingBag className="h-4 w-4" />
                     <span>Reorder Same Items</span>
@@ -643,7 +643,7 @@ export function TrackOrderPage({
                   href={`https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappMessage}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-xs font-bold text-white shadow-md hover:bg-emerald-700 active:scale-95 transition"
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-xs font-bold text-white shadow-sm hover:bg-emerald-800 active:scale-95 transition"
                 >
                   <MessageSquare className="h-4 w-4" />
                   <span>WhatsApp Swadam Support</span>
@@ -652,7 +652,7 @@ export function TrackOrderPage({
                 <button
                   type="button"
                   onClick={() => setIsInvoiceOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-stone-300 bg-white px-5 py-3 text-xs font-bold text-foreground shadow-xs hover:bg-stone-50 active:scale-95 transition dark:border-stone-700 dark:bg-stone-900"
+                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-xs font-bold text-foreground shadow-xs hover:bg-secondary active:scale-95 transition"
                 >
                   <FileText className="h-4 w-4" />
                   <span>View Full Tax Invoice</span>

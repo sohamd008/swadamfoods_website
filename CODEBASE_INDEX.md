@@ -102,26 +102,28 @@ Use this index to quickly locate code symbols, components, routes, and features:
            ┌─────────────────────────────┼─────────────────────────────┐
            ▼                             ▼                             ▼
     [ App Router & UI ]          [ Middleware & CSP ]         [ REST API Handlers ]
-  • React 19 Client Components   • Content Security Policy     • /api/orders
-  • Tailwind CSS 4 Glassmorphism • Markdown / Agent Headers    • /api/payments/phonepe
-  • Lucide React Icons           • WWW redirect & Headers      • /api/admin/orders
-           │                                                           │
-           ▼                                                           ▼
-  [ Client Cart & Context ]                                   [ Cloudflare D1 SQL ]
-  • LocalStorage Persistence                                  • orders table
-  • Dynamic jsPDF Generation                                  • order_items table
-  • Google Analytics Tracking                                 • inventory table
-                                                                       │
-                                                                       ▼
-                                                          [ PhonePe Payment Gateway ]
-                                                          • Standard Checkout v2
-                                                          • Webhook & Status Sync
+   • React 19 Client Components   • Content Security Policy     • /api/orders
+   • Tailwind CSS 4 Artisanal UI  • Markdown / Agent Headers    • /api/payments/phonepe
+   • Fraunces & Plus Jakarta Sans • WWW redirect & Headers      • /api/admin/orders
+   • Lucide React Icons
+            │                                                           │
+            ▼                                                           ▼
+   [ Client Cart & Context ]                                   [ Cloudflare D1 SQL ]
+   • LocalStorage Persistence                                  • orders table
+   • Dynamic jsPDF Generation                                  • order_items table
+   • Google Analytics Tracking                                 • inventory table
+                                                                        │
+                                                                        ▼
+                                                           [ PhonePe Payment Gateway ]
+                                                           • Standard Checkout v2
+                                                           • Webhook & Status Sync
 ```
 
 ### Core Technologies
 - **Framework**: Next.js 16.3.4 (App Router, Turbopack, standalone/OpenNext output)
 - **UI Library**: React 19.2.8 & React DOM 19.2.8
-- **Styling**: Tailwind CSS 4.3.3 (`@tailwindcss/postcss`) with custom ambient glassmorphism
+- **Typography & Brand Identity**: Google Fonts via `next/font/google` (`Fraunces` high-character cookbook/editorial serif + `Plus Jakarta Sans` clean body copy)
+- **Styling**: Tailwind CSS 4.3.3 (`@tailwindcss/postcss`) with authentic warm artisanal culinary palette (sun-roasted terracotta `#B84A1A`, warm unbleached parchment/ivory `#FAF7F2`, deep espresso typography `#231E1B`, and subtle stone borders)
 - **Hosting / Edge**: Cloudflare Pages / Cloudflare Workers via `@opennextjs/cloudflare`
 - **Database**: Cloudflare D1 (Serverless SQLite database binding `DB`)
 - **Payment Gateway**: PhonePe Payment Gateway Standard Checkout v2 (UPI, Cards, NetBanking)

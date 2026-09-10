@@ -29,7 +29,7 @@ export function SiteHeader() {
             />
           </span>
           <span className="flex min-w-0 flex-col leading-none">
-            <span className="font-heading text-lg font-extrabold tracking-tight text-foreground">
+            <span className="font-heading font-serif text-xl font-bold tracking-tight text-foreground">
               <span className="whitespace-nowrap">Swadam Foods</span>
             </span>
             <span className="hidden text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground sm:block">
@@ -38,12 +38,12 @@ export function SiteHeader() {
           </span>
         </a>
 
-        <nav className="hidden items-center gap-1 rounded-full border border-white/40 bg-white/30 p-1 backdrop-blur-md dark:border-white/10 dark:bg-white/5 md:flex" aria-label="Main navigation">
+        <nav className="hidden items-center gap-1 rounded-full border border-border/70 bg-card/60 p-1 md:flex" aria-label="Main navigation">
           {navLinks.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              className="rounded-full px-4 py-1.5 text-xs lg:text-sm font-bold text-muted-foreground transition-all hover:bg-white/60 hover:text-foreground hover:shadow-xs dark:hover:bg-white/10"
+              className="rounded-full px-3.5 py-1.5 text-xs lg:text-sm font-medium text-muted-foreground transition-all hover:bg-card hover:text-foreground hover:shadow-xs"
             >
               {link.label}
             </a>

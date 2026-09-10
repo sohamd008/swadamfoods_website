@@ -3,10 +3,9 @@ import Image from "next/image"
 export function AboutSection() {
   return (
     <section id="about" className="relative scroll-mt-20 py-16 md:py-24">
-      <div className="glass-panel mx-auto max-w-6xl rounded-[2.5rem] p-6 shadow-2xl sm:p-10 md:p-12">
+      <div className="mx-auto max-w-6xl rounded-3xl border border-border bg-card/70 p-6 sm:p-10 md:p-12 shadow-sm">
         <div className="grid items-center gap-10 md:grid-cols-2">
           <div className="relative order-last md:order-first group">
-            <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 blur-lg transition-all group-hover:blur-xl" />
             <Image
               src="/images/kanda-poha.webp"
               alt="Freshly prepared Kanda Poha garnished with coriander and coconut"
@@ -15,15 +14,15 @@ export function AboutSection() {
               sizes="(max-width: 767px) calc(100vw - 2rem), 50vw"
               loading="lazy"
               style={{ aspectRatio: "4/3" }}
-              className="relative h-auto w-full rounded-3xl border border-white/70 object-cover shadow-xl backdrop-blur-xl dark:border-white/10"
+              className="relative h-auto w-full rounded-2xl border border-border/80 object-cover shadow-md"
             />
           </div>
 
           <div className="flex flex-col gap-5">
-            <span className="glass-pill w-fit rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary shadow-xs">
-              Our Story
+            <span className="inline-flex items-center gap-1.5 w-fit rounded-full border border-border/80 bg-card/90 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary shadow-xs">
+              Our Story &amp; Heritage
             </span>
-            <h2 className="text-balance font-heading text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+            <h2 className="text-balance font-heading font-serif text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
               Home-style taste, made with care
             </h2>
             <p className="text-pretty leading-relaxed text-muted-foreground">
@@ -42,28 +41,28 @@ export function AboutSection() {
               minutes, and enjoy a home-style breakfast.
             </p>
 
-            <dl className="mt-2 grid grid-cols-3 gap-3 border-t border-white/40 pt-6 dark:border-white/10">
-              <div className="glass-pill rounded-2xl p-3 text-center">
-                <dt className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <dl className="mt-2 grid grid-cols-3 gap-3 border-t border-border/70 pt-6">
+              <div className="rounded-xl border border-border/70 bg-secondary/40 p-3.5 text-center">
+                <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Products
                 </dt>
-                <dd className="font-heading text-2xl font-black text-foreground">
+                <dd className="font-heading font-serif text-2xl font-bold text-foreground mt-0.5">
                   3
                 </dd>
               </div>
-              <div className="glass-pill rounded-2xl p-3 text-center">
-                <dt className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              <div className="rounded-xl border border-border/70 bg-secondary/40 p-3.5 text-center">
+                <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Preservatives
                 </dt>
-                <dd className="font-heading text-2xl font-black text-foreground">
+                <dd className="font-heading font-serif text-2xl font-bold text-foreground mt-0.5">
                   Zero
                 </dd>
               </div>
-              <div className="glass-pill rounded-2xl p-3 text-center">
-                <dt className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              <div className="rounded-xl border border-border/70 bg-secondary/40 p-3.5 text-center">
+                <dt className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Made in
                 </dt>
-                <dd className="font-heading text-2xl font-black text-foreground">
+                <dd className="font-heading font-serif text-2xl font-bold text-foreground mt-0.5">
                   Pune
                 </dd>
               </div>

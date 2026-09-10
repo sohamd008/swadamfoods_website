@@ -99,17 +99,14 @@ export function SiteFooter() {
   ]
 
   return (
-    <footer id="contact" className="relative scroll-mt-20 border-t border-white/40 pt-8 dark:border-white/10">
+    <footer id="contact" className="relative scroll-mt-20 border-t border-border/70 pt-8">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="glass-panel relative overflow-hidden rounded-[2.5rem] p-8 text-center sm:p-14 shadow-2xl">
-          <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
-          <div className="pointer-events-none absolute -left-20 -bottom-20 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
-          
+        <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-8 text-center sm:p-14 shadow-sm">
           <div className="relative flex flex-col items-center gap-5 max-w-2xl mx-auto">
-            <span className="glass-pill rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary shadow-xs">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card/90 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary shadow-xs">
               Direct from our Kitchen in Pune
             </span>
-            <h2 className="text-balance font-heading text-3xl sm:text-5xl font-black tracking-tight text-foreground">
+            <h2 className="text-balance font-heading font-serif text-3xl sm:text-5xl font-bold tracking-tight text-foreground">
               Ready to taste the purity?
             </h2>
             <p className="text-pretty text-sm sm:text-base text-muted-foreground leading-relaxed">
@@ -118,7 +115,7 @@ export function SiteFooter() {
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <a
                 href="#products"
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-sm font-extrabold text-primary-foreground shadow-xl shadow-primary/25 transition-transform hover:scale-[1.03] active:scale-95"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-4 text-sm font-bold text-primary-foreground shadow-md transition-all hover:bg-primary/95 hover:shadow-lg active:scale-[0.98]"
               >
                 Order Online Now
               </a>
@@ -126,7 +123,7 @@ export function SiteFooter() {
                 href={waLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="glass-pill inline-flex items-center gap-2 rounded-full px-7 py-4 text-sm font-bold text-foreground transition-transform hover:bg-white/80 active:scale-95 dark:hover:bg-white/10"
+                className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-7 py-4 text-sm font-semibold text-foreground transition-all hover:bg-secondary active:scale-[0.98]"
               >
                 <MessageCircle className="h-4 w-4 text-emerald-600" aria-hidden="true" />
                 <span>Chat on WhatsApp</span>
@@ -137,7 +134,7 @@ export function SiteFooter() {
 
         <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div className="flex flex-col gap-4 lg:col-span-1">
-            <span className="w-fit overflow-hidden rounded-2xl border border-white/60 bg-[#f7f2e7]/90 p-2.5 shadow-sm">
+            <span className="w-fit overflow-hidden rounded-2xl border border-border/80 bg-[#f7f2e7]/90 p-2.5 shadow-sm">
               <Image
                 src="/images/swadam-logo.webp"
                 alt="Swadam Foods logo"
@@ -150,28 +147,28 @@ export function SiteFooter() {
             <p className="text-xs leading-relaxed text-muted-foreground">
               Authentic Indian snacks and instant breakfast premixes, handcrafted with real ingredients and traditional family recipes. Proudly women-owned and women-operated in Pune.
             </p>
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 dark:text-emerald-400">
               <ShieldCheck className="h-4 w-4" />
               <span>100% Certified Food Safety</span>
             </div>
           </div>
 
           <div className="flex flex-col gap-3">
-            <span className="text-xs font-extrabold uppercase tracking-widest text-primary">
+            <span className="text-xs font-semibold uppercase tracking-widest text-primary">
               Contact Us
             </span>
             <a
               href={`https://wa.me/${WHATSAPP_NUMBER}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2.5 text-xs font-bold text-foreground transition-colors hover:text-primary"
+              className="flex items-center gap-2.5 text-xs font-semibold text-foreground transition-colors hover:text-primary"
             >
               <Phone className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
               <span>{business.phoneDisplay}</span>
             </a>
             <a
               href={`mailto:${business.email}`}
-              className="flex items-center gap-2.5 text-xs font-bold text-foreground transition-colors hover:text-primary"
+              className="flex items-center gap-2.5 text-xs font-semibold text-foreground transition-colors hover:text-primary"
             >
               <Mail className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
               <span>{business.email}</span>
@@ -180,7 +177,7 @@ export function SiteFooter() {
               href="https://www.instagram.com/swadamfoodsindia"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2.5 text-xs font-bold text-foreground transition-colors hover:text-primary"
+              className="flex items-center gap-2.5 text-xs font-semibold text-foreground transition-colors hover:text-primary"
             >
               <svg
                 className="h-4 w-4 shrink-0 text-accent"
@@ -205,12 +202,12 @@ export function SiteFooter() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <span className="text-xs font-extrabold uppercase tracking-widest text-primary">
+            <span className="text-xs font-semibold uppercase tracking-widest text-primary">
               Official Accreditations
             </span>
             <div className="flex flex-col gap-2.5">
-              <div className="glass-pill flex items-center gap-3 rounded-2xl p-2.5">
-                <div className="flex h-9 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-xs border border-slate-100">
+              <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5">
+                <div className="flex h-9 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1 shadow-xs border border-border/40">
                   <Image
                     src="/images/fssai-logo.webp"
                     alt="FSSAI Logo"
@@ -220,17 +217,17 @@ export function SiteFooter() {
                   />
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground block">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground block">
                     FSSAI License No.
                   </span>
-                  <span className="font-mono text-xs font-black text-foreground select-all truncate">
+                  <span className="font-mono text-xs font-bold text-foreground select-all truncate">
                     {business.fssai}
                   </span>
                 </div>
               </div>
 
-              <div className="glass-pill flex items-center gap-3 rounded-2xl p-2.5">
-                <div className="flex h-9 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-xs border border-slate-100">
+              <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/30 p-2.5">
+                <div className="flex h-9 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1 shadow-xs border border-border/40">
                   <Image
                     src="/images/msme-logo.webp"
                     alt="MSME Logo"
@@ -240,10 +237,10 @@ export function SiteFooter() {
                   />
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground block">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground block">
                     UDYAM Reg. No.
                   </span>
-                  <span className="font-mono text-xs font-black text-foreground select-all truncate">
+                  <span className="font-mono text-xs font-bold text-foreground select-all truncate">
                     {business.udyam}
                   </span>
                 </div>
@@ -252,15 +249,15 @@ export function SiteFooter() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <span className="text-xs font-extrabold uppercase tracking-widest text-primary flex items-center gap-1.5">
+            <span className="text-xs font-semibold uppercase tracking-widest text-primary flex items-center gap-1.5">
               <CreditCard className="h-3.5 w-3.5" />
               <span>Secure Payment Modes</span>
             </span>
 
-            <div className="glass-pill flex items-center gap-2.5 rounded-2xl p-2.5 border border-purple-500/25 bg-purple-500/10">
+            <div className="flex items-center gap-2.5 rounded-xl p-2.5 border border-purple-500/25 bg-purple-500/10">
               <PhonePeIcon className="h-7 w-7 shrink-0 rounded-lg shadow-xs" />
               <div className="flex flex-col min-w-0">
-                <span className="text-[11px] font-extrabold text-[#5F259F] dark:text-purple-300">
+                <span className="text-[11px] font-bold text-[#5F259F] dark:text-purple-300">
                   Powered by PhonePe Payment Gateway
                 </span>
                 <span className="text-[10px] text-muted-foreground truncate">
@@ -276,7 +273,7 @@ export function SiteFooter() {
               {paymentMethods.map((mode) => (
                 <span
                   key={mode}
-                  className="rounded-xl border border-white/60 bg-white/45 px-2.5 py-1 text-[10px] font-bold text-foreground backdrop-blur-md dark:border-white/10 dark:bg-white/5"
+                  className="rounded-lg border border-border/70 bg-card px-2.5 py-1 text-[10px] font-semibold text-foreground shadow-xs"
                 >
                   {mode}
                 </span>

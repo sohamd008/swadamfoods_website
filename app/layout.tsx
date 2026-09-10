@@ -1,5 +1,5 @@
 import Script from 'next/script'
-import { Manrope } from 'next/font/google'
+import { Fraunces, Plus_Jakarta_Sans } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
 import { CartProvider } from '@/lib/cart-context'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -7,9 +7,15 @@ import { SecurityProtection } from '@/components/security-protection'
 import { business, products } from '@/lib/products'
 import './globals.css'
 
-const manrope = Manrope({
+const fraunces = Fraunces({
   subsets: ['latin'],
-  variable: '--font-manrope',
+  variable: '--font-fraunces',
+  display: 'swap',
+})
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-sans-main',
   display: 'swap',
 })
 
@@ -59,8 +65,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f7f2e7' },
-    { media: '(prefers-color-scheme: dark)', color: '#25201a' },
+    { media: '(prefers-color-scheme: light)', color: '#FAF7F2' },
+    { media: '(prefers-color-scheme: dark)', color: '#181412' },
   ],
 }
 
@@ -73,7 +79,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`bg-background ${manrope.variable}`}
+      className={`bg-background ${fraunces.variable} ${jakarta.variable}`}
     >
       <body className="font-sans antialiased" suppressHydrationWarning>
         <Script

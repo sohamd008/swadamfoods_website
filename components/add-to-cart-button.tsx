@@ -27,7 +27,7 @@ export function AddToCartButton({ product }: { product: Product }) {
         })
       }}
       aria-label={`Add ${product.name} to order`}
-      className="flex min-h-11 items-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.03] active:scale-95 touch-manipulation"
+      className="flex min-h-11 items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/95 active:scale-95 touch-manipulation"
     >
       <Plus className="h-4 w-4" aria-hidden="true" />
       Add to order

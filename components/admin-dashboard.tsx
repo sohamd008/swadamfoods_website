@@ -33,7 +33,6 @@ import {
   FileText,
   ShieldCheck,
   Calendar,
-  Sparkles,
   Layers,
   Download,
   BarChart2,
@@ -149,7 +148,7 @@ const STATUS_CONFIG = {
 } as const
 
 const ORDER_PROCESS_STEPS = [
-  { id: "accepted", label: "1. Confirmed", shortLabel: "Confirmed", icon: Sparkles },
+  { id: "accepted", label: "1. Confirmed", shortLabel: "Confirmed", icon: ShieldCheck },
   { id: "preparing", label: "2. Kitchen", shortLabel: "Kitchen", icon: ChefHat },
   { id: "packed", label: "3. Packed", shortLabel: "Packed", icon: Package },
   { id: "shipped", label: "4. Out for Delivery", shortLabel: "En Route", icon: Truck },
@@ -163,7 +162,7 @@ const FILTER_TABS = [
   { id: "packed", label: "Packed", icon: Package },
   { id: "shipped", label: "En Route", icon: Truck },
   { id: "delivered", label: "Delivered", icon: ShieldCheck },
-  { id: "all", label: "All Orders", icon: Sparkles },
+  { id: "all", label: "All Orders", icon: Boxes },
 ]
 
 function getWhatsAppMessage(order: Order, type: string) {
