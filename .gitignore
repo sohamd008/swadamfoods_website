@@ -6,7 +6,7 @@ out/
 *.tsbuildinfo
 tsconfig.tsbuildinfo
 
-# Local development
+# Local development & secrets
 node_modules/
 .DS_Store
 .env
@@ -14,7 +14,42 @@ node_modules/
 .dev.vars*
 .wrangler/
 
-# Legacy v0/Vercel tooling (kept ignored if recreated locally)
+# Test & Automation artifacts
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE, Editor & OS metadata
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.AppleDouble
+.LSOverride
+
+# Scratch & Temporary data
+scratch/
+.temp/
+temp/
+tmp/
+coverage/
+.nyc_output/
+.turbo/
+
+# Legacy v0/Vercel tooling
 .vercel/
 .snowflake/
 .v0-trash/
