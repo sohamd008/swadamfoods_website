@@ -1,34 +1,7 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare"
 import { getDB } from "@/lib/db"
-import { jsonResponse as json } from "@/lib/api"
+import { jsonResponse as json, verifyAdminKey } from "@/lib/api"
 
 export const dynamic = "force-dynamic"
-
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  let diff = 0
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  }
-  return diff === 0
-}
-
-function verifyAdminKey(request: Request): boolean {
-  let adminKey = process.env.ADMIN_SECRET_KEY
-  try {
-    const { env } = getCloudflareContext()
-    adminKey = (env as unknown as { ADMIN_SECRET_KEY?: string })?.ADMIN_SECRET_KEY || adminKey
-  } catch {}
-  if (!adminKey) return false
-  const headerKey = request.headers.get("x-admin-key")?.trim()
-  const authHeader = request.headers.get("authorization")?.replace("Bearer ", "").trim()
-  const urlKey = new URL(request.url).searchParams.get("key")?.trim()
-  return (
-    (headerKey ? timingSafeEqual(headerKey, adminKey) : false) ||
-    (authHeader ? timingSafeEqual(authHeader, adminKey) : false) ||
-    (urlKey ? timingSafeEqual(urlKey, adminKey) : false)
-  )
-}
 
 type OrderRow = {
   id: string

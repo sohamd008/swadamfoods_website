@@ -1,5 +1,5 @@
 import { getDB } from "@/lib/db"
-import { jsonResponse as json, isSameOrigin as sameOrigin } from "@/lib/api"
+import { jsonResponse as json, isSameOrigin as sameOrigin, cleanOrderId, isValidOrderId } from "@/lib/api"
 import { getPhonePeOrderStatus } from "@/lib/phonepe"
 
 export const dynamic = "force-dynamic"
@@ -8,8 +8,8 @@ export async function GET(request: Request) {
   if (!sameOrigin(request)) return json({ error: "Invalid request origin." }, 403)
 
   const rawOrderId = new URL(request.url).searchParams.get("orderId")?.trim() ?? ""
-  const cleanOrderId = rawOrderId.replace(/-P[A-Z0-9]+$/i, "").trim().toUpperCase()
-  if (!/^(SWAD-[A-Z0-9]{4,16}|SWD-\d{8}-[A-Z0-9]{8})$/i.test(cleanOrderId)) return json({ error: "Invalid order ID." }, 400)
+  const sanitizedOrderId = cleanOrderId(rawOrderId)
+  if (!isValidOrderId(sanitizedOrderId)) return json({ error: "Invalid order ID." }, 400)
 
   const db = getDB()
   if (!db) return json({ error: "Database temporarily unavailable." }, 503)
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
         `SELECT id, total, currency, payment_gateway, gateway_order_id, payment_status
          FROM orders WHERE id = ? OR gateway_order_id = ? LIMIT 1`,
       )
-      .bind(cleanOrderId, rawOrderId)
+      .bind(sanitizedOrderId, rawOrderId)
       .first<{
         id: string
         total: number

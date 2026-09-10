@@ -1,5 +1,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare"
 import type { D1Database } from "@cloudflare/workers-types"
+import { timingSafeEqual } from "@/lib/api"
 
 const PHONEPE_API_BASE = "https://api.phonepe.com/apis/pg"
 const PHONEPE_IDENTITY_BASE = "https://api.phonepe.com/apis/identity-manager"
@@ -233,15 +234,6 @@ export async function verifyPhonePeWebhook(rawBody: string, headers: Headers) {
   ).join("")
 
   return timingSafeEqual(expected, signature.toLowerCase())
-}
-
-function timingSafeEqual(a: string, b: string) {
-  if (a.length !== b.length) return false
-  let diff = 0
-  for (let i = 0; i < a.length; i += 1) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  }
-  return diff === 0
 }
 
 export { PAYMENT_EXPIRY_SECONDS, PHONEPE_WEBHOOK_ID }

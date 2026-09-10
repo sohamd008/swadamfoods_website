@@ -1,7 +1,8 @@
 import { jsPDF } from "jspdf"
 import { getDB } from "@/lib/db"
-import { validateIndianMobile } from "@/lib/phone"
-import { numberToWordsINR } from "@/lib/invoice"
+import { cleanOrderId, isValidOrderId } from "@/lib/api"
+import { validateIndianMobile, maskPhone, sanitizePhone } from "@/lib/phone"
+import { numberToWordsINR, calculateGSTBreakdown, formatInvoiceNumber } from "@/lib/invoice"
 
 export const dynamic = "force-dynamic"
 
@@ -34,9 +35,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: rawId } = await params
-  const orderId = (rawId || "").replace(/-P[A-Z0-9]+$/i, "").trim().toUpperCase()
+  const orderId = cleanOrderId(rawId)
 
-  if (!orderId || !/^(SWAD-[A-Z0-9]{4,16}|SWD-\d{8}-[A-Z0-9]{8})$/i.test(orderId)) {
+  if (!orderId || !isValidOrderId(orderId)) {
     return new Response("Invalid order ID format.", { status: 400 })
   }
 
@@ -65,8 +66,7 @@ export async function GET(
   const adminKey = request.headers.get("x-admin-key") || request.headers.get("authorization")?.replace("Bearer ", "") || ""
   const isAdmin = Boolean(adminKey && process.env.ADMIN_SECRET_KEY && adminKey === process.env.ADMIN_SECRET_KEY)
 
-  const dbPhoneDigits = (order.customer_phone || "").replace(/\D/g, "")
-  const dbPhoneLast10 = dbPhoneDigits.slice(-10)
+  const dbPhoneLast10 = sanitizePhone(order.customer_phone || "")
 
   let isVerified = isAdmin
   if (!isVerified && customerPhoneInput) {
@@ -91,7 +91,7 @@ export async function GET(
 
   const items = itemsResult.results ?? []
 
-  const invoiceNumber = order.id.startsWith("SWAD-") ? order.id.replace("SWAD-", "INV-") : order.id.replace("SWD-", "INV-")
+  const invoiceNumber = formatInvoiceNumber(order.id)
   const invoiceDate = new Date(order.created_at).toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
@@ -102,11 +102,8 @@ export async function GET(
     minute: "2-digit",
   })
 
-  const taxableValue = Math.round((order.total / 1.05) * 100) / 100
-  const totalGst = Math.round((order.total - taxableValue) * 100) / 100
-  const cgst = Math.round((totalGst / 2) * 100) / 100
-  const sgst = Math.round((totalGst - cgst) * 100) / 100
-  const maskedPhone = order.customer_phone.replace(/(\d{2})\d{6}(\d{2})/, "$1******$2")
+  const { taxableValue, totalGst, cgst, sgst } = calculateGSTBreakdown(order.total)
+  const maskedPhone = maskPhone(order.customer_phone)
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
   const margin = 14

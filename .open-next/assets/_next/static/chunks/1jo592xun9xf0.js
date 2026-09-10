@@ -1,0 +1,1 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,93198,r=>{"use strict";var e=r.i(43476),i=r.i(18132);r.s(["OrderTracker",0,function({orderId:r}){return(0,e.jsx)(i.TrackOrderPage,{initialOrderId:r})}])},66160,r=>{r.v(e=>Promise.all(["static/chunks/3zb2ni8qoekju.js"].map(e=>r.l(e))).then(()=>e(37633)))}]);

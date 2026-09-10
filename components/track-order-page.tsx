@@ -279,9 +279,8 @@ export function TrackOrderPage({
               <Image
                 src="/images/swadam-logo.webp"
                 alt="Swadam Foods"
-                width={448}
-                height={244}
-                sizes="59px"
+                width={59}
+                height={32}
                 priority
                 className="h-8 w-auto shrink-0"
               />

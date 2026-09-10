@@ -1,7 +1,7 @@
 import { getDB } from "@/lib/db"
-import { jsonResponse as json } from "@/lib/api"
+import { jsonResponse as json, cleanOrderId, isValidOrderId } from "@/lib/api"
 import { getPhonePeOrderStatus } from "@/lib/phonepe"
-import { validateIndianMobile } from "@/lib/phone"
+import { validateIndianMobile, maskPhone, sanitizePhone } from "@/lib/phone"
 
 export const dynamic = "force-dynamic"
 
@@ -37,8 +37,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: rawId } = await params
-  const orderId = (rawId || "").replace(/-P[A-Z0-9]+$/i, "").trim().toUpperCase()
-  if (!orderId || !/^(SWAD-[A-Z0-9]{4,16}|SWD-\d{8}-[A-Z0-9]{8})$/i.test(orderId)) {
+  const orderId = cleanOrderId(rawId)
+  if (!orderId || !isValidOrderId(orderId)) {
     return json({ error: "Invalid order ID format." }, 400)
   }
 
@@ -66,8 +66,7 @@ export async function GET(
     const adminKey = request.headers.get("x-admin-key") || request.headers.get("authorization")?.replace("Bearer ", "") || ""
     const isAdmin = Boolean(adminKey && process.env.ADMIN_SECRET_KEY && adminKey === process.env.ADMIN_SECRET_KEY)
 
-    const dbPhoneDigits = (order.customer_phone || "").replace(/\D/g, "")
-    const dbPhoneLast10 = dbPhoneDigits.slice(-10)
+    const dbPhoneLast10 = sanitizePhone(order.customer_phone || "")
 
     let isVerified = isAdmin
     if (!isVerified && customerPhoneInput) {
@@ -90,7 +89,7 @@ export async function GET(
         requiresVerification: true,
         order: {
           id: order.id,
-          customerPhoneMasked: order.customer_phone.replace(/(\d{2})\d{6}(\d{2})/, "$1******$2"),
+          customerPhoneMasked: maskPhone(order.customer_phone),
           deliveryMethod: order.delivery_method,
           paymentStatus: order.payment_status,
           orderStatus: order.order_status,
@@ -134,7 +133,7 @@ export async function GET(
       order: {
         id: order.id,
         customerName: order.customer_name,
-        customerPhoneMasked: order.customer_phone.replace(/(\d{2})\d{6}(\d{2})/, "$1******$2"),
+        customerPhoneMasked: maskPhone(order.customer_phone),
         customerAddress: order.customer_address,
         pincode: order.pincode,
         deliveryMethod: order.delivery_method,

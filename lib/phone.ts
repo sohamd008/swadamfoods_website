@@ -42,3 +42,7 @@ export function validateIndianMobile(raw: string): { isValid: boolean; error?: s
 
   return { isValid: true, cleanPhone: digits }
 }
+
+export function maskPhone(phone: string): string {
+  return (phone || "").replace(/(\d{2})\d{6}(\d{2})/, "$1******$2")
+}

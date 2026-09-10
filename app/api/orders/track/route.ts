@@ -1,7 +1,7 @@
 import { getDB } from "@/lib/db"
-import { jsonResponse as json } from "@/lib/api"
+import { jsonResponse as json, cleanOrderId, isValidOrderId } from "@/lib/api"
 import { getPhonePeOrderStatus } from "@/lib/phonepe"
-import { validateIndianMobile } from "@/lib/phone"
+import { validateIndianMobile, maskPhone, sanitizePhone } from "@/lib/phone"
 
 export const dynamic = "force-dynamic"
 
@@ -48,9 +48,9 @@ export async function POST(request: Request) {
     }
 
     const orderIdMatch = rawOrderId.match(/SWAD-[A-Z0-9]{4,16}|SWD-\d{8}-[A-Z0-9]{8}/i)
-    const orderId = orderIdMatch ? orderIdMatch[0].toUpperCase() : rawOrderId
+    const orderId = cleanOrderId(orderIdMatch ? orderIdMatch[0] : rawOrderId)
 
-    if (!/^(SWAD-[A-Z0-9]{4,16}|SWD-\d{8}-[A-Z0-9]{8})$/i.test(orderId)) {
+    if (!isValidOrderId(orderId)) {
       return json({ error: "Invalid Order ID format. Expected format: SWAD-XXXX or SWD-YYYYMMDD-XXXXXXXX" }, 400)
     }
 
@@ -81,8 +81,7 @@ export async function POST(request: Request) {
       return json({ error: "No order found with Order ID " + orderId + ". Please check your order confirmation details." }, 404)
     }
 
-    const dbPhoneDigits = (order.customer_phone || "").replace(/\D/g, "")
-    const dbPhoneLast10 = dbPhoneDigits.slice(-10)
+    const dbPhoneLast10 = sanitizePhone(order.customer_phone || "")
 
     if (dbPhoneLast10 !== inputPhoneLast10) {
       return json(
@@ -128,7 +127,7 @@ export async function POST(request: Request) {
       order: {
         id: order.id,
         customerName: order.customer_name,
-        customerPhoneMasked: order.customer_phone.replace(/(\d{2})\d{6}(\d{2})/, "$1******$2"),
+        customerPhoneMasked: maskPhone(order.customer_phone),
         customerPhone: order.customer_phone,
         customerAddress: order.customer_address,
         pincode: order.pincode,

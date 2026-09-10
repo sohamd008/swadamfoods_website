@@ -1,5 +1,5 @@
 import { getDB } from "@/lib/db"
-import { jsonResponse as json, isSameOrigin as sameOrigin } from "@/lib/api"
+import { jsonResponse as json, isSameOrigin as sameOrigin, cleanOrderId, isValidOrderId } from "@/lib/api"
 import {
   PAYMENT_EXPIRY_SECONDS,
   createPhonePePayment,
@@ -29,8 +29,8 @@ export async function POST(request: Request) {
     return json({ error: "Invalid JSON request." }, 400)
   }
 
-  const orderId = typeof body.orderId === "string" ? body.orderId.trim().toUpperCase() : ""
-  if (!/^(SWAD-[A-Z0-9]{4,16}|SWD-\d{8}-[A-Z0-9]{8})$/i.test(orderId)) {
+  const orderId = typeof body.orderId === "string" ? cleanOrderId(body.orderId) : ""
+  if (!isValidOrderId(orderId)) {
     return json({ error: "Invalid order ID." }, 400)
   }
 

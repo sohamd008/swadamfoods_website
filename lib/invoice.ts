@@ -43,3 +43,22 @@ export function numberToWordsINR(amount: number): string {
 
   return "INR " + parts.join(" ") + " Only"
 }
+
+export type TaxBreakdown = {
+  taxableValue: number
+  totalGst: number
+  cgst: number
+  sgst: number
+}
+
+export function calculateGSTBreakdown(total: number, gstRate = 0.05): TaxBreakdown {
+  const taxableValue = Math.round((total / (1 + gstRate)) * 100) / 100
+  const totalGst = Math.round((total - taxableValue) * 100) / 100
+  const cgst = Math.round((totalGst / 2) * 100) / 100
+  const sgst = Math.round((totalGst - cgst) * 100) / 100
+  return { taxableValue, totalGst, cgst, sgst }
+}
+
+export function formatInvoiceNumber(orderId: string): string {
+  return `INV-${orderId.replace(/^(SWAD-|SWD-)/i, "")}`
+}

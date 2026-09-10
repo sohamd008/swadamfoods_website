@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Printer, Download, X, ShieldCheck, CheckCircle2, Building2, Loader2 } from "lucide-react"
 import { PhonePeIcon } from "@/components/phonepe-logo"
-import { numberToWordsINR } from "@/lib/invoice"
+import { numberToWordsINR, calculateGSTBreakdown, formatInvoiceNumber } from "@/lib/invoice"
 
 export type TaxInvoiceOrder = {
   id: string
@@ -40,7 +40,7 @@ export function TaxInvoiceModal({
 }) {
   if (!isOpen) return null
 
-  const invoiceNumber = `INV-${order.id.replace(/^(SWAD-|SWD-)/, "")}`
+  const invoiceNumber = formatInvoiceNumber(order.id)
   const invoiceDate = new Date(order.createdAt).toLocaleDateString("en-IN", {
     year: "numeric",
     month: "short",
@@ -51,11 +51,7 @@ export function TaxInvoiceModal({
     minute: "2-digit",
   })
 
-  const gstRate = 0.05
-  const taxableValue = Math.round((order.total / (1 + gstRate)) * 100) / 100
-  const totalGst = Math.round((order.total - taxableValue) * 100) / 100
-  const cgst = Math.round((totalGst / 2) * 100) / 100
-  const sgst = Math.round((totalGst - cgst) * 100) / 100
+  const { taxableValue, totalGst, cgst, sgst } = calculateGSTBreakdown(order.total)
 
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
 

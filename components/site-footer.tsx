@@ -138,9 +138,8 @@ export function SiteFooter() {
               <Image
                 src="/images/swadam-logo.webp"
                 alt="Swadam Foods logo"
-                width={448}
-                height={244}
-                sizes="80px"
+                width={88}
+                height={48}
                 className="h-12 w-auto"
               />
             </span>

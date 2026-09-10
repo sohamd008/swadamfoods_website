@@ -232,11 +232,18 @@ Use this index to quickly locate code symbols, components, routes, and features:
 - [`lib/api.ts`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/lib/api.ts): API response and security helpers:
   - `jsonResponse(data, status, extraHeaders)`: Standardized JSON response builder with `no-store` cache control.
   - `isSameOrigin(request)`: Validates that state-mutating requests match the application host origin, preventing CSRF.
+  - `timingSafeEqual(a, b)`: Constant-time byte string comparison to prevent side-channel timing attacks.
+  - `cleanOrderId(rawId)`: Strips merchant payment suffix (`-PXXXX`), trims, and normalizes order IDs.
+  - `isValidOrderId(orderId)`: Strict regex validation for `SWAD-XXXX` and legacy `SWD-YYYYMMDD-XXXXXXXX` order formats.
+  - `verifyAdminKey(request)`: Multi-source (`x-admin-key`, `Authorization: Bearer`, `?key=`) timing-safe admin authentication.
 - [`lib/invoice.ts`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/lib/invoice.ts): Centralized tax invoice helper:
   - `numberToWordsINR(amount: number): string`: Converts numerical currency amounts into Indian numbering system words (`INR ... Only` with Crore, Lakh, Thousand, Hundred).
+  - `calculateGSTBreakdown(total, gstRate)`: Centralized GST computation returning taxable value, CGST (2.5%), SGST (2.5%), and total GST (5%).
+  - `formatInvoiceNumber(orderId)`: Standardizes invoice number generation (`INV-XXXX`).
 - [`lib/phone.ts`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/lib/phone.ts): Indian mobile phone number utilities:
   - `validateIndianMobile(rawPhone)`: Validates strict 10-digit format starting with digits 6, 7, 8, or 9, blocking invalid and dummy patterns (`9999999999`, `1234567890`).
   - `sanitizePhone(input)`: Strips non-digit characters.
+  - `maskPhone(phone)`: Masks phone numbers (`98******45`) for privacy-preserving display across tracking and invoice views.
   - `formatIndianMobile(phone)`: Formats phone numbers for user display (`+91 XXXXX XXXXX`).
 - [`lib/products.ts`](file:///c:/Users/Ajit/Documents/antigravity/amazing-shannon/lib/products.ts): Product definitions, weights, prices, shelf-life, and official WhatsApp contact numbers:
   - `WHATSAPP_NUMBER`: `"918888851522"`
