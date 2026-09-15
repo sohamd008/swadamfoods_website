@@ -2,10 +2,16 @@
   "name": "swadamfoods-website",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "npm@10.9.2",
+  "engines": {
+    "node": ">=24 <25",
+    "npm": ">=10 <12"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:worker": "npx @opennextjs/cloudflare build"
+    "build:worker": "npx @opennextjs/cloudflare build",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "jspdf": "^4.2.1",
