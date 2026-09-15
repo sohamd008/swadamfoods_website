@@ -1,6 +1,6 @@
 import { getDB } from "@/lib/db"
-import { jsonResponse as json, cleanOrderId, isValidOrderId } from "@/lib/api"
-import { getPhonePeOrderStatus } from "@/lib/phonepe"
+import { jsonResponse as json, verifyAdminKey, cleanOrderId, isValidOrderId } from "@/lib/api"
+import { syncPhonePeStatus } from "@/lib/order-lifecycle"
 import { validateIndianMobile, maskPhone, sanitizePhone } from "@/lib/phone"
 
 export const dynamic = "force-dynamic"
@@ -17,8 +17,8 @@ type OrderRow = {
   total: number
   currency: string
   payment_status: string
-  payment_gateway?: string | null
-  gateway_order_id?: string | null
+  payment_gateway: string | null
+  gateway_order_id: string | null
   order_status: string
   created_at: string
   updated_at: string
@@ -38,14 +38,10 @@ export async function GET(
 ) {
   const { id: rawId } = await params
   const orderId = cleanOrderId(rawId)
-  if (!orderId || !isValidOrderId(orderId)) {
-    return json({ error: "Invalid order ID format." }, 400)
-  }
+  if (!isValidOrderId(orderId)) return json({ error: "Invalid order ID format." }, 400)
 
   const db = getDB()
-  if (!db || typeof db.prepare !== "function") {
-    return json({ error: "Order details currently unavailable." }, 503)
-  }
+  if (!db) return json({ error: "Order details currently unavailable." }, 503)
 
   try {
     const order = await db
@@ -53,9 +49,7 @@ export async function GET(
         `SELECT id, customer_name, customer_phone, customer_address, pincode,
                 delivery_method, subtotal, delivery_fee, total, currency,
                 payment_status, payment_gateway, gateway_order_id, order_status, created_at, updated_at
-         FROM orders
-         WHERE id = ?
-         LIMIT 1`,
+         FROM orders WHERE id = ? LIMIT 1`,
       )
       .bind(orderId)
       .first<OrderRow>()
@@ -63,25 +57,17 @@ export async function GET(
     if (!order) return json({ error: "Order not found." }, 404)
 
     const customerPhoneInput = request.headers.get("x-customer-phone") || new URL(request.url).searchParams.get("phone") || ""
-    const adminKey = request.headers.get("x-admin-key") || request.headers.get("authorization")?.replace("Bearer ", "") || ""
-    const isAdmin = Boolean(adminKey && process.env.ADMIN_SECRET_KEY && adminKey === process.env.ADMIN_SECRET_KEY)
-
-    const dbPhoneLast10 = sanitizePhone(order.customer_phone || "")
+    const isAdmin = verifyAdminKey(request)
+    const dbPhoneLast10 = sanitizePhone(order.customer_phone)
 
     let isVerified = isAdmin
     if (!isVerified && customerPhoneInput) {
       const phoneValidation = validateIndianMobile(customerPhoneInput)
-      if (phoneValidation.isValid && phoneValidation.cleanPhone === dbPhoneLast10) {
-        isVerified = true
-      } else if (phoneValidation.isValid && phoneValidation.cleanPhone !== dbPhoneLast10) {
-        return json(
-          {
-            error: "The mobile number entered does not match the mobile number used when placing this order. Please verify and try again.",
-            requiresVerification: true,
-          },
-          403,
-        )
+      if (!phoneValidation.isValid) return json({ error: phoneValidation.error || "Please enter a valid mobile number." }, 403)
+      if (phoneValidation.cleanPhone !== dbPhoneLast10) {
+        return json({ error: "The mobile number entered does not match this order.", requiresVerification: true }, 403)
       }
+      isVerified = true
     }
 
     if (!isVerified) {
@@ -101,30 +87,17 @@ export async function GET(
 
     if (order.payment_status !== "paid" && order.payment_gateway === "phonepe" && order.gateway_order_id) {
       try {
-        const ppStatus = await getPhonePeOrderStatus(order.gateway_order_id)
-        if (ppStatus.state === "COMPLETED") {
-          order.payment_status = "paid"
-          await db
-            .prepare(`UPDATE orders SET payment_status = 'paid', updated_at = datetime('now') WHERE id = ?`)
-            .bind(order.id)
-            .run()
-        } else if (ppStatus.state === "FAILED") {
-          order.payment_status = "failed"
-          await db
-            .prepare(`UPDATE orders SET payment_status = 'failed', updated_at = datetime('now') WHERE id = ?`)
-            .bind(order.id)
-            .run()
-        }
-      } catch (err) {
-        console.error("Order page PhonePe status check failed:", err)
+        const payment = await syncPhonePeStatus(db, order.id)
+        if (payment) order.payment_status = payment.paymentStatus
+      } catch (error) {
+        console.error("Order PhonePe status sync failed:", error)
       }
     }
 
     const itemsResult = await db
       .prepare(
         `SELECT product_name, weight, quantity, unit_price, line_total
-         FROM order_items
-         WHERE order_id = ?`,
+         FROM order_items WHERE order_id = ? ORDER BY id`,
       )
       .bind(orderId)
       .all<OrderItemRow>()
@@ -145,12 +118,12 @@ export async function GET(
         orderStatus: order.order_status,
         createdAt: order.created_at,
         updatedAt: order.updated_at,
-        items: (itemsResult.results ?? []).map((i) => ({
-          productName: i.product_name,
-          weight: i.weight,
-          quantity: i.quantity,
-          unitPrice: i.unit_price,
-          lineTotal: i.line_total,
+        items: (itemsResult.results ?? []).map((item) => ({
+          productName: item.product_name,
+          weight: item.weight,
+          quantity: item.quantity,
+          unitPrice: item.unit_price,
+          lineTotal: item.line_total,
         })),
       },
     })
