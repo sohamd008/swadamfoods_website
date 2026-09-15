@@ -17,50 +17,18 @@ type OrderRow = {
   gateway_order_id: string | null
 }
 
-type ItemRow = {
-  product_id: string
-  quantity: number
-}
-
-function isUniqueViolation(error: unknown) {
-  return /unique|constraint|primary\s*key/i.test(error instanceof Error ? error.message : String(error))
-}
-
 function completedPayment(details?: Array<{ transactionId?: string; state?: string; paymentMode?: string }>) {
   return details?.find((detail) => detail.state === "COMPLETED") ?? details?.[0]
 }
 
-/** Atomically claims an order for inventory deduction and applies the stock update once. */
+/** Marks an order as paid once the payment gateway has confirmed completion. */
 export async function markOrderPaid(db: D1Database, orderId: string): Promise<void> {
-  const order = await db
-    .prepare("SELECT id, total, payment_status, payment_gateway, gateway_order_id FROM orders WHERE id = ? LIMIT 1")
+  await db
+    .prepare(
+      "UPDATE orders SET payment_status = 'paid', updated_at = datetime('now') WHERE id = ? AND payment_status <> 'refunded'",
+    )
     .bind(orderId)
-    .first<OrderRow>()
-
-  if (!order || order.payment_status === "refunded") return
-
-  try {
-    const items = await db
-      .prepare("SELECT product_id, quantity FROM order_items WHERE order_id = ?")
-      .bind(orderId)
-      .all<ItemRow>()
-
-    await db.batch([
-      db.prepare("INSERT INTO inventory_deductions (order_id) VALUES (?)").bind(orderId),
-      db.prepare("UPDATE orders SET payment_status = 'paid', updated_at = datetime('now') WHERE id = ? AND payment_status <> 'refunded'").bind(orderId),
-      ...(items.results ?? []).map((item) =>
-        db.prepare("UPDATE product_inventory SET stock = MAX(0, stock - ?), updated_at = datetime('now') WHERE product_id = ?")
-          .bind(item.quantity, item.product_id),
-      ),
-    ])
-  } catch (error) {
-    if (!isUniqueViolation(error)) throw error
-    const claim = await db
-      .prepare("SELECT order_id FROM inventory_deductions WHERE order_id = ? LIMIT 1")
-      .bind(orderId)
-      .first<{ order_id: string }>()
-    if (!claim) throw error
-  }
+    .run()
 }
 
 export async function syncPhonePeStatus(db: D1Database, orderId: string): Promise<PaymentSyncResult | null> {
