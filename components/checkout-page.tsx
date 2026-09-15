@@ -303,7 +303,7 @@ export function CheckoutPage() {
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join("\n"))}`
   }, [address, delivery, items, name, order, phone, pincode, subtotal])
 
-  function validate() {
+  const validate = useCallback(() => {
     const next: Record<string, string> = {}
     const cleanName = name.trim()
     const cleanAddress = address.trim()
@@ -320,7 +320,7 @@ export function CheckoutPage() {
       return false
     }
     return true
-  }
+  }, [address, items, name, notify, phone, pincode])
 
   const submitOrder = useCallback(async () => {
     if (order) {
@@ -383,7 +383,7 @@ export function CheckoutPage() {
       window.clearTimeout(timeout)
       setBusy(false)
     }
-  }, [checkConnection, delivery, items, name, notify, order, phone, startPhonePePayment])
+  }, [address, checkConnection, delivery, items, name, notify, order, phone, pincode, startPhonePePayment, validate])
 
   return (
     <main className="checkout-shell min-h-screen px-4 py-5 pb-36 sm:px-6 sm:py-8 lg:pb-8">
