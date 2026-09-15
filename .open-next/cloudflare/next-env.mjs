@@ -1,3 +1,0 @@
-export const production = {"NEXT_PUBLIC_TURNSTILE_SITE_KEY":"0x4AAAAAAEtsa_dcINgLL2jR","TURNSTILE_SECRET":"0x4AAAAAAEtsa8NmCy05qXi40TOWGSAv9xA"};
-export const development = {"NEXT_PUBLIC_TURNSTILE_SITE_KEY":"0x4AAAAAAEtsa_dcINgLL2jR","TURNSTILE_SECRET":"0x4AAAAAAEtsa8NmCy05qXi40TOWGSAv9xA"};
-export const test = {};

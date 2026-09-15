@@ -3,9 +3,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: var(--font-sans-main), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-heading: var(--font-fraunces), "Playfair Display", Georgia, serif;
-  --font-serif: var(--font-fraunces), "Playfair Display", Georgia, serif;
+  --font-sans: var(--font-manrope), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: var(--font-manrope), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: var(--font-manrope), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   --color-ring: var(--ring);
   --color-input: var(--input);
@@ -80,32 +80,20 @@
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground; }
   a, button, input, textarea, select, [tabindex] {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
-  html {
-    scroll-behavior: smooth;
-  }
-  html, body {
-    overflow-x: clip;
-  }
+  html { scroll-behavior: smooth; }
+  html, body { overflow-x: clip; }
   @media screen and (max-width: 767px) {
-    input, select, textarea {
-      font-size: 16px;
-    }
+    input, select, textarea { font-size: 16px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    html {
-      scroll-behavior: auto;
-    }
+    html { scroll-behavior: auto; }
     *, *::before, *::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
@@ -114,11 +102,6 @@
   }
   img, picture, svg {
     -webkit-user-drag: none;
-    -khtml-user-drag: none;
-    -moz-user-drag: none;
-    -o-user-drag: none;
-    user-drag: none;
-    -webkit-touch-callout: none;
     user-select: none;
     -webkit-user-select: none;
   }
@@ -131,32 +114,26 @@
     box-shadow: 0 4px 20px -2px rgba(45, 30, 15, 0.05);
   }
   .dark .glass-panel {
-    border-color: var(--border);
-    background-color: var(--card);
     box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.4);
   }
-
   .glass-card {
     border: 1px solid var(--border);
     background-color: var(--card);
     box-shadow: 0 2px 10px rgba(45, 30, 15, 0.04), 0 16px 32px -4px rgba(45, 30, 15, 0.05);
-    transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 260ms cubic-bezier(0.16, 1, 0.3, 1), border-color 260ms ease;
+    transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1), border-color 180ms ease;
   }
   .glass-card:hover {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
     border-color: oklch(0.48 0.16 42 / 0.4);
-    box-shadow: 0 4px 16px rgba(45, 30, 15, 0.06), 0 24px 44px -6px rgba(45, 30, 15, 0.10);
+    box-shadow: 0 4px 16px rgba(45, 30, 15, 0.06), 0 20px 36px -6px rgba(45, 30, 15, 0.09);
   }
   .dark .glass-card {
-    border-color: var(--border);
-    background-color: var(--card);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3), 0 16px 32px -4px rgba(0, 0, 0, 0.45);
   }
   .dark .glass-card:hover {
     border-color: oklch(0.72 0.14 55 / 0.5);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 24px 44px -6px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 20px 36px -6px rgba(0, 0, 0, 0.55);
   }
-
   .glass-header {
     border: 1px solid var(--border);
     background-color: color-mix(in srgb, var(--card) 88%, transparent);
@@ -165,55 +142,37 @@
     box-shadow: 0 2px 12px rgba(45, 30, 15, 0.04);
   }
   .dark .glass-header {
-    border-color: var(--border);
-    background-color: color-mix(in srgb, var(--card) 88%, transparent);
     box-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
   }
-
   .glass-pill {
     border: 1px solid var(--border);
     background-color: var(--secondary);
     box-shadow: 0 1px 2px rgba(45, 30, 15, 0.03);
   }
-  .dark .glass-pill {
-    border-color: var(--border);
-    background-color: var(--secondary);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  }
-
   .ios-sheet {
     border: 1px solid var(--border);
     background-color: var(--card);
     box-shadow: 0 -16px 40px rgba(45, 30, 15, 0.12);
   }
-  .dark .ios-sheet {
-    border-color: var(--border);
-    background-color: var(--card);
-    box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.6);
-  }
 }
 
 @layer utilities {
-  .checkout-shell,
-  .ambient-bg {
+  .checkout-shell, .ambient-bg {
     background-color: var(--background);
     background-image:
       radial-gradient(ellipse at top left, oklch(0.92 0.025 65 / 0.35), transparent 45%),
       radial-gradient(ellipse at bottom right, oklch(0.93 0.02 85 / 0.4), transparent 50%);
   }
-  .dark .checkout-shell,
-  .dark .ambient-bg {
+  .dark .checkout-shell, .dark .ambient-bg {
     background-color: var(--background);
     background-image:
       radial-gradient(ellipse at top left, oklch(0.24 0.02 50 / 0.4), transparent 45%),
       radial-gradient(ellipse at bottom right, oklch(0.22 0.015 60 / 0.3), transparent 50%);
   }
-
   .mobile-bottom-bar {
     position: fixed;
+    inset-inline: 0;
     bottom: 0;
-    left: 0;
-    right: 0;
     z-index: 50;
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
     backdrop-filter: blur(12px);
@@ -222,42 +181,12 @@
     background-color: color-mix(in srgb, var(--card) 92%, transparent);
     box-shadow: 0 -6px 24px rgba(45, 30, 15, 0.08);
   }
-  .dark .mobile-bottom-bar {
-    border-top-color: var(--border);
-    background-color: color-mix(in srgb, var(--card) 92%, transparent);
-    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.45);
-  }
 }
 
 @media print {
-  html, body {
-    background: #ffffff !important;
-    color: #000000 !important;
-    overflow: visible !important;
-    height: auto !important;
-  }
-  body * {
-    visibility: hidden !important;
-  }
-  #tax-invoice-printable,
-  #tax-invoice-printable * {
-    visibility: visible !important;
-  }
-  #tax-invoice-printable {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    padding: 6mm 10mm !important;
-    margin: 0 !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    box-shadow: none !important;
-    border: none !important;
-  }
-  @page {
-    size: A4 portrait;
-    margin: 0;
-  }
+  html, body { background: #fff !important; color: #000 !important; overflow: visible !important; height: auto !important; }
+  body * { visibility: hidden !important; }
+  #tax-invoice-printable, #tax-invoice-printable * { visibility: visible !important; }
+  #tax-invoice-printable { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; max-width: 100% !important; padding: 6mm 10mm !important; margin: 0 !important; background: #fff !important; color: #000 !important; box-shadow: none !important; border: none !important; }
+  @page { size: A4 portrait; margin: 0; }
 }

@@ -13,7 +13,6 @@ type PhonePeTokenResponse = {
   access_token?: string
   expires_at?: number
   expires_in?: number
-  token_type?: string
 }
 
 type PhonePePaymentResponse = {
@@ -25,7 +24,7 @@ type PhonePePaymentResponse = {
   message?: string
 }
 
-type PhonePeStatusResponse = {
+export type PhonePeStatusResponse = {
   orderId?: string
   state?: string
   amount?: number
@@ -60,79 +59,58 @@ function required(value: string | undefined, name: string) {
 async function fetchJson<T>(input: RequestInfo | URL, init: RequestInit): Promise<T> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 12000)
+  const signal = init.signal ?? controller.signal
 
-  let response: Response
   try {
-    response = await fetch(input, {
-      ...init,
-      signal: init.signal ?? controller.signal,
-    })
+    const response = await fetch(input, { ...init, signal })
+    const text = await response.text()
+    let data: unknown = null
+
+    try {
+      data = text ? JSON.parse(text) : null
+    } catch {
+      throw new Error(`PhonePe returned an invalid response (${response.status}).`)
+    }
+
+    if (!response.ok) {
+      const message = typeof data === "object" && data && "message" in data
+        ? String((data as { message?: unknown }).message ?? "")
+        : ""
+      throw new Error(message || `PhonePe request failed (${response.status}).`)
+    }
+
+    return data as T
   } finally {
     clearTimeout(timeout)
   }
-
-  const text = await response.text()
-  let data: unknown = null
-
-  try {
-    data = text ? JSON.parse(text) : null
-  } catch {
-    throw new Error(`PhonePe returned an invalid response (${response.status}).`)
-  }
-
-  if (!response.ok) {
-    const message =
-      typeof data === "object" && data && "message" in data
-        ? String((data as { message?: unknown }).message ?? "")
-        : ""
-    throw new Error(message || `PhonePe request failed (${response.status}).`)
-  }
-
-  return data as T
 }
 
 export async function getPhonePeAccessToken(forceRefresh = false): Promise<string> {
   const now = Date.now()
-  if (!forceRefresh && cachedToken && cachedToken.expiresAt > now + 60000) {
-    return cachedToken.token
-  }
+  if (!forceRefresh && cachedToken && cachedToken.expiresAt > now + 60000) return cachedToken.token
 
   const env = getEnv()
-  const clientId = required(env.PHONEPE_CLIENT_ID, "PHONEPE_CLIENT_ID")
-  const clientSecret = required(env.PHONEPE_CLIENT_SECRET, "PHONEPE_CLIENT_SECRET")
-  const clientVersion = required(env.PHONEPE_CLIENT_VERSION, "PHONEPE_CLIENT_VERSION")
-
   const form = new URLSearchParams({
-    client_id: clientId,
-    client_version: clientVersion,
-    client_secret: clientSecret,
+    client_id: required(env.PHONEPE_CLIENT_ID, "PHONEPE_CLIENT_ID"),
+    client_version: required(env.PHONEPE_CLIENT_VERSION, "PHONEPE_CLIENT_VERSION"),
+    client_secret: required(env.PHONEPE_CLIENT_SECRET, "PHONEPE_CLIENT_SECRET"),
     grant_type: "client_credentials",
   })
 
-  const token = await fetchJson<PhonePeTokenResponse>(
-    `${PHONEPE_IDENTITY_BASE}/v1/oauth/token`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: form.toString(),
-    },
-  )
+  const token = await fetchJson<PhonePeTokenResponse>(`${PHONEPE_IDENTITY_BASE}/v1/oauth/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: form.toString(),
+  })
 
   if (!token.access_token) throw new Error("PhonePe did not return an access token.")
 
-  let expiryEpochMs = now + 3600 * 1000
-  if (typeof token.expires_at === "number") {
-    expiryEpochMs = token.expires_at < 10000000000 ? token.expires_at * 1000 : token.expires_at
-  } else if (typeof token.expires_in === "number") {
-    expiryEpochMs = now + token.expires_in * 1000
-  }
+  const expiresAt = typeof token.expires_at === "number"
+    ? (token.expires_at < 10000000000 ? token.expires_at * 1000 : token.expires_at)
+    : now + (token.expires_in ?? 3600) * 1000
 
-  cachedToken = {
-    token: token.access_token,
-    expiresAt: expiryEpochMs,
-  }
-
-  return cachedToken.token
+  cachedToken = { token: token.access_token, expiresAt }
+  return token.access_token
 }
 
 export async function createPhonePePayment(params: {
@@ -142,9 +120,7 @@ export async function createPhonePePayment(params: {
   phone: string
 }) {
   const token = await getPhonePeAccessToken()
-  const origin = "https://swadamfoods.eu.cc"
   const cleanOrderId = params.orderId || params.merchantOrderId
-
   const digits = params.phone.replace(/\D/g, "")
   const cleanPhone = digits.length >= 10 ? digits.slice(-10) : ""
 
@@ -155,84 +131,49 @@ export async function createPhonePePayment(params: {
     paymentFlow: {
       type: "PG_CHECKOUT",
       merchantUrls: {
-        redirectUrl: `${origin}/checkout?payment=phonepe&orderId=${encodeURIComponent(cleanOrderId)}`,
+        redirectUrl: `https://swadamfoods.eu.cc/checkout?payment=phonepe&orderId=${encodeURIComponent(cleanOrderId)}`,
       },
     },
   }
 
-  if (cleanPhone.length === 10) {
-    body.prefillUserLoginDetails = {
-      phoneNumber: cleanPhone,
-    }
-  }
+  if (cleanPhone.length === 10) body.prefillUserLoginDetails = { phoneNumber: cleanPhone }
 
   return fetchJson<PhonePePaymentResponse>(`${PHONEPE_API_BASE}/checkout/v2/pay`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `O-Bearer ${token}`,
-    },
+    headers: { "Content-Type": "application/json", Authorization: `O-Bearer ${token}` },
     body: JSON.stringify(body),
   })
 }
 
-export async function getPhonePeOrderStatus(merchantOrderId: string) {
+export async function getPhonePeOrderStatus(merchantOrderId: string): Promise<PhonePeStatusResponse> {
   let token = await getPhonePeAccessToken()
   const url = `${PHONEPE_API_BASE}/checkout/v2/order/${encodeURIComponent(merchantOrderId)}/status?details=false&errorContext=true`
 
   try {
     return await fetchJson<PhonePeStatusResponse>(url, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `O-Bearer ${token}`,
-      },
+      headers: { "Content-Type": "application/json", Authorization: `O-Bearer ${token}` },
     })
   } catch (error) {
-    const msg = error instanceof Error ? error.message : ""
-    if (msg.includes("401") || msg.toLowerCase().includes("unauthorized")) {
-      token = await getPhonePeAccessToken(true)
-      return fetchJson<PhonePeStatusResponse>(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `O-Bearer ${token}`,
-        },
-      })
-    }
-    throw error
+    const message = error instanceof Error ? error.message : ""
+    if (!message.includes("401") && !message.toLowerCase().includes("unauthorized")) throw error
+    token = await getPhonePeAccessToken(true)
+    return fetchJson<PhonePeStatusResponse>(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json", Authorization: `O-Bearer ${token}` },
+    })
   }
 }
 
 export async function verifyPhonePeWebhook(rawBody: string, headers: Headers) {
-  const env = getEnv()
-  const secret = required(env.PHONEPE_WEBHOOK_SECRET, "PHONEPE_WEBHOOK_SECRET")
+  const secret = required(getEnv().PHONEPE_WEBHOOK_SECRET, "PHONEPE_WEBHOOK_SECRET")
   const keyId = headers.get("x-phonepe-checksum-key-id")?.trim()
-  const signature = (
-    headers.get("x-phonepe-checksum-signature") ??
-    headers.get("phonepe-checksum-signature") ??
-    headers.get("x-phonepe-checksum")
-  )?.trim()
-
+  const signature = (headers.get("x-phonepe-checksum-signature") ?? headers.get("phonepe-checksum-signature") ?? headers.get("x-phonepe-checksum"))?.trim()
   if (!keyId || keyId !== PHONEPE_WEBHOOK_ID || !signature) return false
 
-  const secretKey = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  )
-
-  const digest = await crypto.subtle.sign(
-    "HMAC",
-    secretKey,
-    new TextEncoder().encode(rawBody),
-  )
-  const expected = Array.from(new Uint8Array(digest), (byte) =>
-    byte.toString(16).padStart(2, "0"),
-  ).join("")
-
+  const secretKey = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"])
+  const digest = await crypto.subtle.sign("HMAC", secretKey, new TextEncoder().encode(rawBody))
+  const expected = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")
   return timingSafeEqual(expected, signature.toLowerCase())
 }
 

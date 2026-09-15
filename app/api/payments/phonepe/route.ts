@@ -1,10 +1,7 @@
 import { getDB } from "@/lib/db"
 import { jsonResponse as json, isSameOrigin as sameOrigin, cleanOrderId, isValidOrderId } from "@/lib/api"
-import {
-  PAYMENT_EXPIRY_SECONDS,
-  createPhonePePayment,
-  getPhonePeOrderStatus,
-} from "@/lib/phonepe"
+import { markOrderPaid } from "@/lib/order-lifecycle"
+import { PAYMENT_EXPIRY_SECONDS, createPhonePePayment, getPhonePeOrderStatus } from "@/lib/phonepe"
 
 export const dynamic = "force-dynamic"
 
@@ -14,11 +11,8 @@ function generatePaymentMerchantOrderId(orderId: string) {
 }
 
 export async function POST(request: Request) {
-
   if (!sameOrigin(request)) return json({ error: "Invalid request origin." }, 403)
-
-  const contentType = request.headers.get("content-type")?.toLowerCase() ?? ""
-  if (!contentType.startsWith("application/json")) {
+  if (!(request.headers.get("content-type")?.toLowerCase() ?? "").startsWith("application/json")) {
     return json({ error: "Content-Type must be application/json." }, 415)
   }
 
@@ -30,21 +24,17 @@ export async function POST(request: Request) {
   }
 
   const orderId = typeof body.orderId === "string" ? cleanOrderId(body.orderId) : ""
-  if (!isValidOrderId(orderId)) {
-    return json({ error: "Invalid order ID." }, 400)
-  }
+  if (!isValidOrderId(orderId)) return json({ error: "Invalid order ID." }, 400)
 
   const db = getDB()
   if (!db) return json({ error: "Database temporarily unavailable." }, 503)
 
   try {
-    const result = await db
+    const order = await db
       .prepare(
         `SELECT id, customer_phone, total, currency, payment_gateway,
                 gateway_order_id, payment_status, payment_checkout_url, payment_expires_at
-         FROM orders
-         WHERE id = ?
-         LIMIT 1`,
+         FROM orders WHERE id = ? LIMIT 1`,
       )
       .bind(orderId)
       .first<{
@@ -59,71 +49,51 @@ export async function POST(request: Request) {
         payment_expires_at: number | null
       }>()
 
-    if (!result) return json({ error: "Order not found." }, 404)
-    if (result.currency !== "INR") return json({ error: "Unsupported order currency." }, 400)
-    if (result.payment_status === "paid") return json({ error: "This order has already been paid." }, 409)
-
-    if (result.payment_gateway && result.payment_gateway !== "phonepe") {
-      return json({ error: "This order is assigned to another payment provider." }, 409)
-    }
+    if (!order) return json({ error: "Order not found." }, 404)
+    if (order.currency !== "INR") return json({ error: "Unsupported order currency." }, 400)
+    if (order.payment_status === "paid") return json({ error: "This order has already been paid." }, 409)
+    if (order.payment_gateway && order.payment_gateway !== "phonepe") return json({ error: "This order is assigned to another payment provider." }, 409)
 
     const now = Date.now()
-
     if (
-      result.payment_gateway === "phonepe" &&
-      result.gateway_order_id &&
-      result.payment_checkout_url &&
-      result.payment_expires_at &&
-      result.payment_expires_at > now &&
-      result.payment_status === "processing"
+      order.payment_gateway === "phonepe" &&
+      order.gateway_order_id &&
+      order.payment_checkout_url &&
+      order.payment_expires_at &&
+      order.payment_expires_at > now &&
+      order.payment_status === "processing"
     ) {
-      return json({
-        orderId,
-        gateway: "phonepe",
-        redirectUrl: result.payment_checkout_url,
-        expiresAt: result.payment_expires_at,
-      })
+      return json({ orderId, gateway: "phonepe", redirectUrl: order.payment_checkout_url, expiresAt: order.payment_expires_at })
     }
 
-    if (result.payment_gateway === "phonepe" && result.gateway_order_id && result.payment_status === "processing") {
-      const status = await getPhonePeOrderStatus(result.gateway_order_id)
-
-      if (status.amount !== undefined && status.amount !== result.total * 100) {
-        console.error("PhonePe amount mismatch", { orderId, expected: result.total * 100, received: status.amount })
+    if (order.payment_gateway === "phonepe" && order.gateway_order_id && order.payment_status === "processing") {
+      const status = await getPhonePeOrderStatus(order.gateway_order_id)
+      if (status.amount !== undefined && status.amount !== order.total * 100) {
+        console.error("PhonePe amount mismatch", { orderId, expected: order.total * 100, received: status.amount })
         return json({ error: "Payment verification failed." }, 502)
       }
 
       if (status.state === "COMPLETED") {
-        await db
-          .prepare(
-            `UPDATE orders SET payment_status = 'paid', updated_at = datetime('now') WHERE id = ?`,
-          )
-          .bind(orderId)
-          .run()
+        await markOrderPaid(db, orderId)
         return json({ orderId, gateway: "phonepe", alreadyPaid: true })
       }
 
       if (status.state !== "FAILED" && status.state !== "EXPIRED") {
-        return json({
-          error: "Your previous payment is still being confirmed. Please wait a moment before trying again.",
-          pending: true,
-        }, 409)
+        return json({ error: "Your previous payment is still being confirmed. Please wait a moment before trying again.", pending: true }, 409)
       }
 
       await db
-        .prepare(
-          `UPDATE orders SET payment_status = ?, updated_at = datetime('now') WHERE id = ? AND payment_status = 'processing'`,
-        )
+        .prepare("UPDATE orders SET payment_status = ?, updated_at = datetime('now') WHERE id = ? AND payment_status = 'processing'")
         .bind(status.state === "EXPIRED" ? "expired" : "failed", orderId)
         .run()
     }
 
-    const paymentMerchantOrderId = generatePaymentMerchantOrderId(orderId)
+    const merchantOrderId = generatePaymentMerchantOrderId(orderId)
     const payment = await createPhonePePayment({
-      merchantOrderId: paymentMerchantOrderId,
+      merchantOrderId,
       orderId,
-      amountInRupees: result.total,
-      phone: result.customer_phone,
+      amountInRupees: order.total,
+      phone: order.customer_phone,
     })
 
     if (!payment.redirectUrl || payment.state !== "PENDING") {
@@ -131,31 +101,22 @@ export async function POST(request: Request) {
       return json({ error: "PhonePe could not start the payment." }, 502)
     }
 
-    const expiresAt = typeof payment.expireAt === "number"
-      ? payment.expireAt
-      : now + PAYMENT_EXPIRY_SECONDS * 1000
-
-    await db
+    const expiresAt = typeof payment.expireAt === "number" ? payment.expireAt : now + PAYMENT_EXPIRY_SECONDS * 1000
+    const update = await db
       .prepare(
         `UPDATE orders
-         SET payment_gateway = 'phonepe',
-             gateway_order_id = ?,
-             payment_checkout_url = ?,
-             payment_expires_at = ?,
-             payment_status = 'processing',
-             updated_at = datetime('now')
-         WHERE id = ?
-           AND payment_status IN ('pending', 'failed', 'expired', 'processing')`,
+         SET payment_gateway = 'phonepe', gateway_order_id = ?, payment_checkout_url = ?,
+             payment_expires_at = ?, payment_status = 'processing', updated_at = datetime('now')
+         WHERE id = ? AND payment_status IN ('pending', 'failed', 'expired', 'processing')`,
       )
-      .bind(paymentMerchantOrderId, payment.redirectUrl, expiresAt, orderId)
+      .bind(merchantOrderId, payment.redirectUrl, expiresAt, orderId)
       .run()
 
-    return json({
-      orderId,
-      gateway: "phonepe",
-      redirectUrl: payment.redirectUrl,
-      expiresAt,
-    })
+    if (!update.success || update.meta.changes < 1) {
+      return json({ error: "The order changed while payment was being prepared. Please try again." }, 409)
+    }
+
+    return json({ orderId, gateway: "phonepe", redirectUrl: payment.redirectUrl, expiresAt })
   } catch (error) {
     console.error("Failed to initiate PhonePe payment:", error)
     return json({ error: "We couldn't start the secure payment right now. Please try again." }, 502)
