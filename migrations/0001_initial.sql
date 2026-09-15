@@ -64,15 +64,3 @@ CREATE TABLE IF NOT EXISTS payment_events (
 
 CREATE INDEX IF NOT EXISTS idx_payment_events_order
   ON payment_events (order_id);
-
-CREATE TABLE IF NOT EXISTS product_inventory (
-  product_id TEXT PRIMARY KEY,
-  stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE TABLE IF NOT EXISTS inventory_deductions (
-  order_id TEXT PRIMARY KEY,
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
-);
