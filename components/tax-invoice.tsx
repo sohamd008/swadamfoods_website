@@ -28,10 +28,20 @@ export type TaxInvoiceOrder = {
   }>
 }
 
-export function TaxInvoiceModal({ order, isOpen, onClose }: { order: TaxInvoiceOrder; isOpen: boolean; onClose: () => void }) {
+type TaxInvoiceModalProps = {
+  order: TaxInvoiceOrder
+  isOpen: boolean
+  onClose: () => void
+  adminKey?: string
+}
+
+export function TaxInvoiceModal({ order, isOpen, onClose, adminKey }: TaxInvoiceModalProps) {
   const [downloading, setDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState("")
+
   useEffect(() => {
     if (!isOpen) return
+    setDownloadError("")
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose()
     }
@@ -49,11 +59,40 @@ export function TaxInvoiceModal({ order, isOpen, onClose }: { order: TaxInvoiceO
   const date = new Date(order.createdAt)
   const invoiceNumber = formatInvoiceNumber(order.id)
   const download = async () => {
+    if (order.paymentStatus !== "paid" || downloading) return
     setDownloading(true)
+    setDownloadError("")
+
     try {
-      const response = await fetch(`/api/orders/${encodeURIComponent(order.id)}/invoice`, { cache: "no-store" })
-      if (!response.ok) throw new Error("Invoice download failed.")
+      let resolvedAdminKey = adminKey?.trim() ?? ""
+      let customerPhone = ""
+
+      try {
+        if (!resolvedAdminKey) resolvedAdminKey = localStorage.getItem("swadam_admin_key")?.trim() ?? ""
+        if (!customerPhone) customerPhone = sessionStorage.getItem(`swadam_track_verified_${order.id}`)?.trim() ?? ""
+        if (!customerPhone) customerPhone = localStorage.getItem(`swadam_track_verified_${order.id}`)?.trim() ?? ""
+      } catch {}
+
+      const headers: HeadersInit = { Accept: "application/pdf" }
+      if (resolvedAdminKey) headers["x-admin-key"] = resolvedAdminKey
+      if (customerPhone) headers["x-customer-phone"] = customerPhone
+
+      const response = await fetch(`/api/orders/${encodeURIComponent(order.id)}/invoice`, {
+        cache: "no-store",
+        headers,
+      })
+
+      if (!response.ok) {
+        const message = await response.text().catch(() => "")
+        throw new Error(message || `Invoice download failed (${response.status}).`)
+      }
+
+      const contentType = response.headers.get("content-type")?.toLowerCase() ?? ""
+      if (!contentType.includes("application/pdf")) throw new Error("The server returned an invalid invoice file.")
+
       const blob = await response.blob()
+      if (blob.size === 0) throw new Error("The invoice file is empty.")
+
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement("a")
       anchor.href = url
@@ -61,9 +100,9 @@ export function TaxInvoiceModal({ order, isOpen, onClose }: { order: TaxInvoiceO
       document.body.appendChild(anchor)
       anchor.click()
       anchor.remove()
-      URL.revokeObjectURL(url)
-    } catch {
-      window.open(`/api/orders/${encodeURIComponent(order.id)}/invoice`, "_blank", "noopener,noreferrer")
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (error) {
+      setDownloadError(error instanceof Error ? error.message : "Unable to download the invoice right now.")
     } finally {
       setDownloading(false)
     }
@@ -80,6 +119,12 @@ export function TaxInvoiceModal({ order, isOpen, onClose }: { order: TaxInvoiceO
             <button type="button" onClick={onClose} className="rounded-xl p-2 hover:bg-stone-200" aria-label="Close"><X className="h-4 w-4" /></button>
           </div>
         </div>
+
+        {downloadError && (
+          <div className="mx-3 mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 sm:mx-6" role="alert">
+            {downloadError}
+          </div>
+        )}
 
         <div id="tax-invoice-printable" className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-8">
           <div className="rounded-2xl border border-stone-200 p-4 sm:p-7">
