@@ -96,7 +96,7 @@ export function CheckoutPage() {
   const [toast, setToast] = useState<Toast | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [order, setOrder] = useState<OrderResponse | null>(null)
-  const toastTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null)
+  const toastTimer = useRef<number | null>(null)
   const orderRef = useRef<OrderResponse | null>(null)
   const itemsRef = useRef(items)
   orderRef.current = order
