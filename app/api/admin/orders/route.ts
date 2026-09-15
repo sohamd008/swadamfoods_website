@@ -32,6 +32,18 @@ type OrderItemRow = {
   unit_price: number
   line_total: number
 }
+
+const ALLOWED_STATUSES = new Set([
+  "new",
+  "accepted",
+  "preparing",
+  "packed",
+  "shipped",
+  "delivered",
+  "cancelled",
+  "refund_required",
+])
+
 function filterOrders<T extends { id: string; customerName: string; customerPhone: string; pincode: string; orderStatus: string }>(
   orders: T[],
   statusFilter?: string | null,
@@ -39,66 +51,31 @@ function filterOrders<T extends { id: string; customerName: string; customerPhon
 ): T[] {
   let result = orders
   if (statusFilter && statusFilter !== "all") {
-    if (statusFilter === "active") {
-      result = result.filter((o) =>
-        ["new", "accepted", "preparing", "packed", "shipped"].includes(o.orderStatus),
-      )
-    } else {
-      result = result.filter((o) => o.orderStatus === statusFilter)
-    }
+    result = statusFilter === "active"
+      ? result.filter((order) => ["new", "accepted", "preparing", "packed", "shipped"].includes(order.orderStatus))
+      : result.filter((order) => order.orderStatus === statusFilter)
   }
 
   if (searchQuery) {
-    result = result.filter(
-      (o) =>
-        o.id.toLowerCase().includes(searchQuery) ||
-        o.customerName.toLowerCase().includes(searchQuery) ||
-        o.customerPhone.includes(searchQuery) ||
-        o.pincode.includes(searchQuery),
+    result = result.filter((order) =>
+      order.id.toLowerCase().includes(searchQuery) ||
+      order.customerName.toLowerCase().includes(searchQuery) ||
+      order.customerPhone.includes(searchQuery) ||
+      order.pincode.includes(searchQuery),
     )
   }
   return result
 }
 
-let inMemoryOrders = [
-  {
-    id: "SWD-20260909-A1B2C3D4",
-    customerName: "Rahul Sharma",
-    customerPhone: "9876543210",
-    customerAddress: "Flat 402, Sunshine Heights, FC Road, Pune",
-    pincode: "411004",
-    deliveryMethod: "pune",
-    subtotal: 480,
-    deliveryFee: 0,
-    total: 480,
-    currency: "INR",
-    paymentGateway: "phonepe",
-    gatewayOrderId: "T260909010418",
-    paymentStatus: "paid",
-    orderStatus: "preparing",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    items: [
-      { id: 1, product_name: "Patal Poha Chivda", weight: "500g", quantity: 2, unit_price: 160, line_total: 320 },
-      { id: 2, product_name: "Instant Kanda Poha Premix", weight: "250g", quantity: 2, unit_price: 80, line_total: 160 },
-    ],
-  },
-]
-
 export async function GET(request: Request) {
-  if (!verifyAdminKey(request)) {
-    return json({ error: "Unauthorized. Invalid Admin Key." }, 401)
-  }
+  if (!verifyAdminKey(request)) return json({ error: "Unauthorized." }, 401)
 
   const db = getDB()
+  if (!db) return json({ error: "Database temporarily unavailable." }, 503)
 
   const searchParams = new URL(request.url).searchParams
   const statusFilter = searchParams.get("status")?.trim()
   const searchQuery = searchParams.get("search")?.trim().toLowerCase()
-
-  if (!db || typeof db.prepare !== "function") {
-    return json({ orders: filterOrders([...inMemoryOrders], statusFilter, searchQuery) })
-  }
 
   try {
     const ordersResult = await db
@@ -112,8 +89,6 @@ export async function GET(request: Request) {
          LIMIT 200`,
       )
       .all<OrderRow>()
-
-    const rawOrders = ordersResult.results ?? []
 
     const itemsResult = await db
       .prepare(
@@ -129,7 +104,7 @@ export async function GET(request: Request) {
       itemsMap.set(item.order_id, list)
     }
 
-    const formattedOrders = rawOrders.map((order) => ({
+    const orders = (ordersResult.results ?? []).map((order) => ({
       id: order.id,
       customerName: order.customer_name,
       customerPhone: order.customer_phone,
@@ -149,18 +124,18 @@ export async function GET(request: Request) {
       items: itemsMap.get(order.id) ?? [],
     }))
 
-    return json({ orders: filterOrders(formattedOrders, statusFilter, searchQuery) })
+    return json({ orders: filterOrders(orders, statusFilter, searchQuery) })
   } catch (error) {
-    console.warn("Failed to fetch admin orders from DB, returning in-memory fallback:", error)
-    return json({ orders: filterOrders([...inMemoryOrders], statusFilter, searchQuery) })
+    console.error("Failed to fetch admin orders:", error)
+    return json({ error: "Failed to load orders." }, 500)
   }
 }
 
 export async function PATCH(request: Request) {
-  if (!verifyAdminKey(request)) {
-    return json({ error: "Unauthorized. Invalid Admin Key." }, 401)
-  }
+  if (!verifyAdminKey(request)) return json({ error: "Unauthorized." }, 401)
+
   const db = getDB()
+  if (!db) return json({ error: "Database temporarily unavailable." }, 503)
 
   let body: { orderId?: unknown; orderStatus?: unknown }
   try {
@@ -171,45 +146,15 @@ export async function PATCH(request: Request) {
 
   const orderId = typeof body.orderId === "string" ? body.orderId.trim() : ""
   const orderStatus = typeof body.orderStatus === "string" ? body.orderStatus.trim() : ""
-
-  const ALLOWED_STATUSES = [
-    "new",
-    "accepted",
-    "preparing",
-    "packed",
-    "shipped",
-    "delivered",
-    "cancelled",
-    "refund_required",
-  ]
-
-  if (!orderId || !ALLOWED_STATUSES.includes(orderStatus)) {
-    return json({ error: "Invalid orderId or orderStatus." }, 400)
-  }
-
-  if (!db || typeof db.prepare !== "function") {
-    const order = inMemoryOrders.find((o) => o.id === orderId)
-    if (order) {
-      order.orderStatus = orderStatus
-      order.updatedAt = new Date().toISOString()
-    }
-    return json({ success: true, orderId, orderStatus })
-  }
+  if (!orderId || !ALLOWED_STATUSES.has(orderStatus)) return json({ error: "Invalid orderId or orderStatus." }, 400)
 
   try {
     const result = await db
-      .prepare(
-        `UPDATE orders
-         SET order_status = ?, updated_at = datetime('now')
-         WHERE id = ?`,
-      )
+      .prepare("UPDATE orders SET order_status = ?, updated_at = datetime('now') WHERE id = ?")
       .bind(orderStatus, orderId)
       .run()
 
-    if (!result.success) {
-      return json({ error: "Failed to update order status." }, 500)
-    }
-
+    if (!result.success || result.meta.changes < 1) return json({ error: "Order not found." }, 404)
     return json({ success: true, orderId, orderStatus })
   } catch (error) {
     console.error("Failed to update order status:", error)
