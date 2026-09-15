@@ -1,8 +1,9 @@
 import { jsPDF } from "jspdf"
 import { getDB } from "@/lib/db"
-import { cleanOrderId, isValidOrderId } from "@/lib/api"
+import { business } from "@/lib/products"
+import { cleanOrderId, isValidOrderId, jsonResponse, verifyAdminKey } from "@/lib/api"
 import { validateIndianMobile, maskPhone, sanitizePhone } from "@/lib/phone"
-import { numberToWordsINR, calculateGSTBreakdown, formatInvoiceNumber } from "@/lib/invoice"
+import { formatInvoiceNumber, numberToWordsINR } from "@/lib/invoice"
 
 export const dynamic = "force-dynamic"
 
@@ -22,7 +23,7 @@ type OrderRow = {
   created_at: string
 }
 
-type OrderItemRow = {
+type ItemRow = {
   product_name: string
   weight: string
   quantity: number
@@ -30,245 +31,166 @@ type OrderItemRow = {
   line_total: number
 }
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id: rawId } = await params
-  const orderId = cleanOrderId(rawId)
-
-  if (!orderId || !isValidOrderId(orderId)) {
-    return new Response("Invalid order ID format.", { status: 400 })
-  }
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const orderId = cleanOrderId(id)
+  if (!isValidOrderId(orderId)) return new Response("Invalid order ID format.", { status: 400 })
 
   const db = getDB()
-  if (!db || typeof db.prepare !== "function") {
-    return new Response("Database temporarily unavailable.", { status: 503 })
-  }
+  if (!db) return new Response("Database temporarily unavailable.", { status: 503 })
 
   const order = await db
     .prepare(
       `SELECT id, customer_name, customer_phone, customer_address, pincode,
               delivery_method, subtotal, delivery_fee, total, currency,
               payment_status, order_status, created_at
-       FROM orders
-       WHERE id = ?
-       LIMIT 1`,
+       FROM orders WHERE id = ? LIMIT 1`,
     )
     .bind(orderId)
     .first<OrderRow>()
 
-  if (!order) {
-    return new Response("Order not found.", { status: 404 })
-  }
+  if (!order) return new Response("Order not found.", { status: 404 })
+  if (order.payment_status !== "paid") return new Response("Invoice is available after payment is confirmed.", { status: 409 })
 
-  const customerPhoneInput = request.headers.get("x-customer-phone") || new URL(request.url).searchParams.get("phone") || ""
-  const adminKey = request.headers.get("x-admin-key") || request.headers.get("authorization")?.replace("Bearer ", "") || ""
-  const isAdmin = Boolean(adminKey && process.env.ADMIN_SECRET_KEY && adminKey === process.env.ADMIN_SECRET_KEY)
+  const admin = verifyAdminKey(request)
+  const phoneInput = request.headers.get("x-customer-phone") || new URL(request.url).searchParams.get("phone") || ""
+  const phoneValidation = phoneInput ? validateIndianMobile(phoneInput) : null
+  const verifiedCustomer = Boolean(phoneValidation?.isValid && phoneValidation.cleanPhone === sanitizePhone(order.customer_phone))
+  if (!admin && !verifiedCustomer) return new Response("Mobile number verification required to access the invoice.", { status: 403 })
 
-  const dbPhoneLast10 = sanitizePhone(order.customer_phone || "")
-
-  let isVerified = isAdmin
-  if (!isVerified && customerPhoneInput) {
-    const phoneValidation = validateIndianMobile(customerPhoneInput)
-    if (phoneValidation.isValid && phoneValidation.cleanPhone === dbPhoneLast10) {
-      isVerified = true
-    }
-  }
-
-  if (!isVerified) {
-    return new Response("Mobile number verification required to access tax invoice.", { status: 403 })
-  }
-
-  const itemsResult = await db
-    .prepare(
-      `SELECT product_name, weight, quantity, unit_price, line_total
-       FROM order_items
-       WHERE order_id = ?`,
-    )
+  const items = (await db
+    .prepare("SELECT product_name, weight, quantity, unit_price, line_total FROM order_items WHERE order_id = ? ORDER BY id")
     .bind(orderId)
-    .all<OrderItemRow>()
-
-  const items = itemsResult.results ?? []
-
-  const invoiceNumber = formatInvoiceNumber(order.id)
-  const invoiceDate = new Date(order.created_at).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  })
-  const invoiceTime = new Date(order.created_at).toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-
-  const { taxableValue, totalGst, cgst, sgst } = calculateGSTBreakdown(order.total)
-  const maskedPhone = maskPhone(order.customer_phone)
+    .all<ItemRow>()).results ?? []
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
   const margin = 14
   const pageWidth = 210
-  const contentWidth = pageWidth - margin * 2
+  const width = pageWidth - margin * 2
+  const invoiceDate = new Date(order.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+  const invoiceTime = new Date(order.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
 
-  doc.setDrawColor(226, 232, 240)
-  doc.rect(margin, 10, contentWidth, 277)
-
-  doc.setFillColor(248, 250, 252)
-  doc.rect(margin, 10, contentWidth, 34, "F")
-  doc.setDrawColor(203, 213, 225)
-  doc.line(margin, 44, margin + contentWidth, 44)
+  doc.setDrawColor(220, 215, 205)
+  doc.rect(margin, 10, width, 277)
+  doc.setFillColor(250, 247, 241)
+  doc.rect(margin, 10, width, 34, "F")
+  doc.line(margin, 44, margin + width, 44)
 
   doc.setFont("helvetica", "bold")
   doc.setFontSize(15)
-  doc.setTextColor(30, 41, 59)
-  doc.text("SWADAM FOODS", margin + 5, 18)
-
+  doc.setTextColor(45, 38, 30)
+  doc.text(business.name.toUpperCase(), margin + 5, 18)
   doc.setFont("helvetica", "normal")
   doc.setFontSize(7.5)
-  doc.setTextColor(71, 85, 105)
-  doc.text("Authentic Homemade Delicacies & Instant Premixes", margin + 5, 23)
-  doc.text("B-10, Ruturang Society, Aranyeshwar, Pune 411009", margin + 5, 27)
-  doc.setFont("helvetica", "bold")
-  doc.text("GSTIN: 27AOCPD1930N1Z1 | FSSAI: 21524018002620 | MSME: UDYAM-MH-26-1188295", margin + 5, 31)
-  doc.setFont("helvetica", "normal")
-  doc.text("WhatsApp: +91 88888 51522 | Email: contact@swadamfoods.eu.cc", margin + 5, 35)
-  doc.text("FSSAI Registered Category: 2106 90 99 (Food Preparations)", margin + 5, 39)
+  doc.setTextColor(85, 75, 65)
+  doc.text("Authentic Indian snacks & instant premixes", margin + 5, 23)
+  doc.text(business.address, margin + 5, 27)
+  doc.text(`FSSAI: ${business.fssai} | WhatsApp: ${business.phoneDisplay}`, margin + 5, 31)
+  doc.text(business.email, margin + 5, 35)
 
-  const rightColX = margin + 115
-  doc.setFillColor(234, 88, 12)
-  doc.roundedRect(rightColX, 14, 62, 7, 1.5, 1.5, "F")
+  const right = margin + 116
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(8.5)
-  doc.setTextColor(255, 255, 255)
-  doc.text("TAX INVOICE / BILL OF SUPPLY", rightColX + 31, 18.8, { align: "center" })
-
+  doc.setFontSize(11)
+  doc.setTextColor(45, 38, 30)
+  doc.text("ORDER INVOICE", right, 19)
   doc.setFont("helvetica", "normal")
   doc.setFontSize(7.5)
-  doc.setTextColor(51, 65, 85)
-  doc.text("Invoice No: " + invoiceNumber, rightColX, 26)
-  doc.text("Order ID: " + order.id, rightColX, 30)
-  doc.text("Date: " + invoiceDate + " " + invoiceTime, rightColX, 34)
-  doc.text("Place of Supply: Maharashtra (27)", rightColX, 38)
-  doc.text("Reverse Charge: No", rightColX, 42)
+  doc.setTextColor(70, 65, 60)
+  doc.text(`Invoice No: ${formatInvoiceNumber(order.id)}`, right, 25)
+  doc.text(`Order ID: ${order.id}`, right, 29)
+  doc.text(`Date: ${invoiceDate} ${invoiceTime}`, right, 33)
+  doc.text(`Payment: PhonePe`, right, 37)
+  doc.text("Paid", right, 41)
 
-  let curY = 50
+  let y = 51
   doc.setFont("helvetica", "bold")
   doc.setFontSize(8)
-  doc.setTextColor(100, 116, 139)
-  doc.text("BILLED & SHIPPED TO", margin + 5, curY)
-  doc.text("FULFILLMENT & PAYMENT", rightColX, curY)
-
-  curY += 4.5
+  doc.setTextColor(100, 90, 80)
+  doc.text("CUSTOMER", margin + 5, y)
+  doc.text("DELIVERY", right, y)
+  y += 5
   doc.setFont("helvetica", "bold")
   doc.setFontSize(9)
-  doc.setTextColor(15, 23, 42)
-  doc.text(order.customer_name, margin + 5, curY)
-  doc.text(order.delivery_method === "porter" ? "Porter Delivery" : "Pune Home Delivery", rightColX, curY)
-
-  curY += 4
+  doc.setTextColor(30, 26, 22)
+  doc.text(order.customer_name, margin + 5, y)
+  doc.text(order.delivery_method === "porter" ? "Outside Pune · Porter" : "Pune · Home delivery", right, y)
+  y += 4
   doc.setFont("helvetica", "normal")
   doc.setFontSize(8)
-  doc.setTextColor(51, 65, 85)
-  const addrLines = doc.splitTextToSize(order.customer_address + ", Pune - " + order.pincode, 95)
-  doc.text(addrLines, margin + 5, curY)
-  doc.text("Payment: PhonePe Payment Gateway", rightColX, curY)
-  doc.text("Payment Status: " + (order.payment_status === "paid" ? "PAID IN FULL" : "PENDING"), rightColX, curY + 4)
-  doc.text("Delivery Fee: FREE", rightColX, curY + 8)
+  doc.setTextColor(70, 65, 60)
+  const addressLines = doc.splitTextToSize(`${order.customer_address}, ${order.pincode}`, 96)
+  doc.text(addressLines, margin + 5, y)
+  doc.text(`Phone: ${maskPhone(order.customer_phone)}`, margin + 5, y + addressLines.length * 4 + 2)
 
-  curY += Math.max(addrLines.length * 4 + 4, 14)
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(7.5)
-  doc.text("Phone: " + maskedPhone, margin + 5, curY - 2)
-
-  doc.setDrawColor(203, 213, 225)
-  doc.line(margin, curY, margin + contentWidth, curY)
-
-  curY += 5
-  doc.setFillColor(241, 245, 249)
-  doc.rect(margin, curY, contentWidth, 7, "F")
+  y += Math.max(addressLines.length * 4 + 9, 18)
+  doc.line(margin, y, margin + width, y)
+  y += 6
+  doc.setFillColor(245, 242, 236)
+  doc.rect(margin, y, width, 7, "F")
   doc.setFont("helvetica", "bold")
   doc.setFontSize(7.5)
-  doc.setTextColor(30, 41, 59)
-  doc.text("#", margin + 3, curY + 4.5)
-  doc.text("Item Description", margin + 12, curY + 4.5)
-  doc.text("HSN", margin + 82, curY + 4.5)
-  doc.text("Pack", margin + 105, curY + 4.5)
-  doc.text("Qty", margin + 125, curY + 4.5)
-  doc.text("Rate", margin + 145, curY + 4.5, { align: "right" })
-  doc.text("Total (Rs)", margin + contentWidth - 4, curY + 4.5, { align: "right" })
+  doc.setTextColor(45, 38, 30)
+  doc.text("#", margin + 3, y + 4.5)
+  doc.text("Item", margin + 12, y + 4.5)
+  doc.text("Pack", margin + 100, y + 4.5)
+  doc.text("Qty", margin + 124, y + 4.5)
+  doc.text("Rate", margin + 151, y + 4.5, { align: "right" })
+  doc.text("Amount", margin + width - 4, y + 4.5, { align: "right" })
+  y += 7
 
-  curY += 7
-  items.forEach((it, i) => {
-    doc.setFont("helvetica", "normal")
+  items.forEach((item, index) => {
+    doc.setFont("helvetica", index === 0 ? "bold" : "normal")
     doc.setFontSize(8)
-    doc.setTextColor(15, 23, 42)
-    doc.text(String(i + 1), margin + 3, curY + 5)
-    doc.setFont("helvetica", "bold")
-    doc.text(it.product_name, margin + 12, curY + 5)
+    doc.setTextColor(35, 30, 25)
+    doc.text(String(index + 1), margin + 3, y + 5)
+    doc.text(item.product_name, margin + 12, y + 5)
     doc.setFont("helvetica", "normal")
-    doc.text("2106 90 99", margin + 82, curY + 5)
-    doc.text(it.weight, margin + 105, curY + 5)
-    doc.text(String(it.quantity), margin + 125, curY + 5)
-    doc.text("Rs. " + it.unit_price, margin + 145, curY + 5, { align: "right" })
+    doc.text(item.weight, margin + 100, y + 5)
+    doc.text(String(item.quantity), margin + 124, y + 5)
+    doc.text(`Rs. ${item.unit_price.toFixed(2)}`, margin + 151, y + 5, { align: "right" })
     doc.setFont("helvetica", "bold")
-    doc.text("Rs. " + it.line_total, margin + contentWidth - 4, curY + 5, { align: "right" })
-    curY += 7
-    doc.setDrawColor(241, 245, 249)
-    doc.line(margin, curY, margin + contentWidth, curY)
+    doc.text(`Rs. ${item.line_total.toFixed(2)}`, margin + width - 4, y + 5, { align: "right" })
+    y += 8
+    doc.setDrawColor(238, 234, 227)
+    doc.line(margin, y, margin + width, y)
   })
 
-  curY += 6
-  doc.setDrawColor(203, 213, 225)
-  doc.line(margin, curY, margin + contentWidth, curY)
-
-  curY += 6
+  y += 8
   doc.setFont("helvetica", "normal")
   doc.setFontSize(8)
-  doc.setTextColor(71, 85, 105)
-  doc.text("Amount in Words:", margin + 5, curY)
+  doc.setTextColor(75, 68, 60)
+  doc.text("Amount in Words:", margin + 5, y)
   doc.setFont("helvetica", "bold")
-  doc.setTextColor(15, 23, 42)
-  doc.text(numberToWordsINR(order.total), margin + 5, curY + 4.5)
+  doc.setTextColor(35, 30, 25)
+  doc.text(numberToWordsINR(order.total), margin + 5, y + 5)
 
-  const totX = margin + 120
+  const totalX = margin + 127
   doc.setFont("helvetica", "normal")
-  doc.setFontSize(8)
-  doc.setTextColor(71, 85, 105)
-  doc.text("Subtotal:", totX, curY)
-  doc.text("Rs. " + order.subtotal.toFixed(2), margin + contentWidth - 4, curY, { align: "right" })
-
-  doc.text("CGST (2.5%):", totX, curY + 4)
-  doc.text("Rs. " + cgst.toFixed(2), margin + contentWidth - 4, curY + 4, { align: "right" })
-
-  doc.text("SGST (2.5%):", totX, curY + 8)
-  doc.text("Rs. " + sgst.toFixed(2), margin + contentWidth - 4, curY + 8, { align: "right" })
-
-  doc.text("Delivery Fee:", totX, curY + 12)
-  doc.text(order.delivery_fee === 0 ? "FREE" : "Rs. " + order.delivery_fee.toFixed(2), margin + contentWidth - 4, curY + 12, { align: "right" })
-
-  doc.setFillColor(248, 250, 252)
-  doc.rect(totX - 2, curY + 15, contentWidth - 118, 8, "F")
+  doc.setTextColor(75, 68, 60)
+  doc.text("Subtotal:", totalX, y)
+  doc.text(`Rs. ${order.subtotal.toFixed(2)}`, margin + width - 4, y, { align: "right" })
+  doc.text("Delivery:", totalX, y + 5)
+  doc.text(order.delivery_fee === 0 ? "FREE" : `Rs. ${order.delivery_fee.toFixed(2)}`, margin + width - 4, y + 5, { align: "right" })
+  doc.setFillColor(250, 247, 241)
+  doc.rect(totalX - 3, y + 10, width - 122, 9, "F")
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(9.5)
-  doc.setTextColor(15, 23, 42)
-  doc.text("Grand Total:", totX, curY + 20.5)
-  doc.text("Rs. " + order.total.toFixed(2), margin + contentWidth - 4, curY + 20.5, { align: "right" })
+  doc.setFontSize(10)
+  doc.setTextColor(35, 30, 25)
+  doc.text("Total Paid:", totalX, y + 16)
+  doc.text(`Rs. ${order.total.toFixed(2)}`, margin + width - 4, y + 16, { align: "right" })
 
   doc.setFont("helvetica", "normal")
   doc.setFontSize(7.5)
-  doc.setTextColor(100, 116, 139)
-  doc.text("Payment Verified via PhonePe Payment Gateway (RBI Authorized)", margin + 5, 270)
-  doc.text("For SWADAM FOODS — Authorised Signatory", margin + contentWidth - 4, 270, { align: "right" })
-  doc.text("This is an authentic, computer-generated tax invoice issued by Swadam Foods under GST rules.", margin + contentWidth / 2, 280, { align: "center" })
+  doc.setTextColor(100, 92, 84)
+  doc.text("Payment confirmed through PhonePe Payment Gateway.", margin + 5, 268)
+  doc.text("Thank you for ordering from Swadam Foods.", margin + 5, 274)
+  doc.text("This document is an order invoice. Tax treatment should follow the applicable registration and invoice requirements.", margin + width / 2, 282, { align: "center" })
 
-  const pdfBytes = doc.output("arraybuffer")
-
-  return new Response(pdfBytes, {
-    status: 200,
+  return new Response(doc.output("arraybuffer"), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="Invoice-${order.id}.pdf"`,
-      "Cache-Control": "public, max-age=3600, s-maxage=3600",
+      "Cache-Control": "private, no-store",
     },
   })
 }

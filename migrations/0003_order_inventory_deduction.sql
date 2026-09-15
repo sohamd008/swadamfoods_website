@@ -1,4 +1,7 @@
-ALTER TABLE orders ADD COLUMN inventory_deducted INTEGER NOT NULL DEFAULT 0 CHECK (inventory_deducted IN (0, 1));
+PRAGMA foreign_keys = ON;
 
-CREATE INDEX IF NOT EXISTS idx_orders_inventory_deducted
-  ON orders (inventory_deducted, payment_status);
+CREATE TABLE IF NOT EXISTS inventory_deductions (
+  order_id TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+);

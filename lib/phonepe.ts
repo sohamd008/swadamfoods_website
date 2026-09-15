@@ -59,26 +59,21 @@ function required(value: string | undefined, name: string) {
 async function fetchJson<T>(input: RequestInfo | URL, init: RequestInit): Promise<T> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 12000)
-  const signal = init.signal ?? controller.signal
-
   try {
-    const response = await fetch(input, { ...init, signal })
+    const response = await fetch(input, { ...init, signal: init.signal ?? controller.signal })
     const text = await response.text()
     let data: unknown = null
-
     try {
       data = text ? JSON.parse(text) : null
     } catch {
       throw new Error(`PhonePe returned an invalid response (${response.status}).`)
     }
-
     if (!response.ok) {
       const message = typeof data === "object" && data && "message" in data
         ? String((data as { message?: unknown }).message ?? "")
         : ""
       throw new Error(message || `PhonePe request failed (${response.status}).`)
     }
-
     return data as T
   } finally {
     clearTimeout(timeout)
@@ -102,42 +97,30 @@ export async function getPhonePeAccessToken(forceRefresh = false): Promise<strin
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: form.toString(),
   })
-
   if (!token.access_token) throw new Error("PhonePe did not return an access token.")
 
   const expiresAt = typeof token.expires_at === "number"
     ? (token.expires_at < 10000000000 ? token.expires_at * 1000 : token.expires_at)
     : now + (token.expires_in ?? 3600) * 1000
-
   cachedToken = { token: token.access_token, expiresAt }
   return token.access_token
 }
 
-export async function createPhonePePayment(params: {
-  merchantOrderId: string
-  orderId?: string
-  amountInRupees: number
-  phone: string
-}) {
+export async function createPhonePePayment(params: { merchantOrderId: string; orderId?: string; amountInRupees: number; phone: string }) {
   const token = await getPhonePeAccessToken()
   const cleanOrderId = params.orderId || params.merchantOrderId
   const digits = params.phone.replace(/\D/g, "")
   const cleanPhone = digits.length >= 10 ? digits.slice(-10) : ""
-
   const body: Record<string, unknown> = {
     merchantOrderId: params.merchantOrderId,
     amount: Math.round(params.amountInRupees * 100),
     expireAfter: PAYMENT_EXPIRY_SECONDS,
     paymentFlow: {
       type: "PG_CHECKOUT",
-      merchantUrls: {
-        redirectUrl: `https://swadamfoods.eu.cc/checkout?payment=phonepe&orderId=${encodeURIComponent(cleanOrderId)}`,
-      },
+      merchantUrls: { redirectUrl: `https://swadamfoods.eu.cc/checkout?payment=phonepe&orderId=${encodeURIComponent(cleanOrderId)}` },
     },
   }
-
   if (cleanPhone.length === 10) body.prefillUserLoginDetails = { phoneNumber: cleanPhone }
-
   return fetchJson<PhonePePaymentResponse>(`${PHONEPE_API_BASE}/checkout/v2/pay`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `O-Bearer ${token}` },
@@ -148,20 +131,13 @@ export async function createPhonePePayment(params: {
 export async function getPhonePeOrderStatus(merchantOrderId: string): Promise<PhonePeStatusResponse> {
   let token = await getPhonePeAccessToken()
   const url = `${PHONEPE_API_BASE}/checkout/v2/order/${encodeURIComponent(merchantOrderId)}/status?details=false&errorContext=true`
-
   try {
-    return await fetchJson<PhonePeStatusResponse>(url, {
-      method: "GET",
-      headers: { "Content-Type": "application/json", Authorization: `O-Bearer ${token}` },
-    })
+    return await fetchJson<PhonePeStatusResponse>(url, { method: "GET", headers: { "Content-Type": "application/json", Authorization: `O-Bearer ${token}` } })
   } catch (error) {
     const message = error instanceof Error ? error.message : ""
     if (!message.includes("401") && !message.toLowerCase().includes("unauthorized")) throw error
     token = await getPhonePeAccessToken(true)
-    return fetchJson<PhonePeStatusResponse>(url, {
-      method: "GET",
-      headers: { "Content-Type": "application/json", Authorization: `O-Bearer ${token}` },
-    })
+    return fetchJson<PhonePeStatusResponse>(url, { method: "GET", headers: { "Content-Type": "application/json", Authorization: `O-Bearer ${token}` } })
   }
 }
 

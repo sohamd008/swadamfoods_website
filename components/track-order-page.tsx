@@ -1,689 +1,176 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
-import Link from "next/link"
-import Image from "next/image"
-import {
-  Search,
-  Phone,
-  ShieldCheck,
-  ArrowLeft,
-  RefreshCw,
-  AlertCircle,
-  Clock,
-  Truck,
-  ChefHat,
-  PackageCheck,
-  CheckCircle2,
-  Copy,
-  Check,
-  FileText,
-  MessageSquare,
-  MapPin,
-  Lock,
-  ShoppingBag,
-} from "lucide-react"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { PhonePeIcon } from "@/components/phonepe-logo"
 import dynamic from "next/dynamic"
-import { WHATSAPP_NUMBER, products } from "@/lib/products"
+import Image from "next/image"
+import Link from "next/link"
+import { useSearchParams } from "next/navigation"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { AlertCircle, ArrowLeft, Check, CheckCircle2, ChefHat, Clock, Copy, FileText, Lock, PackageCheck, Phone, RefreshCw, Search, ShieldCheck, ShoppingBag, Truck, X } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { useCart } from "@/lib/cart-context"
+import { WHATSAPP_NUMBER, products } from "@/lib/products"
 import { sanitizePhone, validateIndianMobile } from "@/lib/phone"
 
-const TaxInvoiceModal = dynamic(
-  () => import("@/components/tax-invoice").then((mod) => mod.TaxInvoiceModal),
-  { ssr: false }
-)
+const TaxInvoiceModal = dynamic(() => import("@/components/tax-invoice").then((mod) => mod.TaxInvoiceModal), { ssr: false })
 
-type OrderItem = {
-  productName: string
-  weight: string
-  quantity: number
-  unitPrice: number
-  lineTotal: number
-}
-
+type OrderItem = { productName: string; weight: string; quantity: number; unitPrice: number; lineTotal: number }
 type OrderDetails = {
-  id: string
-  customerName: string
-  customerPhoneMasked: string
-  customerPhone: string
-  customerAddress: string
-  pincode: string
-  deliveryMethod: string
-  subtotal: number
-  deliveryFee: number
-  total: number
-  currency: string
-  paymentStatus: string
-  orderStatus: string
-  createdAt: string
-  updatedAt: string
-  items: OrderItem[]
+  id: string; customerName: string; customerPhoneMasked: string; customerPhone: string; customerAddress: string; pincode: string
+  deliveryMethod: string; subtotal: number; deliveryFee: number; total: number; currency: string; paymentStatus: string; orderStatus: string
+  createdAt: string; updatedAt: string; items: OrderItem[]
 }
+type Toast = { type: "info" | "success" | "error"; message: string }
 
 const STAGES = [
-  {
-    id: "received",
-    label: "Order Received",
-    subtitle: "Received & logged into system",
-    icon: Clock,
-  },
-  {
-    id: "paid",
-    label: "Payment Confirmed",
-    subtitle: "Verified via PhonePe Payment Gateway",
-    icon: ShieldCheck,
-  },
-  {
-    id: "preparing",
-    label: "Kitchen Preparation",
-    subtitle: "Freshly handcrafting delicacies",
-    icon: ChefHat,
-  },
-  {
-    id: "packed",
-    label: "Packed & Sealed",
-    subtitle: "Sealed & ready for dispatch",
-    icon: PackageCheck,
-  },
-  {
-    id: "shipped",
-    label: "Out for Delivery",
-    subtitle: "Delivery partner on the way",
-    icon: Truck,
-  },
-  {
-    id: "delivered",
-    label: "Delivered",
-    subtitle: "Delivered to your doorstep!",
-    icon: CheckCircle2,
-  },
-]
+  { label: "Order Received", icon: Clock },
+  { label: "Payment Confirmed", icon: ShieldCheck },
+  { label: "Preparing", icon: ChefHat },
+  { label: "Packed", icon: PackageCheck },
+  { label: "Out for Delivery", icon: Truck },
+  { label: "Delivered", icon: CheckCircle2 },
+] as const
 
-export function TrackOrderPage({
-  initialOrderId: initialOrderIdProp,
-  initialPhone: initialPhoneProp,
-}: {
-  initialOrderId?: string
-  initialPhone?: string
-} = {}) {
-  const { addItem, openCart, clear: clearCart } = useCart()
+function stageIndex(order: Pick<OrderDetails, "orderStatus" | "paymentStatus">) {
+  switch (order.orderStatus) {
+    case "delivered": return 5
+    case "shipped": return 4
+    case "packed": return 3
+    case "preparing": return 2
+    case "accepted": return 1
+    default: return order.paymentStatus === "paid" ? 1 : 0
+  }
+}
+
+function relativeTime(value: string) {
+  const timestamp = new Date(value).getTime()
+  if (!Number.isFinite(timestamp)) return value
+  const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000))
+  if (minutes < 1) return "Just now"
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
+}
+
+export function TrackOrderPage({ initialOrderId: initialOrderIdProp, initialPhone: initialPhoneProp }: { initialOrderId?: string; initialPhone?: string } = {}) {
   const searchParams = useSearchParams()
-  const initialOrderId = initialOrderIdProp || searchParams?.get("orderId") || searchParams?.get("id") || ""
-  const initialPhone = initialPhoneProp || searchParams?.get("phone") || searchParams?.get("mobile") || ""
-
-  const [orderId, setOrderId] = useState(initialOrderId.toUpperCase())
-  const [phone, setPhone] = useState(initialPhone)
-  const [loading, setLoading] = useState(false)
-  const [refreshing, setRefreshing] = useState(false)
-  const [error, setError] = useState("")
+  const { addItem, openCart, clear: clearCart } = useCart()
+  const initialOrderId = useMemo(() => (initialOrderIdProp || searchParams?.get("orderId") || searchParams?.get("id") || "").trim().toUpperCase(), [initialOrderIdProp, searchParams])
+  const initialPhone = useMemo(() => initialPhoneProp || searchParams?.get("phone") || searchParams?.get("mobile") || "", [initialPhoneProp, searchParams])
+  const [orderId, setOrderId] = useState(initialOrderId)
+  const [phone, setPhone] = useState(sanitizePhone(initialPhone))
   const [order, setOrder] = useState<OrderDetails | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [toast, setToast] = useState<Toast | null>(null)
   const [copied, setCopied] = useState(false)
-  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false)
+  const [invoiceOpen, setInvoiceOpen] = useState(false)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const autoChecked = useRef(false)
+
+  const notify = useCallback((type: Toast["type"], message: string, duration = 5000) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setToast({ type, message })
+    toastTimer.current = setTimeout(() => setToast(null), duration)
+  }, [])
 
   useEffect(() => {
-    if (initialOrderId) {
-      setOrderId(initialOrderId.toUpperCase())
-    }
-    if (initialPhone) {
-      setPhone(initialPhone)
-    }
+    setOrderId(initialOrderId)
+    setPhone(sanitizePhone(initialPhone))
   }, [initialOrderId, initialPhone])
 
-  useEffect(() => {
-    const cleanId = initialOrderId.trim().toUpperCase()
-    let checkPhone = initialPhone
-    if (!checkPhone && cleanId && typeof window !== "undefined") {
-      checkPhone =
-        localStorage.getItem("swadam_track_verified_" + cleanId) ||
-        sessionStorage.getItem("swadam_track_verified_" + cleanId) ||
-        ""
-      if (checkPhone) {
-        setPhone(checkPhone)
-      }
-    }
+  const verify = useCallback(async (idValue = orderId, phoneValue = phone, silent = false) => {
+    const cleanId = idValue.trim().toUpperCase()
+    const phoneCheck = validateIndianMobile(phoneValue)
+    if (!cleanId) { if (!silent) notify("error", "Please enter your Order ID."); return false }
+    if (!phoneCheck.isValid) { if (!silent) notify("error", phoneCheck.error || "Please enter a valid mobile number."); return false }
 
-    const phoneValidation = validateIndianMobile(checkPhone)
-    if (cleanId && phoneValidation.isValid) {
-      const autoVerify = async () => {
-        setLoading(true)
-        setError("")
-        try {
-          const res = await fetch("/api/orders/track", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderId: cleanId, phone: phoneValidation.cleanPhone }),
-          })
-          const data = await res.json()
-          if (!res.ok) {
-            setError(data.error || "Verification failed. Please check your details.")
-            return
-          }
-          try {
-            localStorage.setItem("swadam_track_verified_" + cleanId, phoneValidation.cleanPhone)
-            sessionStorage.setItem("swadam_track_verified_" + cleanId, phoneValidation.cleanPhone)
-          } catch {}
-          setOrder(data.order)
-          if (data.order?.paymentStatus === "paid") {
-            clearCart()
-          }
-          setError("")
-        } catch {
-          setError("Failed to connect to the server. Please check your internet connection.")
-        } finally {
-          setLoading(false)
-        }
-      }
-      autoVerify()
-    }
-  }, [initialOrderId, initialPhone])
-
-  const handleVerify = async (e?: React.FormEvent, isSilentRefresh = false) => {
-    if (e) e.preventDefault()
-
-    const cleanId = orderId.trim().toUpperCase()
-    const phoneValidation = validateIndianMobile(phone)
-
-    if (!cleanId) {
-      setError("Please enter your Order ID.")
-      return
-    }
-
-    if (!phoneValidation.isValid) {
-      setError(phoneValidation.error || "Please enter a valid 10-digit mobile number.")
-      return
-    }
-
-    const cleanPhone = phoneValidation.cleanPhone
-
-    if (isSilentRefresh) {
-      setRefreshing(true)
-    } else {
-      setLoading(true)
-    }
-    setError("")
-
+    setLoading(true)
     try {
-      const res = await fetch("/api/orders/track", {
+      const response = await fetch("/api/orders/track", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: cleanId, phone: cleanPhone }),
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({ orderId: cleanId, phone: phoneCheck.cleanPhone }),
       })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error || "Verification failed. Please check your details.")
-        return
-      }
-
-      try {
-        localStorage.setItem("swadam_track_verified_" + cleanId, cleanPhone)
-        sessionStorage.setItem("swadam_track_verified_" + cleanId, cleanPhone)
-      } catch {}
-
+      const data = (await response.json().catch(() => null)) as { error?: string; order?: OrderDetails } | null
+      if (!response.ok || !data?.order) throw new Error(data?.error || "We couldn't verify that order.")
+      setOrderId(cleanId)
+      setPhone(phoneCheck.cleanPhone)
       setOrder(data.order)
-      if (data.order?.paymentStatus === "paid") {
-        clearCart()
-      }
-      setError("")
-    } catch {
-      setError("Failed to connect to the server. Please check your internet connection.")
+      try {
+        localStorage.setItem(`swadam_track_verified_${cleanId}`, phoneCheck.cleanPhone)
+        sessionStorage.setItem(`swadam_track_verified_${cleanId}`, phoneCheck.cleanPhone)
+      } catch {}
+      if (data.order.paymentStatus === "paid") clearCart()
+      if (!silent) notify("success", `Order ${data.order.id} verified.`, 3000)
+      return true
+    } catch (error) {
+      if (!silent) notify("error", error instanceof Error ? error.message : "We couldn't verify the order right now.")
+      return false
     } finally {
       setLoading(false)
-      if (isSilentRefresh) {
-        setTimeout(() => setRefreshing(false), 500)
-      }
     }
-  }
+  }, [clearCart, notify, orderId, phone])
 
-  const copyOrderId = () => {
+  useEffect(() => {
+    if (autoChecked.current || !initialOrderId) return
+    autoChecked.current = true
+    let savedPhone = sanitizePhone(initialPhone)
+    try {
+      if (!savedPhone) savedPhone = sanitizePhone(localStorage.getItem(`swadam_track_verified_${initialOrderId}`) || sessionStorage.getItem(`swadam_track_verified_${initialOrderId}`) || "")
+    } catch {}
+    if (savedPhone) void verify(initialOrderId, savedPhone, true)
+  }, [initialOrderId, initialPhone, verify])
+
+  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current) }, [])
+
+  const currentStage = order ? stageIndex(order) : 0
+  const whatsappMessage = useMemo(() => order
+    ? `Namaste ${order.customerName}! Your Swadam Foods order *${order.id}* is currently *${order.orderStatus}*.\n\nTrack order: https://swadamfoods.eu.cc/track?orderId=${encodeURIComponent(order.id)}`
+    : "Namaste Swadam Foods! I need help tracking my order.", [order])
+
+  const copyOrderId = useCallback(async () => {
     if (!order) return
-    navigator.clipboard.writeText(order.id)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+    try {
+      await navigator.clipboard.writeText(order.id)
+      setCopied(true)
+      notify("success", "Order ID copied.", 2200)
+      window.setTimeout(() => setCopied(false), 2200)
+    } catch {
+      notify("error", "Couldn't copy the Order ID.")
+    }
+  }, [notify, order])
 
-  const getStageIndex = (orderStatus: string, paymentStatus: string) => {
-    if (orderStatus === "delivered") return 5
-    if (orderStatus === "shipped") return 4
-    if (orderStatus === "packed") return 3
-    if (orderStatus === "preparing") return 2
-    if (paymentStatus === "paid" || orderStatus === "accepted") return 1
-    return 0
-  }
-
-  const handleReset = () => {
+  const reset = useCallback(() => {
     setOrder(null)
-    setError("")
-  }
-
-  const currentStageIdx = order ? getStageIndex(order.orderStatus, order.paymentStatus) : 0
-  const isCancelled = order?.orderStatus === "cancelled"
-
-  const whatsappMessage = order
-    ? encodeURIComponent(`Namaste Swadam Foods! I am inquiring about my order *${order.id}* (Total: Rs. ${order.total}).`)
-    : encodeURIComponent(`Namaste Swadam Foods! I need help tracking my order.`)
+    setToast(null)
+    setCopied(false)
+    setInvoiceOpen(false)
+  }, [])
 
   return (
-    <div className="min-h-screen bg-background pb-16 pt-4">
-      <header className="sticky top-3 z-40 mx-auto max-w-4xl px-4 sm:px-6">
-        <div className="glass-header flex h-16 items-center justify-between gap-4 rounded-full px-4 sm:px-6">
-          <Link
-            href="/"
-            className="flex min-w-0 items-center gap-2.5 sm:gap-3 transition-transform hover:scale-[1.02] active:scale-95"
-          >
-            <span className="flex items-center justify-center overflow-hidden rounded-2xl bg-[#f7f2e7]/90 p-1 shadow-sm ring-1 ring-white/60">
-              <Image
-                src="/images/swadam-logo.webp"
-                alt="Swadam Foods"
-                width={59}
-                height={32}
-                priority
-                className="h-8 w-auto shrink-0"
-              />
-            </span>
-            <div className="flex flex-col min-w-0">
-              <span className="font-heading font-serif text-base font-bold tracking-tight text-foreground truncate">
-                Swadam Foods
-              </span>
-              <span className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase truncate">
-                Order Tracking
-              </span>
-            </div>
-          </Link>
-
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/80 px-4 py-2 text-xs font-semibold text-foreground transition-all hover:bg-card active:scale-95"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Store</span>
-            </Link>
-          </div>
-        </div>
-      </header>
-
+    <div className="ambient-bg min-h-screen pb-16 pt-4">
+      {toast && <div role={toast.type === "error" ? "alert" : "status"} aria-live="polite" className="fixed inset-x-0 top-3 z-[1000] flex justify-center px-3 sm:top-5"><div className={`flex w-full max-w-xl items-start gap-3 rounded-2xl border px-4 py-3.5 shadow-2xl backdrop-blur-2xl ${toast.type === "error" ? "border-destructive/25 bg-destructive/10" : toast.type === "success" ? "border-emerald-500/25 bg-emerald-500/10" : "border-primary/20 bg-card/95"}`}>{toast.type === "error" ? <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" /> : <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />}<p className="min-w-0 flex-1 text-sm font-semibold text-foreground">{toast.message}</p><button type="button" onClick={() => setToast(null)} aria-label="Dismiss" className="rounded-full p-1 text-muted-foreground hover:bg-secondary"><X className="h-4 w-4" /></button></div></div>}
+      <header className="sticky top-3 z-40 mx-auto max-w-4xl px-4 sm:px-6"><div className="glass-header flex h-16 items-center justify-between gap-4 rounded-full px-4 sm:px-6"><Link href="/" className="flex min-w-0 items-center gap-2.5"><span className="flex items-center justify-center overflow-hidden rounded-2xl bg-[#f7f2e7]/90 p-1"><Image src="/images/swadam-logo.webp" alt="Swadam Foods" width={59} height={32} priority className="h-8 w-auto" /></span><div className="min-w-0"><p className="truncate text-base font-bold text-foreground">Swadam Foods</p><p className="truncate text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Order Tracking</p></div></Link><div className="flex items-center gap-2"><ThemeToggle /><Link href="/" className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card/80 px-4 py-2 text-xs font-semibold text-foreground hover:bg-card"><ArrowLeft className="h-3.5 w-3.5" /><span className="hidden sm:inline">Store</span></Link></div></div></header>
       <main className="mx-auto max-w-4xl px-4 pt-6 sm:px-6">
         {!order ? (
-          <div className="mx-auto max-w-lg space-y-6 pt-4">
-            <div className="rounded-2xl border border-border bg-card p-6 sm:p-9 shadow-sm">
-              <div className="flex items-center gap-3">
-                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary text-primary">
-                  <Truck className="h-6 w-6" />
-                </span>
-                <div>
-                  <h1 className="font-heading font-serif text-2xl font-bold text-foreground">Track Your Order</h1>
-                  <p className="text-xs text-muted-foreground">Verify identity with your mobile number</p>
-                </div>
-              </div>
-
-              <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-                Enter the Order ID from your receipt or confirmation message, along with the 10-digit mobile number used during checkout.
-              </p>
-
-              <form onSubmit={(e) => handleVerify(e)} className="mt-6 space-y-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="order-id" className="text-xs font-bold uppercase tracking-wide text-foreground">
-                    Order ID
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="order-id"
-                      type="text"
-                      value={orderId}
-                      onChange={(e) => setOrderId(e.target.value.toUpperCase())}
-                      placeholder="SWAD-1001 or SWAD-XXXX"
-                      className="w-full rounded-xl border border-input bg-background px-4 py-3.5 font-mono text-base sm:text-sm font-bold text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
-                      autoComplete="off"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label htmlFor="mobile-number" className="text-xs font-bold uppercase tracking-wide text-foreground">
-                    Mobile Number
-                  </label>
-                  <div className="relative flex items-center">
-                    <span className="absolute left-4 flex items-center gap-1 text-xs font-bold text-muted-foreground">
-                      <Phone className="h-3.5 w-3.5" />
-                      <span>+91</span>
-                    </span>
-                    <input
-                      id="mobile-number"
-                      type="tel"
-                      inputMode="numeric"
-                      pattern="[6-9][0-9]{9}"
-                      maxLength={10}
-                      value={phone}
-                      onChange={(e) => setPhone(sanitizePhone(e.target.value))}
-                      placeholder="10-digit mobile number"
-                      className="w-full rounded-xl border border-input bg-background py-3.5 pl-16 pr-4 font-mono text-base sm:text-sm font-bold text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
-                      autoComplete="tel"
-                    />
-                  </div>
-                </div>
-
-                {error && (
-                  <div className="flex items-start gap-2.5 rounded-xl border border-destructive/20 bg-destructive/10 p-3.5 text-xs font-semibold text-destructive animate-in fade-in">
-                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                    <span className="leading-snug">{error}</span>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-sm font-bold text-primary-foreground shadow-md transition-all hover:bg-primary/95 active:scale-[0.98] disabled:opacity-50 touch-manipulation"
-                >
-                  {loading ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      <span>Verifying details...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Search className="h-4 w-4" />
-                      <span>Verify &amp; Track Order</span>
-                    </>
-                  )}
-                </button>
-              </form>
-
-              <div className="mt-6 border-t border-border pt-5">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
-                    <Lock className="h-3.5 w-3.5 text-emerald-600" />
-                    <span>Protected verification</span>
-                  </span>
-                  <a
-                    href={`https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappMessage}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-bold text-primary hover:underline"
-                  >
-                    Need Help? WhatsApp
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
+          <section className="mx-auto mt-6 max-w-lg rounded-3xl border border-border bg-card p-6 shadow-xl sm:p-9"><div className="flex items-center gap-3"><span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-primary"><Truck className="h-6 w-6" /></span><div><h1 className="text-2xl font-bold text-foreground">Track Your Order</h1><p className="text-xs text-muted-foreground">Verify with the mobile number used at checkout.</p></div></div><p className="mt-4 text-xs leading-5 text-muted-foreground">Enter the Order ID from your confirmation and your 10-digit mobile number.</p><form className="mt-6 space-y-4" onSubmit={(event) => { event.preventDefault(); void verify() }}><label className="block"><span className="text-xs font-bold uppercase tracking-wide">Order ID</span><input value={orderId} onChange={(e) => setOrderId(e.target.value.toUpperCase())} placeholder="SWD-20260915-AB12CD34" autoComplete="off" className="mt-1.5 w-full rounded-2xl border border-input bg-background px-4 py-3.5 font-mono text-base font-bold outline-none focus:border-primary" /></label><label className="block"><span className="text-xs font-bold uppercase tracking-wide">Mobile Number</span><div className="relative mt-1.5"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">+91</span><input value={phone} onChange={(e) => setPhone(sanitizePhone(e.target.value))} maxLength={10} inputMode="numeric" type="tel" placeholder="10-digit mobile number" autoComplete="tel" className="w-full rounded-2xl border border-input bg-background py-3.5 pl-14 pr-4 font-mono text-base font-bold outline-none focus:border-primary" /></div></label><button disabled={loading} className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3.5 text-sm font-extrabold text-primary-foreground shadow-lg disabled:opacity-50">{loading ? <><RefreshCw className="h-4 w-4 animate-spin" /> Verifying…</> : <><Search className="h-4 w-4" /> Verify &amp; Track</>}</button></form><div className="mt-6 flex items-center justify-between border-t border-border pt-5 text-xs text-muted-foreground"><span className="flex items-center gap-1.5"><Lock className="h-3.5 w-3.5 text-accent" /> Protected verification</span><a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer" className="font-bold text-primary hover:underline">Need help?</a></div></section>
         ) : (
-          <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={handleReset}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground shadow-xs hover:bg-secondary active:scale-95 transition"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                <span>Track another order</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleVerify(undefined, true)}
-                disabled={refreshing}
-                className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground shadow-xs hover:bg-secondary active:scale-95 transition disabled:opacity-50"
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin text-primary" : ""}`} />
-                <span>{refreshing ? "Refreshing..." : "Refresh Status"}</span>
-              </button>
+          <section className="space-y-5"><div className="flex flex-wrap items-center justify-between gap-3"><button type="button" onClick={reset} className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold hover:bg-secondary"><ArrowLeft className="h-3.5 w-3.5" /> Track another order</button><div className="flex flex-wrap gap-2"><button type="button" onClick={() => void verify(order.id, phone)} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold hover:bg-secondary disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh</button>{order.paymentStatus === "paid" && <button type="button" onClick={() => setInvoiceOpen(true)} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold hover:bg-secondary"><FileText className="h-3.5 w-3.5" /> Invoice</button>}</div></div>
+            <div className="rounded-3xl border border-border bg-card p-5 shadow-xl sm:p-7"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Order status</p><h1 className="mt-1 break-all text-3xl font-black tracking-tight text-foreground">{order.id}</h1><p className="mt-1 text-xs text-muted-foreground">Placed {relativeTime(order.createdAt)} · {order.customerName}</p></div><button type="button" onClick={() => void copyOrderId()} className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-border bg-background px-3 py-2 text-xs font-bold">{copied ? <Check className="h-3.5 w-3.5 text-accent" /> : <Copy className="h-3.5 w-3.5" />} {copied ? "Copied" : "Copy ID"}</button></div>
+              <div className="mt-7 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">{STAGES.map((stage, index) => { const Icon = stage.icon; const active = index <= currentStage; return <div key={stage.label} className={`rounded-2xl border p-3 text-center ${active ? "border-primary/35 bg-primary/8" : "border-border bg-background"}`}><Icon className={`mx-auto h-5 w-5 ${active ? "text-primary" : "text-muted-foreground"}`} /><p className={`mt-1 text-[10px] font-bold ${active ? "text-foreground" : "text-muted-foreground"}`}>{stage.label}</p></div> })}</div>
+              <div className="mt-6 grid gap-3 sm:grid-cols-3"><InfoCard label="Payment" value={order.paymentStatus === "paid" ? "Paid" : order.paymentStatus} /><InfoCard label="Order" value={order.orderStatus.replaceAll("_", " ")} /><InfoCard label="Total" value={`₹${order.total.toLocaleString("en-IN")}`} /></div>
+              <div className="mt-6 rounded-2xl border border-border bg-background p-4"><div className="flex items-start gap-3"><ShoppingBag className="mt-0.5 h-5 w-5 shrink-0 text-primary" /><div className="min-w-0 flex-1"><p className="text-sm font-bold text-foreground">Your items</p><div className="mt-3 space-y-2">{order.items.map((item, index) => <div key={`${item.productName}-${index}`} className="flex items-center justify-between gap-4 text-sm"><span className="min-w-0 truncate text-muted-foreground">{item.productName} · {item.weight} × {item.quantity}</span><span className="shrink-0 font-bold">₹{item.lineTotal.toLocaleString("en-IN")}</span></div>)}</div></div></div></div>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row"><a href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappMessage)}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-extrabold text-primary-foreground"><Phone className="h-4 w-4" /> WhatsApp us</a><button type="button" onClick={() => { order.items.forEach((item) => { const product = products.find((candidate) => candidate.name === item.productName); if (product) addItem(product) }); openCart() }} className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border bg-background px-5 py-3 text-sm font-extrabold text-foreground"><ShoppingBag className="h-4 w-4" /> Order again</button></div>
             </div>
-
-            <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-sm">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-6">
-                <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-primary">
-                      Verified Customer Order
-                    </span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
-                      <ShieldCheck className="h-3 w-3" />
-                      <span>Authenticated</span>
-                    </span>
-                  </div>
-                  <h1 className="font-heading font-serif text-2xl sm:text-3xl font-bold text-foreground">
-                    Namaste, {order.customerName}!
-                  </h1>
-                  <p className="text-xs text-muted-foreground">
-                    Placed on {new Date(order.createdAt).toLocaleDateString("en-IN", { dateStyle: "long" })}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={copyOrderId}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-secondary/40 px-3.5 py-2 text-xs font-bold text-foreground shadow-xs hover:bg-secondary active:scale-95 transition"
-                  >
-                    {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                    <span className="font-mono">{order.id}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsInvoiceOpen(true)}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/95 active:scale-95 transition touch-manipulation"
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    <span>Download Tax Invoice</span>
-                  </button>
-                </div>
-              </div>
-
-              {isCancelled ? (
-                <div className="mt-6 rounded-xl border border-destructive/20 bg-destructive/10 p-5 text-destructive">
-                  <div className="flex items-center gap-3">
-                    <AlertCircle className="h-6 w-6 shrink-0" />
-                    <div>
-                      <h4 className="text-sm font-bold">Order Cancelled</h4>
-                      <p className="text-xs mt-0.5">This order was cancelled. If you were charged, your refund will be processed promptly.</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-8 space-y-6">
-                  <div>
-                    <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                      Preparation &amp; Delivery Progress
-                    </h2>
-                  </div>
-
-                  <div className="relative">
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {STAGES.map((stage, idx) => {
-                        const Icon = stage.icon
-                        const isDone = currentStageIdx > idx
-                        const isCurrent = currentStageIdx === idx
-
-                        return (
-                          <div
-                            key={stage.id}
-                            className={`relative flex items-start gap-3 rounded-xl border p-4 transition-all ${
-                              isCurrent
-                                ? "border-primary bg-primary/10 shadow-xs ring-1 ring-primary/40"
-                                : isDone
-                                ? "border-emerald-500/30 bg-emerald-50/50 text-foreground dark:bg-emerald-950/20"
-                                : "border-border/60 bg-secondary/20 text-muted-foreground opacity-60"
-                            }`}
-                          >
-                            <span
-                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                                isCurrent
-                                  ? "bg-primary text-primary-foreground shadow-xs"
-                                  : isDone
-                                  ? "bg-emerald-600 text-white"
-                                  : "bg-secondary text-muted-foreground"
-                              }`}
-                            >
-                              <Icon className="h-5 w-5" />
-                            </span>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <p className="text-xs font-bold text-foreground truncate">{stage.label}</p>
-                                {isCurrent && (
-                                  <span className="rounded-md bg-primary/20 px-1.5 py-0.5 text-[9px] font-bold text-primary">
-                                    Current
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">{stage.subtitle}</p>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-8 grid gap-6 border-t border-border pt-6 sm:grid-cols-2">
-                <div className="space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                    Delivery Address
-                  </h3>
-                  <div className="rounded-xl border border-border bg-secondary/30 p-4">
-                    <div className="flex items-start gap-2.5">
-                      <MapPin className="h-4 w-4 shrink-0 text-primary mt-0.5" />
-                      <div className="text-xs space-y-1">
-                        <p className="font-bold text-foreground">{order.customerName}</p>
-                        <p className="text-muted-foreground">{order.customerAddress}</p>
-                        <p className="font-mono text-muted-foreground">Pincode: {order.pincode}</p>
-                        <p className="text-muted-foreground pt-1">
-                          Phone: <span className="font-mono font-bold text-foreground">{order.customerPhoneMasked}</span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
-                      <PhonePeIcon className="h-6 w-6 shrink-0 rounded-md" />
-                      <div className="text-xs">
-                        <p className="font-bold text-foreground">PhonePe Payment Gateway</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {order.paymentStatus === "paid" ? "Payment Confirmed" : "Payment Verification Pending"}
-                        </p>
-                      </div>
-                    </div>
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                        order.paymentStatus === "paid"
-                          ? "bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
-                          : "bg-amber-500/10 text-amber-800 dark:text-amber-300"
-                      }`}
-                    >
-                      {order.paymentStatus === "paid" ? "Paid" : "Pending"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                    Items in Order ({order.items.length})
-                  </h3>
-                  <div className="rounded-xl border border-border bg-secondary/30 p-4 divide-y divide-border">
-                    {order.items.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between py-2 text-xs">
-                        <div>
-                          <p className="font-bold font-serif text-foreground">{item.productName}</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {item.weight} &times; {item.quantity}
-                          </p>
-                        </div>
-                        <span className="font-mono font-bold text-foreground">₹{item.lineTotal}</span>
-                      </div>
-                    ))}
-
-                    <div className="pt-3 mt-1 flex items-center justify-between text-xs">
-                      <span className="font-bold text-muted-foreground">Subtotal</span>
-                      <span className="font-mono font-bold text-foreground">₹{order.subtotal}</span>
-                    </div>
-                    <div className="py-1.5 flex items-center justify-between text-xs">
-                      <span className="font-bold text-muted-foreground">Delivery</span>
-                      <span className="font-bold text-emerald-700 dark:text-emerald-400">
-                        {order.deliveryFee === 0 ? "FREE" : `₹${order.deliveryFee}`}
-                      </span>
-                    </div>
-                    <div className="pt-2 flex items-center justify-between text-sm border-t border-border">
-                      <span className="font-bold text-foreground">Total Paid</span>
-                      <span className="font-mono font-bold text-foreground text-base">₹{order.total}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
-                {order.orderStatus === "delivered" && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      order.items.forEach((item) => {
-                        const product = products.find((p) => p.name === item.productName || p.id === item.productName)
-                        if (product) {
-                          for (let i = 0; i < item.quantity; i++) addItem(product)
-                        }
-                      })
-                      openCart()
-                    }}
-                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/95 active:scale-95 transition"
-                  >
-                    <ShoppingBag className="h-4 w-4" />
-                    <span>Reorder Same Items</span>
-                  </button>
-                )}
-
-                <a
-                  href={`https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappMessage}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-xs font-bold text-white shadow-sm hover:bg-emerald-800 active:scale-95 transition"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  <span>WhatsApp Swadam Support</span>
-                </a>
-
-                <button
-                  type="button"
-                  onClick={() => setIsInvoiceOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-xs font-bold text-foreground shadow-xs hover:bg-secondary active:scale-95 transition"
-                >
-                  <FileText className="h-4 w-4" />
-                  <span>View Full Tax Invoice</span>
-                </button>
-              </div>
-            </div>
-
-            {isInvoiceOpen && (
-              <TaxInvoiceModal
-                order={{
-                  id: order.id,
-                  customerName: order.customerName,
-                  customerPhoneMasked: order.customerPhoneMasked,
-                  customerAddress: order.customerAddress,
-                  pincode: order.pincode,
-                  deliveryMethod: order.deliveryMethod,
-                  subtotal: order.subtotal,
-                  deliveryFee: order.deliveryFee,
-                  total: order.total,
-                  currency: order.currency,
-                  paymentStatus: order.paymentStatus,
-                  orderStatus: order.orderStatus,
-                  createdAt: order.createdAt,
-                  items: order.items,
-                }}
-                isOpen={isInvoiceOpen}
-                onClose={() => setIsInvoiceOpen(false)}
-              />
-            )}
-          </div>
+          </section>
         )}
       </main>
+      {order && <TaxInvoiceModal isOpen={invoiceOpen} order={order} onClose={() => setInvoiceOpen(false)} />}
     </div>
   )
+}
+
+function InfoCard({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-2xl border border-border bg-background p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p><p className="mt-1 truncate text-sm font-extrabold capitalize text-foreground">{value}</p></div>
 }
