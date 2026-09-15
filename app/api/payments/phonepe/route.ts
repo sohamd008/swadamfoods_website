@@ -10,6 +10,8 @@ function generatePaymentMerchantOrderId(orderId: string) {
   return `${orderId}-P${suffix}`
 }
 
+const PAYMENT_CLAIM_SECONDS = 60
+
 export async function POST(request: Request) {
   if (!sameOrigin(request)) return json({ error: "Invalid request origin." }, 403)
   if (!(request.headers.get("content-type")?.toLowerCase() ?? "").startsWith("application/json")) {
@@ -30,7 +32,7 @@ export async function POST(request: Request) {
   if (!db) return json({ error: "Database temporarily unavailable." }, 503)
 
   try {
-    const order = await db
+    let order = await db
       .prepare(
         `SELECT id, customer_phone, total, currency, payment_gateway,
                 gateway_order_id, payment_status, payment_checkout_url, payment_expires_at
@@ -55,6 +57,7 @@ export async function POST(request: Request) {
     if (order.payment_gateway && order.payment_gateway !== "phonepe") return json({ error: "This order is assigned to another payment provider." }, 409)
 
     const now = Date.now()
+
     if (
       order.payment_gateway === "phonepe" &&
       order.gateway_order_id &&
@@ -66,7 +69,27 @@ export async function POST(request: Request) {
       return json({ orderId, gateway: "phonepe", redirectUrl: order.payment_checkout_url, expiresAt: order.payment_expires_at })
     }
 
-    if (order.payment_gateway === "phonepe" && order.gateway_order_id && order.payment_status === "processing") {
+    // A request can reach this point while another request is still creating the gateway payment.
+    // Do not start a second PhonePe payment during that short claiming window.
+    if (
+      order.payment_gateway === "phonepe" &&
+      order.payment_status === "processing" &&
+      !order.payment_checkout_url &&
+      order.gateway_order_id &&
+      order.payment_expires_at &&
+      order.payment_expires_at > now
+    ) {
+      return json({ error: "Your payment is already being prepared. Please wait a moment and try again.", pending: true }, 409)
+    }
+
+    // If a real checkout previously existed but is no longer usable, verify its final state
+    // before permitting a fresh payment attempt.
+    if (
+      order.payment_gateway === "phonepe" &&
+      order.gateway_order_id &&
+      order.payment_checkout_url &&
+      order.payment_status === "processing"
+    ) {
       const status = await getPhonePeOrderStatus(order.gateway_order_id)
       if (status.amount !== undefined && status.amount !== order.total * 100) {
         console.error("PhonePe amount mismatch", { orderId, expected: order.total * 100, received: status.amount })
@@ -83,12 +106,36 @@ export async function POST(request: Request) {
       }
 
       await db
-        .prepare("UPDATE orders SET payment_status = ?, updated_at = datetime('now') WHERE id = ? AND payment_status = 'processing'")
-        .bind(status.state === "EXPIRED" ? "expired" : "failed", orderId)
+        .prepare("UPDATE orders SET payment_status = ?, updated_at = datetime('now') WHERE id = ? AND payment_status = 'processing' AND gateway_order_id = ?")
+        .bind(status.state === "EXPIRED" ? "expired" : "failed", orderId, order.gateway_order_id)
         .run()
+
+      order = {
+        ...order,
+        payment_status: status.state === "EXPIRED" ? "expired" : "failed",
+      }
     }
 
     const merchantOrderId = generatePaymentMerchantOrderId(orderId)
+    const claimExpiresAt = now + PAYMENT_CLAIM_SECONDS * 1000
+
+    // Claim the order before calling PhonePe. This prevents two concurrent checkout requests
+    // from creating two gateway payments for the same order.
+    const claim = await db
+      .prepare(
+        `UPDATE orders
+         SET payment_gateway = 'phonepe', gateway_order_id = ?, payment_checkout_url = NULL,
+             payment_expires_at = ?, payment_status = 'processing', updated_at = datetime('now')
+         WHERE id = ?
+           AND payment_status IN ('pending', 'failed', 'expired')`,
+      )
+      .bind(merchantOrderId, claimExpiresAt, orderId)
+      .run()
+
+    if (!claim.success || claim.meta.changes < 1) {
+      return json({ error: "Your payment is already being prepared. Please wait a moment and try again.", pending: true }, 409)
+    }
+
     const payment = await createPhonePePayment({
       merchantOrderId,
       orderId,
@@ -98,6 +145,10 @@ export async function POST(request: Request) {
 
     if (!payment.redirectUrl || payment.state !== "PENDING") {
       console.error("Unexpected PhonePe payment response", payment)
+      await db
+        .prepare("UPDATE orders SET payment_gateway = NULL, gateway_order_id = NULL, payment_checkout_url = NULL, payment_expires_at = NULL, payment_status = 'pending', updated_at = datetime('now') WHERE id = ? AND gateway_order_id = ? AND payment_status = 'processing'")
+        .bind(orderId, merchantOrderId)
+        .run()
       return json({ error: "PhonePe could not start the payment." }, 502)
     }
 
@@ -107,13 +158,15 @@ export async function POST(request: Request) {
         `UPDATE orders
          SET payment_gateway = 'phonepe', gateway_order_id = ?, payment_checkout_url = ?,
              payment_expires_at = ?, payment_status = 'processing', updated_at = datetime('now')
-         WHERE id = ? AND payment_status IN ('pending', 'failed', 'expired', 'processing')`,
+         WHERE id = ? AND payment_status = 'processing' AND gateway_order_id = ?`,
       )
-      .bind(merchantOrderId, payment.redirectUrl, expiresAt, orderId)
+      .bind(merchantOrderId, payment.redirectUrl, expiresAt, orderId, merchantOrderId)
       .run()
 
     if (!update.success || update.meta.changes < 1) {
-      return json({ error: "The order changed while payment was being prepared. Please try again." }, 409)
+      // The payment belongs to the order only if our claimed gateway id is still present.
+      // Return a conflict rather than exposing a payment link that another request won.
+      return json({ error: "The order changed while payment was being prepared. Please refresh and try again." }, 409)
     }
 
     return json({ orderId, gateway: "phonepe", redirectUrl: payment.redirectUrl, expiresAt })
