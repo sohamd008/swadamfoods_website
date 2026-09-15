@@ -16,44 +16,27 @@ export function jsonResponse(
 }
 
 export function isSameOrigin(request: Request): boolean {
-  const secFetchSite = request.headers.get("Sec-Fetch-Site")?.toLowerCase()
-  if (secFetchSite === "cross-site") {
-    return false
-  }
-
-  const origin = request.headers.get("Origin")
   const requestOrigin = new URL(request.url).origin
+  const secFetchSite = request.headers.get("Sec-Fetch-Site")?.toLowerCase()
 
-  if (origin) {
+  if (secFetchSite === "cross-site") return false
+
+  for (const value of [request.headers.get("Origin"), request.headers.get("Referer")]) {
+    if (!value) continue
     try {
-      return new URL(origin).origin === requestOrigin
+      return new URL(value).origin === requestOrigin
     } catch {
       return false
     }
   }
 
-  const referer = request.headers.get("Referer")
-  if (referer) {
-    try {
-      return new URL(referer).origin === requestOrigin
-    } catch {
-      return false
-    }
-  }
-
-  if (secFetchSite === "same-origin" || secFetchSite === "same-site") {
-    return true
-  }
-
-  return process.env.NODE_ENV !== "production"
+  return secFetchSite === "same-origin" || secFetchSite === "same-site" || process.env.NODE_ENV !== "production"
 }
 
 export function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false
   let diff = 0
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  }
+  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
   return diff === 0
 }
 
@@ -65,19 +48,30 @@ export function isValidOrderId(orderId: string): boolean {
   return /^(SWAD-[A-Z0-9]{4,16}|SWD-\d{8}-[A-Z0-9]{8})$/i.test(orderId)
 }
 
+export function generateOrderId(now = new Date()): string {
+  const date = [now.getUTCFullYear(), String(now.getUTCMonth() + 1).padStart(2, "0"), String(now.getUTCDate()).padStart(2, "0")].join("")
+  const suffix = crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()
+  return `SWD-${date}-${suffix}`
+}
+
 export function verifyAdminKey(request: Request): boolean {
-  let adminKey = process.env.ADMIN_SECRET_KEY
+  let adminKey = ""
   try {
     const { env } = getCloudflareContext()
-    adminKey = (env as unknown as { ADMIN_SECRET_KEY?: string })?.ADMIN_SECRET_KEY || adminKey
+    adminKey = (env as unknown as { ADMIN_SECRET_KEY?: string }).ADMIN_SECRET_KEY?.trim() ?? ""
   } catch {}
+
+  if (!adminKey) {
+    adminKey = process.env.ADMIN_SECRET_KEY?.trim() ?? ""
+  }
   if (!adminKey) return false
-  const headerKey = request.headers.get("x-admin-key")?.trim()
-  const authHeader = request.headers.get("authorization")?.replace("Bearer ", "").trim()
-  const urlKey = new URL(request.url).searchParams.get("key")?.trim()
+
+  const headerKey = request.headers.get("x-admin-key")?.trim() ?? ""
+  const authHeader = request.headers.get("authorization")?.trim() ?? ""
+  const bearerKey = /^Bearer\s+(.+)$/i.exec(authHeader)?.[1]?.trim() ?? ""
+
   return (
-    (headerKey ? timingSafeEqual(headerKey, adminKey) : false) ||
-    (authHeader ? timingSafeEqual(authHeader, adminKey) : false) ||
-    (urlKey ? timingSafeEqual(urlKey, adminKey) : false)
+    (headerKey.length > 0 && timingSafeEqual(headerKey, adminKey)) ||
+    (bearerKey.length > 0 && timingSafeEqual(bearerKey, adminKey))
   )
 }
