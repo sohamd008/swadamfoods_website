@@ -69,9 +69,13 @@ export function verifyAdminKey(request: Request): boolean {
   const headerKey = request.headers.get("x-admin-key")?.trim() ?? ""
   const authHeader = request.headers.get("authorization")?.trim() ?? ""
   const bearerKey = /^Bearer\s+(.+)$/i.exec(authHeader)?.[1]?.trim() ?? ""
+  const queryKey = request.method === "GET"
+    ? new URL(request.url).searchParams.get("key")?.trim() ?? ""
+    : ""
 
   return (
     (headerKey.length > 0 && timingSafeEqual(headerKey, adminKey)) ||
-    (bearerKey.length > 0 && timingSafeEqual(bearerKey, adminKey))
+    (bearerKey.length > 0 && timingSafeEqual(bearerKey, adminKey)) ||
+    (queryKey.length > 0 && timingSafeEqual(queryKey, adminKey))
   )
 }
