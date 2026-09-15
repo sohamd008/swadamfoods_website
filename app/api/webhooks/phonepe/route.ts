@@ -1,6 +1,7 @@
 import { getDB } from "@/lib/db"
 import { jsonResponse as json, cleanOrderId } from "@/lib/api"
 import { verifyPhonePeWebhook } from "@/lib/phonepe"
+import { markOrderPaid } from "@/lib/order-lifecycle"
 
 export const dynamic = "force-dynamic"
 
@@ -12,15 +13,11 @@ async function sha256(value: string) {
 type PhonePeWebhook = {
   event?: string
   payload?: {
-    orderId?: string
-    merchantId?: string
     merchantOrderId?: string
     state?: string
     amount?: number
-    expireAt?: number
     paymentDetails?: Array<{
       transactionId?: string
-      amount?: number
       state?: string
       paymentMode?: string
     }>
@@ -45,25 +42,27 @@ export async function POST(request: Request) {
 
     const event = body.event
     const payload = body.payload
-    const merchantOrderId = payload?.merchantOrderId
+    const merchantOrderId = payload?.merchantOrderId?.trim()
 
     if (
       (event !== "checkout.order.completed" && event !== "checkout.order.failed") ||
       !payload ||
-      !merchantOrderId
+      !merchantOrderId ||
+      (payload.state !== "COMPLETED" && payload.state !== "FAILED")
     ) {
       return json({ received: true })
     }
 
-    if (payload.state !== "COMPLETED" && payload.state !== "FAILED") return json({ received: true })
-
     const sanitizedOrderId = cleanOrderId(merchantOrderId)
     const db = getDB()
     if (!db) return json({ error: "Database unavailable." }, 503)
+
     const order = await db
       .prepare(
         `SELECT id, total, currency, payment_status
-         FROM orders WHERE (gateway_order_id = ? OR id = ?) AND payment_gateway = 'phonepe' LIMIT 1`,
+         FROM orders
+         WHERE (gateway_order_id = ? OR id = ?) AND payment_gateway = 'phonepe'
+         LIMIT 1`,
       )
       .bind(merchantOrderId, sanitizedOrderId)
       .first<{
@@ -92,8 +91,7 @@ export async function POST(request: Request) {
     try {
       await db
         .prepare(
-          `INSERT INTO payment_events
-             (order_id, gateway, event_id, event_type, payload)
+          `INSERT INTO payment_events (order_id, gateway, event_id, event_type, payload)
            VALUES (?, 'phonepe', ?, ?, ?)`,
         )
         .bind(order.id, eventId, event, rawBody)
@@ -104,19 +102,11 @@ export async function POST(request: Request) {
       throw error
     }
 
-    const transaction = payload.paymentDetails?.find((detail) => detail.state === "COMPLETED")
-      ?? payload.paymentDetails?.[0]
+    const transaction = payload.paymentDetails?.find((detail) => detail.state === "COMPLETED") ?? payload.paymentDetails?.[0]
 
-    if (event === "checkout.order.completed" && payload.state === "COMPLETED") {
-      await db
-        .prepare(
-          `UPDATE orders
-           SET payment_status = 'paid', updated_at = datetime('now')
-           WHERE id = ? AND payment_status <> 'refunded'`,
-        )
-        .bind(order.id)
-        .run()
-    } else if (event === "checkout.order.failed" && payload.state === "FAILED") {
+    if (event === "checkout.order.completed") {
+      await markOrderPaid(db, order.id)
+    } else {
       await db
         .prepare(
           `UPDATE orders
