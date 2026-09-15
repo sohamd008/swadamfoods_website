@@ -133,8 +133,8 @@ export async function POST(request: Request) {
             `INSERT INTO orders (
               id, customer_name, customer_phone, customer_address, pincode,
               delivery_method, subtotal, delivery_fee, total, currency,
-              payment_status, order_status, inventory_deducted
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'INR', 'pending', 'new', 0)`,
+              payment_status, order_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'INR', 'pending', 'new')`,
           )
           .bind(orderId, name, phoneValidation.cleanPhone, address, pincode, delivery, subtotal, deliveryFee, total),
         ...normalizedItems.map((item) =>
