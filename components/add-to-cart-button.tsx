@@ -2,7 +2,6 @@
 
 import { Plus } from "lucide-react"
 import { useCart } from "@/lib/cart-context"
-import { trackEvent } from "@/lib/analytics"
 import type { Product } from "@/lib/products"
 
 export function AddToCartButton({ product }: { product: Product }) {
@@ -11,21 +10,7 @@ export function AddToCartButton({ product }: { product: Product }) {
   return (
     <button
       type="button"
-      onClick={() => {
-        addItem(product)
-        trackEvent("add_to_cart", {
-          currency: "INR",
-          value: product.price,
-          items: [
-            {
-              item_id: product.id,
-              item_name: product.name,
-              price: product.price,
-              quantity: 1,
-            },
-          ],
-        })
-      }}
+      onClick={() => addItem(product)}
       aria-label={`Add ${product.name} to order`}
       className="flex min-h-11 items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/95 active:scale-95 touch-manipulation"
     >

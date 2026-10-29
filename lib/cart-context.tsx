@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 import type { Product } from "@/lib/products"
 import { products } from "@/lib/products"
 import { trackEvent } from "@/lib/analytics"
@@ -67,7 +67,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [hasLoadedCart, items])
 
-  function addItem(product: Product) {
+  const openCart = useCallback(() => setIsOpen(true), [])
+  const closeCart = useCallback(() => setIsOpen(false), [])
+  const clear = useCallback(() => setItems([]), [])
+
+  const addItem = useCallback((product: Product) => {
     setItems((previous) => {
       const existing = previous.find((item) => item.product.id === product.id)
       if (existing) {
@@ -82,9 +86,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       items: [{ item_id: product.id, item_name: product.name, price: product.price, quantity: 1, item_brand: "Swadam Foods" }],
     })
     setIsOpen(true)
-  }
+  }, [])
 
-  function removeItem(productId: string) {
+  const removeItem = useCallback((productId: string) => {
     setItems((previous) => {
       const found = previous.find((item) => item.product.id === productId)
       if (found) {
@@ -96,16 +100,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       return previous.filter((item) => item.product.id !== productId)
     })
-  }
+  }, [])
 
-  function setQuantity(productId: string, quantity: number) {
+  const setQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity <= 0) {
       removeItem(productId)
       return
     }
     const nextQuantity = Math.min(MAX_ITEM_QUANTITY, Math.floor(quantity))
     setItems((previous) => previous.map((item) => item.product.id === productId ? { ...item, quantity: nextQuantity } : item))
-  }
+  }, [removeItem])
 
   const { totalItems, totalPrice } = useMemo(
     () => items.reduce(
@@ -118,18 +122,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [items],
   )
 
-  const value: CartContextValue = {
+  const value = useMemo<CartContextValue>(() => ({
     items,
     isOpen,
     totalItems,
     totalPrice,
-    openCart: () => setIsOpen(true),
-    closeCart: () => setIsOpen(false),
+    openCart,
+    closeCart,
     addItem,
     removeItem,
     setQuantity,
-    clear: () => setItems([]),
-  }
+    clear,
+  }), [items, isOpen, totalItems, totalPrice, openCart, closeCart, addItem, removeItem, setQuantity, clear])
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>
 }
