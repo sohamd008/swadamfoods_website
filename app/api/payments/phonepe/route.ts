@@ -69,8 +69,6 @@ export async function POST(request: Request) {
       return json({ orderId, gateway: "phonepe", redirectUrl: order.payment_checkout_url, expiresAt: order.payment_expires_at })
     }
 
-    // A request can reach this point while another request is still creating the gateway payment.
-    // Do not start a second PhonePe payment during that short claiming window.
     if (
       order.payment_gateway === "phonepe" &&
       order.payment_status === "processing" &&
@@ -82,8 +80,6 @@ export async function POST(request: Request) {
       return json({ error: "Your payment is already being prepared. Please wait a moment and try again.", pending: true }, 409)
     }
 
-    // If a real checkout previously existed but is no longer usable, verify its final state
-    // before permitting a fresh payment attempt.
     if (
       order.payment_gateway === "phonepe" &&
       order.gateway_order_id &&
@@ -119,8 +115,6 @@ export async function POST(request: Request) {
     const merchantOrderId = generatePaymentMerchantOrderId(orderId)
     const claimExpiresAt = now + PAYMENT_CLAIM_SECONDS * 1000
 
-    // Claim the order before calling PhonePe. This prevents two concurrent checkout requests
-    // from creating two gateway payments for the same order.
     const claim = await db
       .prepare(
         `UPDATE orders
@@ -164,8 +158,6 @@ export async function POST(request: Request) {
       .run()
 
     if (!update.success || update.meta.changes < 1) {
-      // The payment belongs to the order only if our claimed gateway id is still present.
-      // Return a conflict rather than exposing a payment link that another request won.
       return json({ error: "The order changed while payment was being prepared. Please refresh and try again." }, 409)
     }
 

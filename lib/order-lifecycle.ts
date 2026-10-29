@@ -21,7 +21,6 @@ function completedPayment(details?: Array<{ transactionId?: string; state?: stri
   return details?.find((detail) => detail.state === "COMPLETED") ?? details?.[0]
 }
 
-/** Marks an order as paid once the payment gateway has confirmed completion. */
 export async function markOrderPaid(db: D1Database, orderId: string): Promise<void> {
   await db
     .prepare(
