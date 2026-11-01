@@ -36,6 +36,14 @@ For local development, use:
 
     npx wrangler d1 execute swadam_inventory --local --file=migrations/inventory/0002_finished_stock.sql
 
+Apply vendor ingredient rates and version history:
+
+    npx wrangler d1 execute swadam_inventory --remote --file=migrations/inventory/0003_vendor_material_rates.sql
+
+For local development, use:
+
+    npx wrangler d1 execute swadam_inventory --local --file=migrations/inventory/0003_vendor_material_rates.sql
+
 ## 3. Configure Cloudflare Access
 
 Create a self-hosted Cloudflare Access application for the custom hostname and these inventory paths:
@@ -72,4 +80,4 @@ After saving the D1 binding and Access values, deploy the Worker and test:
 6. Create a vendor, material, purchase lot, product and test batch.
 7. Try to consume more than the received lot balance; the database trigger must reject the batch atomically.
 
-The inventory interface is tablet-first, uses the site's shared glassmorphism/theme tokens and keeps production data in the dedicated INVENTORY_DB binding. Finished packet stock is manually maintained as whole sealed-packet counts for each product and pack size; it is separate from production kilograms and is not automatically reserved against storefront orders.
+The inventory interface is tablet-first, uses the site's shared glassmorphism/theme tokens and keeps production data in the dedicated INVENTORY_DB binding. Finished packet stock is manually maintained as whole sealed-packet counts for each product and pack size; it is separate from production kilograms and is not automatically reserved against storefront orders. The Vendor rates section records the current INR rate per vendor and raw material, with immutable version history including prior rate, new rate, effective date, operator and notes.
