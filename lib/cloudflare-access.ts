@@ -19,8 +19,9 @@ type AccessJwtPayload = {
   iss?: string
   email?: string
 }
+type AccessJwk = JsonWebKey & { kid?: string; kty?: string }
 
-let keyCache: { expiresAt: number; keys: JsonWebKey[] } | null = null
+let keyCache: { expiresAt: number; keys: AccessJwk[] } | null = null
 
 function getAccessEnvironment(): AccessEnvironment {
   let runtime: AccessEnvironment = {}
@@ -38,22 +39,22 @@ function getAccessEnvironment(): AccessEnvironment {
   }
 }
 
-function decodeBase64Url(value: string): Uint8Array {
+function decodeBase64Url(value: string): ArrayBuffer {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/")
   const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4)
   const binary = atob(padded)
-  const bytes = new Uint8Array(binary.length)
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length))
   for (let index = 0; index < binary.length; index += 1) {
     bytes[index] = binary.charCodeAt(index)
   }
-  return bytes
+  return bytes.buffer as ArrayBuffer
 }
 
 function parseJwtPart<T>(value: string): T {
   return JSON.parse(new TextDecoder().decode(decodeBase64Url(value))) as T
 }
 
-async function getAccessKeys(teamDomain: string): Promise<JsonWebKey[]> {
+async function getAccessKeys(teamDomain: string): Promise<AccessJwk[]> {
   if (keyCache && keyCache.expiresAt > Date.now()) return keyCache.keys
 
   const response = await fetch("https://" + teamDomain + "/cdn-cgi/access/certs", {
@@ -62,7 +63,7 @@ async function getAccessKeys(teamDomain: string): Promise<JsonWebKey[]> {
   })
   if (!response.ok) throw new Error("Cloudflare Access certificates could not be loaded.")
 
-  const body = (await response.json()) as { keys?: JsonWebKey[] }
+  const body = (await response.json()) as { keys?: AccessJwk[] }
   if (!Array.isArray(body.keys) || body.keys.length === 0) {
     throw new Error("Cloudflare Access did not return signing keys.")
   }
@@ -128,11 +129,12 @@ export async function verifyInventoryAccess(assertion: string | null | undefined
       false,
       ["verify"],
     )
+    const signingInput = new TextEncoder().encode(parts[0] + "." + parts[1])
     const valid = await crypto.subtle.verify(
       "RSASSA-PKCS1-v1_5",
       publicKey,
       decodeBase64Url(parts[2]),
-      new TextEncoder().encode(parts[0] + "." + parts[1]),
+      signingInput.buffer as ArrayBuffer,
     )
     return valid ? { ok: true, email, reason: "authorized" } : { ok: false, reason: "invalid_token" }
   } catch {
