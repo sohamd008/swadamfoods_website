@@ -45,6 +45,23 @@ type EntityKind = "product" | "vendor" | "material" | "purchase_lot"
 type EditableMaster = { kind: "product"; record: Product } | { kind: "vendor"; record: Vendor }
 type DeletableMaster = EditableMaster
 
+const MATERIAL_CATEGORIES = [
+  "Grains & cereals",
+  "Flours & starches",
+  "Pulses & legumes",
+  "Nuts & seeds",
+  "Spices & seasonings",
+  "Herbs & flavourings",
+  "Oils & fats",
+  "Sweeteners",
+  "Dairy ingredients",
+  "Dried fruits",
+  "Fruits & vegetables",
+  "Packaging materials",
+  "Processing aids",
+  "Other",
+] as const
+
 const NAV: Array<{ id: TabId; label: string; icon: typeof LayoutDashboard }> = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "batches", label: "Production batches", icon: Factory },
@@ -134,7 +151,7 @@ function EntityModal({ initialKind, data, onClose, onCreate }: { initialKind: En
       <label className="block"><span className={LABEL}>Record type</span><select className={INPUT} value={kind} onChange={(event) => { setKind(event.target.value as EntityKind); setError("") }}><option value="product">Product</option><option value="vendor">Vendor</option><option value="material">Raw material</option><option value="purchase_lot">Material purchase / received lot</option></select></label>
       {kind === "product" ? <div className="grid gap-4 sm:grid-cols-2"><Field label="Product name" name="name" required placeholder="e.g. Patal Poha Chivda" /><Field label="Product code" name="code" placeholder="Auto-generated when blank" /><Field label="Category" name="category" placeholder="Snacks, premixes..." /><Field label="Description" name="description" placeholder="Optional notes" /></div> : null}
       {kind === "vendor" ? <div className="grid gap-4 sm:grid-cols-2"><Field label="Vendor / business name" name="name" required placeholder="Supplier name" /><Field label="Contact person" name="contactName" placeholder="Contact name" /><Field label="Phone" name="phone" placeholder="+91..." /><Field label="Email" name="email" type="email" placeholder="vendor@example.com" /><Field label="GSTIN" name="gstin" placeholder="Optional GSTIN" /><Field label="Address" name="address" placeholder="Vendor address" /><div className="sm:col-span-2"><Field label="Notes" name="notes" placeholder="Materials supplied, payment terms..." /></div></div> : null}
-      {kind === "material" ? <div className="grid gap-4 sm:grid-cols-2"><Field label="Material name" name="name" required placeholder="e.g. Flattened rice" /><Field label="Material code" name="code" placeholder="Auto-generated when blank" /><Field label="Category" name="category" placeholder="Ingredient, packaging..." /><SelectField label="Base unit" name="unit" required><option value="">Choose unit</option><option value="kg">Kilograms (kg)</option><option value="g">Grams (g)</option><option value="litre">Litres</option><option value="unit">Units</option></SelectField><div className="sm:col-span-2"><Field label="Description" name="description" placeholder="Optional specifications" /></div></div> : null}
+      {kind === "material" ? <div className="grid gap-4 sm:grid-cols-2"><Field label="Material name" name="name" required placeholder="e.g. Flattened rice" /><Field label="Material code" name="code" placeholder="Auto-generated when blank" /><SelectField label="Category" name="category"><option value="">Choose category (optional)</option>{MATERIAL_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</SelectField><SelectField label="Base unit" name="unit" required><option value="">Choose unit</option><option value="kg">Kilograms (kg)</option><option value="g">Grams (g)</option><option value="litre">Litres</option><option value="unit">Units</option></SelectField><div className="sm:col-span-2"><Field label="Description" name="description" placeholder="Optional specifications" /></div></div> : null}
       {kind === "purchase_lot" ? <div className="grid gap-4 sm:grid-cols-2"><SelectField label="Material" name="materialId" required><option value="">Choose material</option>{data.materials.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.unit}</option>)}</SelectField><SelectField label="Vendor" name="vendorId" required><option value="">Choose vendor</option>{data.vendors.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectField><Field label="Purchase / received date" name="purchasedOn" type="date" required /><Field label="Quantity received" name="receivedQty" type="number" step="0.001" min="0.001" required placeholder="e.g. 250" /><Field label="Vendor lot number" name="vendorLotNumber" placeholder="Supplier lot reference" /><Field label="Invoice number" name="invoiceNumber" placeholder="Purchase invoice reference" /><Field label="Unit cost (INR, optional)" name="unitCost" type="number" step="0.01" min="0" placeholder="Cost per base unit" />{(!data.materials.length || !data.vendors.length) ? <p className="sm:col-span-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200">Add at least one vendor and one raw material before recording a purchase lot.</p> : null}</div> : null}
       {error ? <p role="alert" className="rounded-xl bg-rose-500/10 p-3 text-sm text-rose-700 dark:text-rose-300">{error}</p> : null}
       <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end"><button type="button" onClick={onClose} className={BUTTON + " border border-border bg-background/70"}>Cancel</button><button type="submit" disabled={saving || (kind === "purchase_lot" && (!data.materials.length || !data.vendors.length))} className={BUTTON + " bg-primary text-primary-foreground"}>{saving ? "Saving..." : <><Plus className="h-4 w-4" /> Save record</>}</button></div>
