@@ -1,10 +1,10 @@
 "use client"
 
 import { useMemo, useState, type FormEvent } from "react"
-import { Clock3, History, Pencil, Plus, Search, TrendingUp, X } from "lucide-react"
+import { ChevronDown, ChevronUp, Clock3, History, Pencil, Plus, Search, TrendingUp, X } from "lucide-react"
 
 type VendorOption = { id: string; name: string }
-type MaterialOption = { id: string; name: string; code: string; unit: string }
+type MaterialOption = { id: string; name: string; code: string; unit: string; category: string | null }
 type VendorRate = {
   id: string
   vendorId: string
@@ -101,20 +101,62 @@ export function VendorRatesPanel({ vendors, materials, rates, versions, onSave }
   onSave: (value: Record<string, string>) => Promise<boolean>
 }) {
   const [editing, setEditing] = useState<VendorRate | null | undefined>(undefined)
-  const [expanded, setExpanded] = useState<string | null>(null)
+  const [expandedMaterials, setExpandedMaterials] = useState<Set<string>>(() => new Set())
+  const [expandedHistory, setExpandedHistory] = useState<Set<string>>(() => new Set())
   const [search, setSearch] = useState("")
   const [vendorFilter, setVendorFilter] = useState("all")
   const [materialFilter, setMaterialFilter] = useState("all")
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return rates.filter(rate => (vendorFilter === "all" || rate.vendorId === vendorFilter)
-      && (materialFilter === "all" || rate.materialId === materialFilter)
-      && (!q || rate.vendorName.toLowerCase().includes(q) || rate.materialName.toLowerCase().includes(q) || rate.materialCode.toLowerCase().includes(q)))
-  }, [rates, search, vendorFilter, materialFilter])
-  const orderedVersions = (rateId: string) => versions.filter(version => version.rateId === rateId).sort((a,b) => b.version - a.version)
+
+  const ingredientGroups = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    const matchingRates = rates.filter(rate => vendorFilter === "all" || rate.vendorId === vendorFilter)
+    const visibleMaterials = materials
+      .filter(material => materialFilter === "all" || material.id === materialFilter)
+      .map(material => {
+        const materialRates = matchingRates
+          .filter(rate => rate.materialId === material.id)
+          .sort((a, b) => a.rate - b.rate || a.vendorName.localeCompare(b.vendorName))
+        const materialMatchesQuery = !query
+          || material.name.toLowerCase().includes(query)
+          || material.code.toLowerCase().includes(query)
+        const vendorMatches = query
+          ? materialRates.filter(rate => rate.vendorName.toLowerCase().includes(query))
+          : materialRates
+        return {
+          material,
+          rates: materialMatchesQuery ? materialRates : vendorMatches,
+          visible: !query || materialMatchesQuery || vendorMatches.length > 0,
+        }
+      })
+      .filter(item => item.visible)
+      .sort((a, b) => a.material.name.localeCompare(b.material.name))
+
+    const categories = new Map<string, typeof visibleMaterials>()
+    for (const item of visibleMaterials) {
+      const category = item.material.category?.trim() || "Uncategorised ingredients"
+      const items = categories.get(category) ?? []
+      items.push(item)
+      categories.set(category, items)
+    }
+    return Array.from(categories.entries()).sort(([a], [b]) => {
+      if (a === "Uncategorised ingredients") return 1
+      if (b === "Uncategorised ingredients") return -1
+      return a.localeCompare(b)
+    })
+  }, [materials, rates, search, vendorFilter, materialFilter])
+
+  const orderedVersions = (rateId: string) =>
+    versions.filter(version => version.rateId === rateId).sort((a, b) => b.version - a.version)
+
+  const toggleSetValue = (setter: (value: Set<string>) => void, current: Set<string>, id: string) => {
+    const next = new Set(current)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setter(next)
+  }
 
   return <div className="space-y-5">
-    <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-lg font-black tracking-tight sm:text-xl">Vendor ingredient rates</h2><p className="mt-1 text-sm text-muted-foreground">Manage each supplier's price for each raw material, with permanent version history.</p></div><button type="button" onClick={() => setEditing(null)} disabled={!vendors.length || !materials.length} className={BUTTON + " bg-primary text-primary-foreground"}><Plus className="h-4 w-4" /> Add vendor rate</button></div>
+    <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-lg font-black tracking-tight sm:text-xl">Vendor ingredient rates</h2><p className="mt-1 text-sm text-muted-foreground">Ingredients are grouped by category. Each ingredient shows its cheapest current vendor rate; expand it to compare all suppliers.</p></div><button type="button" onClick={() => setEditing(null)} disabled={!vendors.length || !materials.length} className={BUTTON + " bg-primary text-primary-foreground"}><Plus className="h-4 w-4" /> Add vendor rate</button></div>
 
     <div className="grid gap-3 sm:grid-cols-3">
       <div className="glass-card rounded-2xl p-4"><p className="text-xs font-bold text-muted-foreground">Vendors</p><p className="mt-2 text-2xl font-black">{vendors.length}</p></div>
@@ -130,26 +172,67 @@ export function VendorRatesPanel({ vendors, materials, rates, versions, onSave }
         <select aria-label="Filter vendor" className={INPUT} value={vendorFilter} onChange={event => setVendorFilter(event.target.value)}><option value="all">All vendors</option>{vendors.map(vendor => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}</select>
         <select aria-label="Filter ingredient" className={INPUT} value={materialFilter} onChange={event => setMaterialFilter(event.target.value)}><option value="all">All ingredients</option>{materials.map(material => <option key={material.id} value={material.id}>{material.name}</option>)}</select>
       </div>
-      {filtered.length ? <div className="space-y-3">{filtered.map(rate => {
-        const history = orderedVersions(rate.id)
-        return <article key={rate.id} className="rounded-2xl border border-border bg-background/55 p-4 sm:p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0"><p className="text-xs font-extrabold uppercase tracking-wide text-primary">{rate.vendorName}</p><h3 className="mt-1 text-lg font-black">{rate.materialName}</h3><p className="mt-1 text-xs text-muted-foreground">{rate.materialCode} · priced per {rate.unit}</p></div>
-            <div className="text-left sm:text-right"><p className="text-2xl font-black tabular-nums">{money(rate.rate, rate.currency)}</p><p className="mt-1 text-xs text-muted-foreground">Effective {dateLabel(rate.effectiveFrom)}</p></div>
-          </div>
-          {rate.notes ? <p className="mt-3 text-sm text-muted-foreground">{rate.notes}</p> : null}
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-3">
-            <button type="button" onClick={() => setEditing(rate)} className={BUTTON + " border border-border bg-background/75"}><Pencil className="h-4 w-4" /> Update rate</button>
-            <button type="button" onClick={() => setExpanded(expanded === rate.id ? null : rate.id)} className={BUTTON + " border border-border bg-background/75"}><History className="h-4 w-4" /> {expanded === rate.id ? "Hide history" : "Version history"} <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">{history.length}</span></button>
-            <span className="ml-auto text-[11px] text-muted-foreground">Last updated {dateTimeLabel(rate.updatedAt)} · {rate.updatedBy}</span>
-          </div>
-          {expanded === rate.id ? <div className="mt-4 rounded-xl border border-border bg-secondary/35 p-3 sm:p-4">
-            <div className="mb-3 flex items-center gap-2"><Clock3 className="h-4 w-4 text-primary" /><h4 className="text-sm font-extrabold">Rate version history</h4></div>
-            {history.length ? <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-sm"><thead><tr className="border-b border-border text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground"><th className="px-3 py-2">Version</th><th className="px-3 py-2">Previous rate</th><th className="px-3 py-2">New rate</th><th className="px-3 py-2">Effective from</th><th className="px-3 py-2">Changed by / date</th></tr></thead><tbody>{history.map(version => <tr key={version.id} className="border-b border-border/60 last:border-0"><td className="px-3 py-3 font-bold">v{version.version}</td><td className="px-3 py-3 tabular-nums">{version.previousRate === null ? "—" : money(version.previousRate, version.currency)}</td><td className="px-3 py-3 font-extrabold tabular-nums">{money(version.newRate, version.currency)}</td><td className="px-3 py-3 whitespace-nowrap">{dateLabel(version.effectiveFrom)}</td><td className="px-3 py-3"><p>{version.changedBy}</p><p className="mt-1 text-xs text-muted-foreground">{dateTimeLabel(version.changedAt)}</p></td></tr>)}</tbody></table></div> : <p className="text-sm text-muted-foreground">No rate versions found.</p>}
-            {history.some(version => version.notes) ? <div className="mt-3 space-y-1 border-t border-border pt-3">{history.filter(version => version.notes).map(version => <p key={version.id} className="text-xs text-muted-foreground">v{version.version}: {version.notes}</p>)}</div> : null}
-          </div> : null}
-        </article>
-      })}</div> : <div className="rounded-2xl border border-dashed border-border px-5 py-12 text-center"><p className="font-bold">No matching vendor rates</p><p className="mt-1 text-sm text-muted-foreground">Add a rate or change the filters.</p></div>}
+
+      {ingredientGroups.length ? <div className="space-y-6">{ingredientGroups.map(([category, items]) =>
+        <section key={category} className="space-y-3">
+          <div className="flex items-center gap-3"><h3 className="text-xs font-black uppercase tracking-[0.14em] text-muted-foreground">{category}</h3><span className="h-px flex-1 bg-border" /></div>
+          {items.map(({ material, rates: materialRates }) => {
+            const isExpanded = expandedMaterials.has(material.id)
+            const cheapest = materialRates[0]
+            return <article key={material.id} className="overflow-hidden rounded-2xl border border-border bg-background/55">
+              <button type="button" aria-expanded={isExpanded} onClick={() => toggleSetValue(setExpandedMaterials, expandedMaterials, material.id)} className="flex min-h-24 w-full flex-wrap items-center justify-between gap-4 p-4 text-left transition hover:bg-secondary/35 sm:p-5">
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-base font-black sm:text-lg">{material.name}</h4>
+                  <p className="mt-1 text-xs text-muted-foreground">{material.code} · priced per {material.unit}</p>
+                </div>
+                <div className="min-w-[150px] text-left sm:text-right">
+                  {cheapest ? <>
+                    <p className="text-xl font-black tabular-nums sm:text-2xl">{money(cheapest.rate, cheapest.currency)}</p>
+                    <p className="mt-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-300">Cheapest · {cheapest.vendorName}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">{materialRates.length} vendor rate{materialRates.length === 1 ? "" : "s"}</p>
+                  </> : <p className="text-sm font-bold text-muted-foreground">No vendor rate added</p>}
+                </div>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background/70 text-muted-foreground">
+                  {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </span>
+              </button>
+
+              {isExpanded ? <div className="space-y-3 border-t border-border bg-secondary/20 p-3 sm:p-4">
+                {materialRates.length ? materialRates.map((rate, index) => {
+                  const history = orderedVersions(rate.id)
+                  const historyOpen = expandedHistory.has(rate.id)
+                  return <div key={rate.id} className="rounded-xl border border-border bg-background/75 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-extrabold">{rate.vendorName}</p>
+                          {index === 0 ? <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300">Lowest rate</span> : null}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">{rate.materialCode} · priced per {rate.unit}</p>
+                      </div>
+                      <div className="text-left sm:text-right">
+                        <p className="text-xl font-black tabular-nums">{money(rate.rate, rate.currency)}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">Effective {dateLabel(rate.effectiveFrom)}</p>
+                      </div>
+                    </div>
+                    {rate.notes ? <p className="mt-3 text-sm text-muted-foreground">{rate.notes}</p> : null}
+                    <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+                      <button type="button" onClick={() => setEditing(rate)} className={BUTTON + " border border-border bg-background/75"}><Pencil className="h-4 w-4" /> Update rate</button>
+                      <button type="button" onClick={() => toggleSetValue(setExpandedHistory, expandedHistory, rate.id)} className={BUTTON + " border border-border bg-background/75"}><History className="h-4 w-4" /> {historyOpen ? "Hide history" : "Version history"} <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">{history.length}</span></button>
+                      <span className="ml-auto text-[11px] text-muted-foreground">Last updated {dateTimeLabel(rate.updatedAt)} · {rate.updatedBy}</span>
+                    </div>
+                    {historyOpen ? <div className="mt-4 rounded-xl border border-border bg-secondary/35 p-3 sm:p-4">
+                      <div className="mb-3 flex items-center gap-2"><Clock3 className="h-4 w-4 text-primary" /><h5 className="text-sm font-extrabold">Rate version history</h5></div>
+                      {history.length ? <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-sm"><thead><tr className="border-b border-border text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground"><th className="px-3 py-2">Version</th><th className="px-3 py-2">Previous rate</th><th className="px-3 py-2">New rate</th><th className="px-3 py-2">Effective from</th><th className="px-3 py-2">Changed by / date</th></tr></thead><tbody>{history.map(version => <tr key={version.id} className="border-b border-border/60 last:border-0"><td className="px-3 py-3 font-bold">v{version.version}</td><td className="px-3 py-3 tabular-nums">{version.previousRate === null ? "—" : money(version.previousRate, version.currency)}</td><td className="px-3 py-3 font-extrabold tabular-nums">{money(version.newRate, version.currency)}</td><td className="px-3 py-3 whitespace-nowrap">{dateLabel(version.effectiveFrom)}</td><td className="px-3 py-3"><p>{version.changedBy}</p><p className="mt-1 text-xs text-muted-foreground">{dateTimeLabel(version.changedAt)}</p></td></tr>)}</tbody></table></div> : <p className="text-sm text-muted-foreground">No rate versions found.</p>}
+                      {history.some(version => version.notes) ? <div className="mt-3 space-y-1 border-t border-border pt-3">{history.filter(version => version.notes).map(version => <p key={version.id} className="text-xs text-muted-foreground">v{version.version}: {version.notes}</p>)}</div> : null}
+                    </div> : null}
+                  </div>
+                }) : <div className="rounded-xl border border-dashed border-border p-5 text-center"><p className="font-bold">No vendor rates for {material.name}</p><p className="mt-1 text-sm text-muted-foreground">Use “Add vendor rate” above to record the first supplier price for this ingredient.</p></div>}
+              </div> : null}
+            </article>
+          })}
+        </section>
+      )}</div> : <div className="rounded-2xl border border-dashed border-border px-5 py-12 text-center"><p className="font-bold">No matching ingredients</p><p className="mt-1 text-sm text-muted-foreground">Add raw materials or change the search and filters.</p></div>}
     </section> : null}
     {editing !== undefined ? <VendorRateModal vendors={vendors} materials={materials} initial={editing ?? undefined} onClose={() => setEditing(undefined)} onSave={onSave} /> : null}
   </div>
