@@ -17,6 +17,11 @@
       "binding": "DB",
       "database_name": "swadam_orders",
       "database_id": "f1ddcf6c-0825-431b-8994-e7497c3350b3"
+    },
+    {
+      "binding": "INVENTORY_DB",
+      "database_name": "swadam_inventory",
+      "database_id": "da786727-ba8d-457b-96f6-711b265f9812"
     }
   ]
 }
