@@ -1,10 +1,10 @@
 "use client"
 
 import Image from "next/image"
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react"
 import {
   Activity, AlertCircle, ArrowDownToLine, ArrowRight, Boxes, CalendarDays, Check, CheckCircle2,
-  ClipboardCheck, Clock3, Factory, Filter, LayoutDashboard, LockKeyhole, Package, Pencil, Plus,
+  ChevronDown, ClipboardCheck, Clock3, Factory, Filter, LayoutDashboard, LockKeyhole, Package, Pencil, Plus,
   RefreshCw, Search, ShieldCheck, Trash2, Truck, Wallet, Wheat, X,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -46,20 +46,20 @@ type EditableMaster = { kind: "product"; record: Product } | { kind: "vendor"; r
 type DeletableMaster = EditableMaster
 
 const MATERIAL_CATEGORIES = [
-  "Grains & cereals",
-  "Flours & starches",
-  "Pulses & legumes",
-  "Nuts & seeds",
-  "Spices & seasonings",
-  "Herbs & flavourings",
-  "Oils & fats",
-  "Sweeteners",
-  "Dairy ingredients",
-  "Dried fruits",
-  "Fruits & vegetables",
-  "Packaging materials",
-  "Processing aids",
-  "Other",
+  { label: "Grains & cereals", hint: "Poha, rice, wheat and corn", group: "Ingredients" },
+  { label: "Flours & starches", hint: "Besan, rice flour and starches", group: "Ingredients" },
+  { label: "Pulses & legumes", hint: "Chana, lentils and beans", group: "Ingredients" },
+  { label: "Nuts & seeds", hint: "Groundnuts, sesame and cashews", group: "Ingredients" },
+  { label: "Spices & seasonings", hint: "Chilli, turmeric, salt and masala", group: "Ingredients" },
+  { label: "Herbs & flavourings", hint: "Herbs, extracts and flavours", group: "Ingredients" },
+  { label: "Oils & fats", hint: "Edible oils, ghee and fats", group: "Ingredients" },
+  { label: "Sweeteners", hint: "Sugar, jaggery and glucose", group: "Ingredients" },
+  { label: "Dairy ingredients", hint: "Milk powder, whey and dairy solids", group: "Ingredients" },
+  { label: "Dried fruits", hint: "Raisins, dates and dried berries", group: "Ingredients" },
+  { label: "Fruits & vegetables", hint: "Fresh and processed produce", group: "Ingredients" },
+  { label: "Packaging materials", hint: "Pouches, labels and cartons", group: "Production supplies" },
+  { label: "Processing aids", hint: "Food-grade processing aids", group: "Production supplies" },
+  { label: "Other", hint: "Anything not covered above", group: "Production supplies" },
 ] as const
 
 const NAV: Array<{ id: TabId; label: string; icon: typeof LayoutDashboard }> = [
@@ -120,6 +120,109 @@ function Field({ label, name, required, type = "text", placeholder, step, min }:
 function SelectField({ label, name, required, children }: { label: string; name: string; required?: boolean; children: ReactNode }) {
   return <label className="block"><span className={LABEL}>{label}{required ? " *" : ""}</span><select className={INPUT} name={name} required={required} defaultValue="">{children}</select></label>
 }
+
+function MaterialCategoryDropdown() {
+  const [selected, setSelected] = useState("")
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState("")
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const closeOnOutside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) setOpen(false)
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false)
+    }
+    document.addEventListener("pointerdown", closeOnOutside)
+    document.addEventListener("keydown", closeOnEscape)
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutside)
+      document.removeEventListener("keydown", closeOnEscape)
+    }
+  }, [open])
+
+  const filtered = useMemo(() => {
+    const value = query.trim().toLowerCase()
+    return MATERIAL_CATEGORIES.filter(item =>
+      !value || item.label.toLowerCase().includes(value) || item.hint.toLowerCase().includes(value)
+    )
+  }, [query])
+  const groups = ["Ingredients", "Production supplies"] as const
+
+  return <div className="block">
+    <span className={LABEL}>Category</span>
+    <div ref={rootRef} className="relative">
+      <input type="hidden" name="category" value={selected} />
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen(value => !value)}
+        className={INPUT + " flex items-center justify-between gap-3 text-left"}
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Wheat className="h-4 w-4" /></span>
+          <span className="min-w-0">
+            <span className={"block truncate text-sm font-bold " + (selected ? "text-foreground" : "text-muted-foreground")}>{selected || "Choose a category"}</span>
+            <span className="mt-0.5 block text-[11px] font-medium text-muted-foreground">{selected ? "Category selected" : "Optional · search or browse"}</span>
+          </span>
+        </span>
+        <ChevronDown className={"h-4 w-4 shrink-0 text-muted-foreground transition-transform " + (open ? "rotate-180" : "")} />
+      </button>
+
+      {open ? <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-[100] overflow-hidden rounded-2xl border border-border bg-card/95 shadow-2xl shadow-stone-950/15 backdrop-blur-xl">
+        <div className="border-b border-border bg-secondary/35 p-3">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div><p className="text-sm font-extrabold text-foreground">Choose a category</p><p className="mt-0.5 text-[11px] text-muted-foreground">Pick the closest match for this material.</p></div>
+            <span className="rounded-full border border-border bg-background/80 px-2.5 py-1 text-[10px] font-bold text-muted-foreground">{filtered.length} options</span>
+          </div>
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              autoFocus
+              value={query}
+              onChange={event => setQuery(event.target.value)}
+              placeholder="Search categories..."
+              className="min-h-10 w-full rounded-xl border border-border bg-background px-3 pl-9 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-primary/15"
+            />
+          </label>
+        </div>
+        <div className="max-h-64 overflow-y-auto p-2">
+          <button type="button" onClick={() => { setSelected(""); setOpen(false); setQuery("") }} className={"mb-2 flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm transition " + (!selected ? "border-primary/30 bg-primary/5 text-primary" : "border-transparent text-muted-foreground hover:bg-secondary/70")}>
+            <span><span className="block font-bold">No category</span><span className="mt-0.5 block text-[11px] opacity-75">Leave this field blank</span></span>
+            {!selected ? <Check className="h-4 w-4" /> : null}
+          </button>
+          {groups.map(group => {
+            const items = filtered.filter(item => item.group === group)
+            if (!items.length) return null
+            return <div key={group} className="mb-2 last:mb-0">
+              <p className="px-3 pb-1.5 pt-2 text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">{group}</p>
+              <div className="space-y-1">
+                {items.map(item => {
+                  const active = selected === item.label
+                  return <button
+                    key={item.label}
+                    type="button"
+                    role="option"
+                    aria-selected={active}
+                    onClick={() => { setSelected(item.label); setOpen(false); setQuery("") }}
+                    className={"flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition " + (active ? "border-primary/30 bg-primary/10" : "border-transparent hover:border-border hover:bg-secondary/65")}
+                  >
+                    <span className="min-w-0"><span className="block text-sm font-bold text-foreground">{item.label}</span><span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{item.hint}</span></span>
+                    {active ? <Check className="h-4 w-4 shrink-0 text-primary" /> : null}
+                  </button>
+                })}
+              </div>
+            </div>
+          })}
+          {!filtered.length ? <p className="px-3 py-8 text-center text-sm text-muted-foreground">No category matches “{query}”.</p> : null}
+        </div>
+      </div> : null}
+    </div>
+  </div>
+}
 function Modal({ title, description, onClose, children, wide = false }: { title: string; description?: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose() }
@@ -151,7 +254,7 @@ function EntityModal({ initialKind, data, onClose, onCreate }: { initialKind: En
       <label className="block"><span className={LABEL}>Record type</span><select className={INPUT} value={kind} onChange={(event) => { setKind(event.target.value as EntityKind); setError("") }}><option value="product">Product</option><option value="vendor">Vendor</option><option value="material">Raw material</option><option value="purchase_lot">Material purchase / received lot</option></select></label>
       {kind === "product" ? <div className="grid gap-4 sm:grid-cols-2"><Field label="Product name" name="name" required placeholder="e.g. Patal Poha Chivda" /><Field label="Product code" name="code" placeholder="Auto-generated when blank" /><Field label="Category" name="category" placeholder="Snacks, premixes..." /><Field label="Description" name="description" placeholder="Optional notes" /></div> : null}
       {kind === "vendor" ? <div className="grid gap-4 sm:grid-cols-2"><Field label="Vendor / business name" name="name" required placeholder="Supplier name" /><Field label="Contact person" name="contactName" placeholder="Contact name" /><Field label="Phone" name="phone" placeholder="+91..." /><Field label="Email" name="email" type="email" placeholder="vendor@example.com" /><Field label="GSTIN" name="gstin" placeholder="Optional GSTIN" /><Field label="Address" name="address" placeholder="Vendor address" /><div className="sm:col-span-2"><Field label="Notes" name="notes" placeholder="Materials supplied, payment terms..." /></div></div> : null}
-      {kind === "material" ? <div className="grid gap-4 sm:grid-cols-2"><Field label="Material name" name="name" required placeholder="e.g. Flattened rice" /><Field label="Material code" name="code" placeholder="Auto-generated when blank" /><SelectField label="Category" name="category"><option value="">Choose category (optional)</option>{MATERIAL_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</SelectField><SelectField label="Base unit" name="unit" required><option value="">Choose unit</option><option value="kg">Kilograms (kg)</option><option value="g">Grams (g)</option><option value="litre">Litres</option><option value="unit">Units</option></SelectField><div className="sm:col-span-2"><Field label="Description" name="description" placeholder="Optional specifications" /></div></div> : null}
+      {kind === "material" ? <div className="grid gap-4 sm:grid-cols-2"><Field label="Material name" name="name" required placeholder="e.g. Flattened rice" /><Field label="Material code" name="code" placeholder="Auto-generated when blank" /><MaterialCategoryDropdown /><SelectField label="Base unit" name="unit" required><option value="">Choose unit</option><option value="kg">Kilograms (kg)</option><option value="g">Grams (g)</option><option value="litre">Litres</option><option value="unit">Units</option></SelectField><div className="sm:col-span-2"><Field label="Description" name="description" placeholder="Optional specifications" /></div></div> : null}
       {kind === "purchase_lot" ? <div className="grid gap-4 sm:grid-cols-2"><SelectField label="Material" name="materialId" required><option value="">Choose material</option>{data.materials.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.unit}</option>)}</SelectField><SelectField label="Vendor" name="vendorId" required><option value="">Choose vendor</option>{data.vendors.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectField><Field label="Purchase / received date" name="purchasedOn" type="date" required /><Field label="Quantity received" name="receivedQty" type="number" step="0.001" min="0.001" required placeholder="e.g. 250" /><Field label="Vendor lot number" name="vendorLotNumber" placeholder="Supplier lot reference" /><Field label="Invoice number" name="invoiceNumber" placeholder="Purchase invoice reference" /><Field label="Unit cost (INR, optional)" name="unitCost" type="number" step="0.01" min="0" placeholder="Cost per base unit" />{(!data.materials.length || !data.vendors.length) ? <p className="sm:col-span-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200">Add at least one vendor and one raw material before recording a purchase lot.</p> : null}</div> : null}
       {error ? <p role="alert" className="rounded-xl bg-rose-500/10 p-3 text-sm text-rose-700 dark:text-rose-300">{error}</p> : null}
       <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end"><button type="button" onClick={onClose} className={BUTTON + " border border-border bg-background/70"}>Cancel</button><button type="submit" disabled={saving || (kind === "purchase_lot" && (!data.materials.length || !data.vendors.length))} className={BUTTON + " bg-primary text-primary-foreground"}>{saving ? "Saving..." : <><Plus className="h-4 w-4" /> Save record</>}</button></div>
