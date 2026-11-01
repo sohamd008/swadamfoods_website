@@ -15,6 +15,18 @@ type ProductRow = {
   created_at: string
 }
 
+type FinishedStockRow = {
+  id: string
+  productId: string
+  productName: string
+  productCode: string
+  packSizeG: number
+  packetsOnHand: number
+  notes: string | null
+  updatedBy: string
+  updatedAt: string
+}
+
 type VendorRow = {
   id: string
   name: string
@@ -160,8 +172,9 @@ export async function GET(request: Request) {
   if (!db) return jsonResponse({ error: "Inventory database is not connected. Follow INVENTORY_SETUP.md to create and bind swadam_inventory." }, 503)
 
   try {
-    const [productsResult, vendorsResult, materialsResult, lotsResult, batchesResult, usageResult, activityResult, statsResult] = await Promise.all([
+    const [productsResult, finishedStockResult, vendorsResult, materialsResult, lotsResult, batchesResult, usageResult, activityResult, statsResult] = await Promise.all([
       db.prepare("SELECT id, code, name, category, description, is_active, created_at FROM inventory_products ORDER BY name COLLATE NOCASE").all<ProductRow>(),
+      db.prepare("SELECT s.id, s.product_id AS productId, p.name AS productName, p.code AS productCode, s.pack_size_g AS packSizeG, s.packets_on_hand AS packetsOnHand, s.notes, s.updated_by AS updatedBy, s.updated_at AS updatedAt FROM inventory_finished_stock s JOIN inventory_products p ON p.id = s.product_id ORDER BY p.name COLLATE NOCASE, s.pack_size_g ASC").all<FinishedStockRow>(),
       db.prepare("SELECT id, name, contact_name, phone, email, gstin, address, notes, is_active, created_at FROM inventory_vendors ORDER BY name COLLATE NOCASE").all<VendorRow>(),
       db.prepare("SELECT id, code, name, category, unit, description, is_active, created_at FROM inventory_materials ORDER BY name COLLATE NOCASE").all<MaterialRow>(),
       db.prepare(
@@ -193,6 +206,7 @@ export async function GET(request: Request) {
 
     return jsonResponse({
       products: productsResult.results ?? [],
+      finishedStock: finishedStockResult.results ?? [],
       vendors: vendorsResult.results ?? [],
       materials: materialsResult.results ?? [],
       purchaseLots: lotsResult.results ?? [],
@@ -245,6 +259,33 @@ export async function POST(request: Request) {
         auditStatement(db, auth.email, "created", "product", id, "Added product " + name),
       ])
       return jsonResponse({ success: true, id }, 201)
+    }
+
+    if (type === "finished_stock") {
+      const productId = textValue(body.productId, 64)
+      const packSizeGrams = Number(body.packSizeGrams)
+      const packetsOnHand = Number(body.packetsOnHand)
+      const notes = textValue(body.notes, 500)
+      if (!productId) return jsonResponse({ error: "Choose a product for this packet stock record." }, 400)
+      if (!Number.isSafeInteger(packSizeGrams) || packSizeGrams < 1 || packSizeGrams > 100000) {
+        return jsonResponse({ error: "Packet size must be a whole number of grams greater than zero." }, 400)
+      }
+      if (!Number.isSafeInteger(packetsOnHand) || packetsOnHand < 0 || packetsOnHand > 100000000) {
+        return jsonResponse({ error: "Packet count must be a whole number zero or greater." }, 400)
+      }
+
+      const product = await db.prepare("SELECT id, name FROM inventory_products WHERE id = ?").bind(productId).first<{ id: string; name: string }>()
+      if (!product) return jsonResponse({ error: "The selected product does not exist." }, 404)
+      const current = await db.prepare("SELECT id, packets_on_hand AS packetsOnHand FROM inventory_finished_stock WHERE product_id = ? AND pack_size_g = ?")
+        .bind(productId, packSizeGrams).first<{ id: string; packetsOnHand: number }>()
+      const id = current?.id ?? crypto.randomUUID()
+      const previousCount = current?.packetsOnHand ?? 0
+      await db.batch([
+        db.prepare("INSERT INTO inventory_finished_stock (id, product_id, pack_size_g, packets_on_hand, notes, updated_by) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(product_id, pack_size_g) DO UPDATE SET packets_on_hand = excluded.packets_on_hand, notes = excluded.notes, updated_by = excluded.updated_by, updated_at = datetime('now')")
+          .bind(id, productId, packSizeGrams, packetsOnHand, notes || null, auth.email),
+        auditStatement(db, auth.email, current ? "updated" : "created", "finished_stock", id, product.name + " · " + packSizeGrams + " g packets: " + previousCount + " → " + packetsOnHand + " packets"),
+      ])
+      return jsonResponse({ success: true, id, packetsOnHand }, current ? 200 : 201)
     }
 
     if (type === "vendor") {
