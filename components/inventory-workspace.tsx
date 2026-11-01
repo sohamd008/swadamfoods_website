@@ -15,7 +15,7 @@ type FinishedStock = { id: string; productId: string; productName: string; produ
 type VendorRate = { id: string; vendorId: string; vendorName: string; materialId: string; materialName: string; materialCode: string; unit: string; rate: number; currency: string; effectiveFrom: string; notes: string | null; updatedBy: string; updatedAt: string }
 type VendorRateVersion = { id: string; rateId: string; version: number; previousRate: number | null; newRate: number; currency: string; effectiveFrom: string; notes: string | null; changedBy: string; changedAt: string }
 type Vendor = { id: string; name: string; contact_name: string | null; phone: string | null; email: string | null; gstin: string | null; address: string | null; notes: string | null; is_active: number; purchaseLotCount: number; usedPurchaseLotCount: number; affectedBatchCount: number }
-type Material = { id: string; code: string; name: string; category: string | null; unit: string; description: string | null; is_active: number }
+type Material = { id: string; code: string; name: string; category: string | null; unit: string; description: string | null; is_active: number; purchaseLotCount: number }
 type PurchaseLot = {
   id: string; materialId: string; materialName: string; unit: string; vendorId: string; vendorName: string
   vendorLotNumber: string | null; invoiceNumber: string | null; purchasedOn: string
@@ -40,9 +40,9 @@ type Snapshot = {
   batches: Batch[]; activity: ActivityLog[]
   stats: { totalBatches: number; totalOutputKg: number; monthBatches: number; monthOutputKg: number; qcPending: number }
 }
-type TabId = "overview" | "batches" | "products" | "finished_stock" | "vendors" | "vendor_rates" | "materials" | "quality" | "activity"
+type TabId = "overview" | "batches" | "products" | "finished_stock" | "vendors" | "vendor_rates" | "raw_materials" | "materials" | "quality" | "activity"
 type EntityKind = "product" | "vendor" | "material" | "purchase_lot"
-type EditableMaster = { kind: "product"; record: Product } | { kind: "vendor"; record: Vendor }
+type EditableMaster = { kind: "product"; record: Product } | { kind: "vendor"; record: Vendor } | { kind: "material"; record: Material }
 type DeletableMaster = EditableMaster
 
 const MATERIAL_CATEGORIES = [
@@ -69,7 +69,8 @@ const NAV: Array<{ id: TabId; label: string; icon: typeof LayoutDashboard }> = [
   { id: "finished_stock", label: "Finished packets", icon: Boxes },
   { id: "vendors", label: "Vendors", icon: Truck },
   { id: "vendor_rates", label: "Vendor rates", icon: Wallet },
-  { id: "materials", label: "Materials & lots", icon: Wheat },
+  { id: "raw_materials", label: "Raw materials", icon: Wheat },
+  { id: "materials", label: "Materials & lots", icon: Boxes },
   { id: "quality", label: "Quality control", icon: ClipboardCheck },
   { id: "activity", label: "Activity history", icon: Activity },
 ]
@@ -174,7 +175,9 @@ function EditMasterModal({ target, onClose, onSave }: { target: EditableMaster; 
   }
   const product = target.kind === "product" ? target.record : null
   const vendor = target.kind === "vendor" ? target.record : null
-  return <Modal title={"Edit " + (product ? "product" : "vendor")} description="Update this master record while keeping its linked history." onClose={onClose}>
+  const material = target.kind === "material" ? target.record : null
+  const title = product ? "product" : vendor ? "vendor" : "raw material"
+  return <Modal title={"Edit " + title} description="Update this master record while keeping its linked history." onClose={onClose}>
     <form onSubmit={submit} className="space-y-5">
       {product ? <div className="grid gap-4 sm:grid-cols-2">
         <label className="block"><span className={LABEL}>Product name *</span><input className={INPUT} name="name" required maxLength={120} defaultValue={product.name} /></label>
@@ -191,6 +194,13 @@ function EditMasterModal({ target, onClose, onSave }: { target: EditableMaster; 
         <label className="block"><span className={LABEL}>Address</span><input className={INPUT} name="address" maxLength={300} defaultValue={vendor.address ?? ""} /></label>
         <label className="block sm:col-span-2"><span className={LABEL}>Notes</span><input className={INPUT} name="notes" maxLength={500} defaultValue={vendor.notes ?? ""} /></label>
       </div> : null}
+      {material ? <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block"><span className={LABEL}>Raw material name *</span><input className={INPUT} name="name" required maxLength={120} defaultValue={material.name} /></label>
+        <label className="block"><span className={LABEL}>Material code *</span><input className={INPUT} name="code" required maxLength={40} defaultValue={material.code} /></label>
+        <label className="block"><span className={LABEL}>Category</span><select className={INPUT} name="category" defaultValue={material.category ?? ""}><option value="">Uncategorised</option>{material.category && !MATERIAL_CATEGORIES.some(category => category === material.category) ? <option value={material.category}>{material.category}</option> : null}{MATERIAL_CATEGORIES.map(category => <option key={category} value={category}>{category}</option>)}</select></label>
+        {material.purchaseLotCount > 0 ? <label className="block"><span className={LABEL}>Base unit</span><input className={INPUT + " cursor-not-allowed opacity-70"} readOnly value={material.unit === "kg" ? "Kilograms (kg)" : material.unit === "g" ? "Grams (g)" : material.unit === "litre" ? "Litres" : "Units"} /><p className="mt-1.5 text-[11px] text-muted-foreground">Locked because this material has purchase-lot history.</p><input type="hidden" name="unit" value={material.unit} /></label> : <label className="block"><span className={LABEL}>Base unit *</span><select className={INPUT} name="unit" required defaultValue={material.unit}><option value="kg">Kilograms (kg)</option><option value="g">Grams (g)</option><option value="litre">Litres</option><option value="unit">Units</option></select></label>}
+        <label className="block sm:col-span-2"><span className={LABEL}>Description / specifications</span><textarea className={INPUT + " min-h-24 resize-y"} name="description" rows={3} maxLength={500} defaultValue={material.description ?? ""} /></label>
+      </div> : null}
       {error ? <p role="alert" className="rounded-xl bg-rose-500/10 p-3 text-sm text-rose-700 dark:text-rose-300">{error}</p> : null}
       <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
         <button type="button" onClick={onClose} className={BUTTON + " border border-border bg-background/70"}>Cancel</button>
@@ -200,12 +210,15 @@ function EditMasterModal({ target, onClose, onSave }: { target: EditableMaster; 
   </Modal>
 }
 
-function DeleteMasterModal({ target, onClose, onDelete }: { target: DeletableMaster; onClose: () => void; onDelete: (kind: "product" | "vendor", id: string) => Promise<boolean> }) {
+function DeleteMasterModal({ target, onClose, onDelete }: { target: DeletableMaster; onClose: () => void; onDelete: (kind: "product" | "vendor" | "material", id: string) => Promise<boolean> }) {
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState("")
   const product = target.kind === "product" ? target.record : null
   const vendor = target.kind === "vendor" ? target.record : null
-  const blocked = product ? product.batchCount > 0 : (vendor?.usedPurchaseLotCount ?? 0) > 0
+  const material = target.kind === "material" ? target.record : null
+  const blocked = material ? material.purchaseLotCount > 0 : product ? product.batchCount > 0 : (vendor?.usedPurchaseLotCount ?? 0) > 0
+  const title = product ? "product" : vendor ? "vendor" : "raw material"
+  const name = product?.name ?? vendor?.name ?? material?.name ?? ""
   const submit = async () => {
     if (blocked) return
     setDeleting(true)
@@ -214,12 +227,14 @@ function DeleteMasterModal({ target, onClose, onDelete }: { target: DeletableMas
     setDeleting(false)
     if (!success) setError("The record could not be deleted. Refresh and try again.")
   }
-  return <Modal title={"Permanently delete " + (product ? "product" : "vendor")} description={product?.name ?? vendor?.name} onClose={onClose}>
+  return <Modal title={"Permanently delete " + title} description={name} onClose={onClose}>
     <div className="space-y-4">
       {product ? <p className="text-sm leading-6 text-muted-foreground">This permanently removes the product and its {product.finishedStockCount} finished-packet stock record(s). It cannot be undone.</p> : null}
       {vendor ? <p className="text-sm leading-6 text-muted-foreground">This permanently removes the vendor, its {vendor.purchaseLotCount} purchase lot(s) and its vendor-rate records, provided none of its lots have been consumed.</p> : null}
+      {material ? <p className="text-sm leading-6 text-muted-foreground">This permanently removes the raw material. Any vendor rates and their version history linked to it will also be removed. It can only be deleted when it has no purchase-lot or production-use history.</p> : null}
       {blocked && product ? <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-900 dark:text-amber-200">Deletion is blocked because this product has {product.batchCount} production batch(es). Removing it would destroy production history and ingredient traceability.</div> : null}
       {blocked && vendor ? <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-900 dark:text-amber-200">Deletion is blocked because {vendor.usedPurchaseLotCount} of this vendor's purchase lots were consumed across {vendor.affectedBatchCount} production batch(es). The supplier and lot links must remain to preserve traceability.</div> : null}
+      {blocked && material ? <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-900 dark:text-amber-200">Deletion is blocked because this material is linked to {material.purchaseLotCount} purchase lot(s). Keep it so the supplier and production records remain traceable. You can still edit its name, code, category and description.</div> : null}
       {!blocked ? <p className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm font-semibold leading-6 text-rose-800 dark:text-rose-200">This is a permanent deletion, not an archive. This action cannot be undone.</p> : null}
       {error ? <p role="alert" className="text-sm text-rose-600">{error}</p> : null}
       <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
@@ -228,6 +243,66 @@ function DeleteMasterModal({ target, onClose, onDelete }: { target: DeletableMas
       </div>
     </div>
   </Modal>
+}
+
+function RawMaterialsPanel({ materials, purchaseLots, onAdd, onEdit, onDelete }: {
+  materials: Material[]
+  purchaseLots: PurchaseLot[]
+  onAdd: () => void
+  onEdit: (material: Material) => void
+  onDelete: (material: Material) => void
+}) {
+  const [query, setQuery] = useState("")
+  const [category, setCategory] = useState("all")
+  const categories = useMemo(() => Array.from(new Set(materials.map(material => material.category || "Uncategorised"))).sort((a, b) => a.localeCompare(b)), [materials])
+  const filtered = useMemo(() => {
+    const value = query.trim().toLowerCase()
+    return materials.filter(material => {
+      const matchesCategory = category === "all" || (material.category || "Uncategorised") === category
+      const matchesQuery = !value || material.name.toLowerCase().includes(value) || material.code.toLowerCase().includes(value) || (material.category ?? "").toLowerCase().includes(value) || (material.description ?? "").toLowerCase().includes(value)
+      return matchesCategory && matchesQuery
+    }).sort((a, b) => a.name.localeCompare(b.name))
+  }, [materials, query, category])
+  const totalLots = materials.reduce((sum, material) => sum + material.purchaseLotCount, 0)
+
+  return <div className="space-y-5">
+    <Heading title="Raw materials" description="Your ingredient and packaging catalogue. Edit material details or permanently remove unused records." action={<button type="button" onClick={onAdd} className={BUTTON + " bg-primary text-primary-foreground"}><Plus className="h-4 w-4" /> Add raw material</button>} />
+    <div className="grid gap-3 sm:grid-cols-3">
+      <div className="glass-card rounded-2xl p-4"><p className="text-xs font-bold text-muted-foreground">Catalogue items</p><p className="mt-2 text-2xl font-black">{materials.length}</p></div>
+      <div className="glass-card rounded-2xl p-4"><p className="text-xs font-bold text-muted-foreground">Categories</p><p className="mt-2 text-2xl font-black">{categories.length}</p></div>
+      <div className="glass-card rounded-2xl p-4"><p className="text-xs font-bold text-muted-foreground">Purchase lots linked</p><p className="mt-2 text-2xl font-black">{totalLots}</p></div>
+    </div>
+    {materials.length ? <section className="glass-panel rounded-3xl p-4 sm:p-6">
+      <div className="mb-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_240px]">
+        <label className="relative block"><Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input className={INPUT + " pl-10"} value={query} onChange={event => setQuery(event.target.value)} placeholder="Search material name, code or description..." /></label>
+        <select className={INPUT} aria-label="Filter raw materials by category" value={category} onChange={event => setCategory(event.target.value)}><option value="all">All categories</option>{categories.map(item => <option key={item} value={item}>{item}</option>)}</select>
+      </div>
+      {filtered.length ? <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+        {filtered.map(material => {
+          const lots = purchaseLots.filter(lot => lot.materialId === material.id)
+          const available = lots.reduce((sum, lot) => sum + lot.availableQty, 0)
+          return <Panel key={material.id}>
+            <div className="flex items-start justify-between gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Wheat className="h-5 w-5" /></span>
+              <span className="rounded-full border border-border px-3 py-1 text-[10px] font-extrabold">{material.code}</span>
+            </div>
+            <h3 className="mt-3 text-base font-black">{material.name}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{material.category || "Uncategorised"} · {material.unit}</p>
+            {material.description ? <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{material.description}</p> : null}
+            <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-3">
+              <div><p className="text-[11px] text-muted-foreground">Available stock</p><p className="mt-1 text-lg font-black">{number(available, 3)} <span className="text-xs font-bold text-muted-foreground">{material.unit}</span></p></div>
+              <div><p className="text-[11px] text-muted-foreground">Purchase lots</p><p className="mt-1 text-lg font-black">{lots.length}</p></div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3">
+              <button type="button" onClick={() => onEdit(material)} className={BUTTON + " border border-border bg-background/75"}><Pencil className="h-4 w-4" /> Edit</button>
+              <button type="button" onClick={() => onDelete(material)} className={BUTTON + " border border-rose-500/25 bg-rose-500/5 text-rose-700 dark:text-rose-300"}><Trash2 className="h-4 w-4" /> Delete permanently</button>
+            </div>
+            {material.purchaseLotCount > 0 ? <p className="mt-2 text-[11px] text-muted-foreground">Deletion locked while {material.purchaseLotCount} linked purchase lot(s) are retained for traceability.</p> : null}
+          </Panel>
+        })}
+      </div> : <Empty title="No matching raw materials" description="Try a different search or category filter." />}
+    </section> : <Empty title="No raw materials added" description="Create raw-material records to build your ingredient and packaging catalogue." action={<button type="button" onClick={onAdd} className={BUTTON + " bg-primary text-primary-foreground"}>Add first raw material</button>} />}
+  </div>
 }
 
 function FinishedStockModal({ data, initial, onClose, onSave }: { data: Snapshot; initial?: FinishedStock; onClose: () => void; onSave: (value: Record<string, string>) => Promise<boolean> }) {
@@ -374,7 +449,7 @@ export function InventoryWorkspace({ currentUserEmail }: { currentUserEmail: str
     }
   }, [refresh])
 
-  const deleteMaster = useCallback(async (kind: "product" | "vendor", id: string) => {
+  const deleteMaster = useCallback(async (kind: "product" | "vendor" | "material", id: string) => {
     try {
       const response = await fetch("/api/inventory", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: kind, id }), credentials: "same-origin" })
       const result = await response.json() as { error?: string }
@@ -519,7 +594,9 @@ export function InventoryWorkspace({ currentUserEmail }: { currentUserEmail: str
 
         {snapshot && tab === "vendor_rates" ? <VendorRatesPanel vendors={snapshot.vendors} materials={snapshot.materials} rates={snapshot.vendorRates} versions={snapshot.vendorRateVersions} onSave={saveVendorRate} /> : null}
 
-        {snapshot && tab === "materials" ? <div className="space-y-5"><Heading title="Materials & purchase lots" description="Received quantities, consumption and remaining lot balances." action={<button type="button" onClick={() => setEntity("purchase_lot")} className={BUTTON + " bg-primary text-primary-foreground"}><Plus className="h-4 w-4" /> Receive material</button>} />{snapshot.materials.length ? <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">{snapshot.materials.map((material) => { const lots = snapshot.purchaseLots.filter((lot) => lot.materialId === material.id); const available = lots.reduce((sum, lot) => sum + lot.availableQty, 0); return <Panel key={material.id}><div className="flex items-start justify-between gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Wheat className="h-5 w-5" /></span><span className="rounded-full border border-border px-3 py-1 text-[10px] font-extrabold">{material.code}</span></div><h3 className="mt-3 text-base font-black">{material.name}</h3><p className="mt-1 text-xs text-muted-foreground">{material.category || "Uncategorised"} · {material.unit}</p><div className="mt-4 flex items-end justify-between border-t border-border pt-3"><div><p className="text-xs text-muted-foreground">Available across lots</p><p className="text-xl font-black">{number(available, 3)} <span className="text-xs font-bold text-muted-foreground">{material.unit}</span></p></div><p className="text-xs text-muted-foreground">{lots.length} lots</p></div></Panel>})}</div> : <Empty title="No raw materials added" description="Create raw-material records before receiving supplier lots." action={<button type="button" onClick={() => setEntity("material")} className={BUTTON + " bg-primary text-primary-foreground"}>Add material</button>} />}<Panel><Heading title="Received purchase lots" description="The supplier consignments that production batches consume." />{snapshot.purchaseLots.length ? <div className="overflow-x-auto rounded-2xl border border-border"><table className="w-full min-w-[900px] text-left"><thead className="bg-secondary/55"><tr className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground"><th className="px-4 py-3">Material</th><th className="px-4 py-3">Vendor</th><th className="px-4 py-3">Purchased</th><th className="px-4 py-3">Vendor lot</th><th className="px-4 py-3">Received</th><th className="px-4 py-3">Used</th><th className="px-4 py-3">Available</th><th className="px-4 py-3">Invoice</th></tr></thead><tbody>{snapshot.purchaseLots.map((lot) => <tr key={lot.id} className="border-t border-border/70 text-sm"><td className="px-4 py-4 font-bold">{lot.materialName}</td><td className="px-4 py-4">{lot.vendorName}</td><td className="px-4 py-4 whitespace-nowrap text-muted-foreground">{date(lot.purchasedOn)}</td><td className="px-4 py-4 text-muted-foreground">{lot.vendorLotNumber || "—"}</td><td className="px-4 py-4 font-mono">{number(lot.receivedQty, 3)} {lot.unit}</td><td className="px-4 py-4 font-mono">{number(lot.usedQty, 3)} {lot.unit}</td><td className="px-4 py-4 font-mono font-extrabold">{number(lot.availableQty, 3)} {lot.unit}</td><td className="px-4 py-4 text-muted-foreground">{lot.invoiceNumber || "—"}</td></tr>)}</tbody></table></div> : <Empty title="No purchase lots yet" description="Record a received lot to connect materials with vendors and track available quantities." action={<button type="button" onClick={() => setEntity("purchase_lot")} className={BUTTON + " bg-primary text-primary-foreground"}>Receive a purchase lot</button>} />}</Panel></div> : null}
+        {snapshot && tab === "raw_materials" ? <RawMaterialsPanel materials={snapshot.materials} purchaseLots={snapshot.purchaseLots} onAdd={() => setEntity("material")} onEdit={material => setEditingMaster({kind:"material",record:material})} onDelete={material => setDeletingMaster({kind:"material",record:material})} /> : null}
+
+        {snapshot && tab === "materials" ? <div className="space-y-5"><Heading title="Materials & purchase lots" description="Received quantities, consumption and remaining lot balances." action={<button type="button" onClick={() => setEntity("purchase_lot")} className={BUTTON + " bg-primary text-primary-foreground"}><Plus className="h-4 w-4" /> Receive material</button>} /><Panel><Heading title="Received purchase lots" description="The supplier consignments that production batches consume." />{snapshot.purchaseLots.length ? <div className="overflow-x-auto rounded-2xl border border-border"><table className="w-full min-w-[900px] text-left"><thead className="bg-secondary/55"><tr className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground"><th className="px-4 py-3">Material</th><th className="px-4 py-3">Vendor</th><th className="px-4 py-3">Purchased</th><th className="px-4 py-3">Vendor lot</th><th className="px-4 py-3">Received</th><th className="px-4 py-3">Used</th><th className="px-4 py-3">Available</th><th className="px-4 py-3">Invoice</th></tr></thead><tbody>{snapshot.purchaseLots.map((lot) => <tr key={lot.id} className="border-t border-border/70 text-sm"><td className="px-4 py-4 font-bold">{lot.materialName}</td><td className="px-4 py-4">{lot.vendorName}</td><td className="px-4 py-4 whitespace-nowrap text-muted-foreground">{date(lot.purchasedOn)}</td><td className="px-4 py-4 text-muted-foreground">{lot.vendorLotNumber || "—"}</td><td className="px-4 py-4 font-mono">{number(lot.receivedQty, 3)} {lot.unit}</td><td className="px-4 py-4 font-mono">{number(lot.usedQty, 3)} {lot.unit}</td><td className="px-4 py-4 font-mono font-extrabold">{number(lot.availableQty, 3)} {lot.unit}</td><td className="px-4 py-4 text-muted-foreground">{lot.invoiceNumber || "—"}</td></tr>)}</tbody></table></div> : <Empty title="No purchase lots yet" description="Record a received lot to connect materials with vendors and track available quantities." action={<button type="button" onClick={() => setEntity("purchase_lot")} className={BUTTON + " bg-primary text-primary-foreground"}>Receive a purchase lot</button>} />}</Panel></div> : null}
 
         {snapshot && tab === "quality" ? <Panel><Heading title="Quality control queue" description="Open a batch to review its history and record an inspection decision." />{snapshot.batches.filter((batch) => batch.status !== "released" && batch.status !== "rejected").length ? <div className="space-y-2">{snapshot.batches.filter((batch) => batch.status !== "released" && batch.status !== "rejected").map((batch) => <button key={batch.id} type="button" onClick={() => setSelectedBatch(batch)} className="flex min-h-[76px] w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-background/55 p-4 text-left transition hover:border-primary/35 hover:bg-primary/5"><div className="min-w-0"><p className="font-mono text-xs font-extrabold">{batch.batchNo}</p><p className="mt-1 truncate text-sm font-bold">{batch.productName} · {number(batch.outputQtyKg, 2)} kg</p><p className="mt-1 text-xs text-muted-foreground">{date(batch.manufacturedOn)} · {batch.materials.length} material lines</p></div><div className="flex items-center gap-2"><StatusPill status={batch.status} /><ArrowRight className="h-4 w-4 text-muted-foreground" /></div></button>)}</div> : <Empty title="Quality queue is clear" description="New batches appear here until approved, held or rejected." />}</Panel> : null}
 
