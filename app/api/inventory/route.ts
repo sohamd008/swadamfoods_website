@@ -285,26 +285,6 @@ export async function POST(request: Request) {
   const type = textValue(body.type, 30)
 
   try {
-    if (type === "material") {
-      const material = await db.prepare("SELECT id, name FROM inventory_materials WHERE id = ?").bind(id).first<{ id: string; name: string }>()
-      if (!material) return jsonResponse({ error: "Raw material not found." }, 404)
-      const [lots, usage] = await Promise.all([
-        db.prepare("SELECT COUNT(*) AS count FROM inventory_purchase_lots WHERE material_id = ?").bind(id).first<{ count: number }>(),
-        db.prepare("SELECT COUNT(*) AS count FROM inventory_batch_material_usage WHERE material_id = ?").bind(id).first<{ count: number }>(),
-      ])
-      const lotCount = lots?.count ?? 0
-      const usageCount = usage?.count ?? 0
-      if (lotCount > 0 || usageCount > 0) {
-        return jsonResponse({ error: "This raw material is linked to " + lotCount + " purchase lot(s) and " + usageCount + " production usage record(s). It cannot be permanently deleted without breaking supplier and batch traceability." }, 409)
-      }
-      await db.batch([
-        db.prepare("DELETE FROM inventory_vendor_material_rates WHERE material_id = ?").bind(id),
-        db.prepare("DELETE FROM inventory_materials WHERE id = ?").bind(id),
-        auditStatement(db, auth.email, "deleted", "material", id, "Permanently deleted unused raw material " + material.name),
-      ])
-      return jsonResponse({ success: true, deleted: "material", id })
-    }
-
     if (type === "product") {
       const name = textValue(body.name, 120)
       const code = textValue(body.code, 40).toUpperCase()
@@ -621,6 +601,26 @@ export async function DELETE(request: Request) {
   if (!id || !["product", "vendor", "material"].includes(type)) return jsonResponse({ error: "Choose a valid product, vendor or raw material to delete." }, 400)
 
   try {
+    if (type === "material") {
+      const material = await db.prepare("SELECT id, name FROM inventory_materials WHERE id = ?").bind(id).first<{ id: string; name: string }>()
+      if (!material) return jsonResponse({ error: "Raw material not found." }, 404)
+      const [lots, usage] = await Promise.all([
+        db.prepare("SELECT COUNT(*) AS count FROM inventory_purchase_lots WHERE material_id = ?").bind(id).first<{ count: number }>(),
+        db.prepare("SELECT COUNT(*) AS count FROM inventory_batch_material_usage WHERE material_id = ?").bind(id).first<{ count: number }>(),
+      ])
+      const lotCount = lots?.count ?? 0
+      const usageCount = usage?.count ?? 0
+      if (lotCount > 0 || usageCount > 0) {
+        return jsonResponse({ error: "This raw material is linked to " + lotCount + " purchase lot(s) and " + usageCount + " production usage record(s). It cannot be permanently deleted without breaking supplier and batch traceability." }, 409)
+      }
+      await db.batch([
+        db.prepare("DELETE FROM inventory_vendor_material_rates WHERE material_id = ?").bind(id),
+        db.prepare("DELETE FROM inventory_materials WHERE id = ?").bind(id),
+        auditStatement(db, auth.email, "deleted", "material", id, "Permanently deleted unused raw material " + material.name),
+      ])
+      return jsonResponse({ success: true, deleted: "material", id })
+    }
+
     if (type === "product") {
       const product = await db.prepare("SELECT id, name FROM inventory_products WHERE id = ?").bind(id).first<{ id: string; name: string }>()
       if (!product) return jsonResponse({ error: "Product not found." }, 404)
