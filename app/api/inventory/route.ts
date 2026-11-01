@@ -12,6 +12,8 @@ type ProductRow = {
   category: string | null
   description: string | null
   is_active: number
+  batchCount: number
+  finishedStockCount: number
   created_at: string
 }
 
@@ -37,7 +39,39 @@ type VendorRow = {
   address: string | null
   notes: string | null
   is_active: number
+  purchaseLotCount: number
+  usedPurchaseLotCount: number
+  affectedBatchCount: number
   created_at: string
+}
+
+type VendorRateRow = {
+  id: string
+  vendorId: string
+  vendorName: string
+  materialId: string
+  materialName: string
+  materialCode: string
+  unit: string
+  rate: number
+  currency: string
+  effectiveFrom: string
+  notes: string | null
+  updatedBy: string
+  updatedAt: string
+}
+
+type VendorRateVersionRow = {
+  id: string
+  rateId: string
+  version: number
+  previousRate: number | null
+  newRate: number
+  currency: string
+  effectiveFrom: string
+  notes: string | null
+  changedBy: string
+  changedAt: string
 }
 
 type MaterialRow = {
@@ -172,11 +206,13 @@ export async function GET(request: Request) {
   if (!db) return jsonResponse({ error: "Inventory database is not connected. Follow INVENTORY_SETUP.md to create and bind swadam_inventory." }, 503)
 
   try {
-    const [productsResult, finishedStockResult, vendorsResult, materialsResult, lotsResult, batchesResult, usageResult, activityResult, statsResult] = await Promise.all([
-      db.prepare("SELECT id, code, name, category, description, is_active, created_at FROM inventory_products ORDER BY name COLLATE NOCASE").all<ProductRow>(),
+    const [productsResult, finishedStockResult, vendorsResult, materialsResult, lotsResult, batchesResult, usageResult, activityResult, statsResult, vendorRatesResult, vendorRateVersionsResult] = await Promise.all([
+      db.prepare("SELECT p.id, p.code, p.name, p.category, p.description, p.is_active, (SELECT COUNT(*) FROM inventory_production_batches b WHERE b.product_id = p.id) AS batchCount, (SELECT COUNT(*) FROM inventory_finished_stock s WHERE s.product_id = p.id) AS finishedStockCount, p.created_at FROM inventory_products p ORDER BY p.name COLLATE NOCASE").all<ProductRow>(),
       db.prepare("SELECT s.id, s.product_id AS productId, p.name AS productName, p.code AS productCode, s.pack_size_g AS packSizeG, s.packets_on_hand AS packetsOnHand, s.notes, s.updated_by AS updatedBy, s.updated_at AS updatedAt FROM inventory_finished_stock s JOIN inventory_products p ON p.id = s.product_id ORDER BY p.name COLLATE NOCASE, s.pack_size_g ASC").all<FinishedStockRow>(),
-      db.prepare("SELECT id, name, contact_name, phone, email, gstin, address, notes, is_active, created_at FROM inventory_vendors ORDER BY name COLLATE NOCASE").all<VendorRow>(),
+      db.prepare("SELECT v.id, v.name, v.contact_name, v.phone, v.email, v.gstin, v.address, v.notes, v.is_active, (SELECT COUNT(*) FROM inventory_purchase_lots l WHERE l.vendor_id = v.id) AS purchaseLotCount, (SELECT COUNT(*) FROM inventory_purchase_lots l WHERE l.vendor_id = v.id AND EXISTS (SELECT 1 FROM inventory_batch_material_usage u WHERE u.purchase_lot_id = l.id)) AS usedPurchaseLotCount, (SELECT COUNT(DISTINCT u.batch_id) FROM inventory_batch_material_usage u JOIN inventory_purchase_lots l ON l.id = u.purchase_lot_id WHERE l.vendor_id = v.id) AS affectedBatchCount, v.created_at FROM inventory_vendors v ORDER BY v.name COLLATE NOCASE").all<VendorRow>(),
       db.prepare("SELECT id, code, name, category, unit, description, is_active, created_at FROM inventory_materials ORDER BY name COLLATE NOCASE").all<MaterialRow>(),
+      db.prepare("SELECT r.id, r.vendor_id AS vendorId, v.name AS vendorName, r.material_id AS materialId, m.name AS materialName, m.code AS materialCode, m.unit AS unit, r.rate, r.currency, r.effective_from AS effectiveFrom, r.notes, r.updated_by AS updatedBy, r.updated_at AS updatedAt FROM inventory_vendor_material_rates r JOIN inventory_vendors v ON v.id = r.vendor_id JOIN inventory_materials m ON m.id = r.material_id ORDER BY v.name COLLATE NOCASE, m.name COLLATE NOCASE").all<VendorRateRow>(),
+      db.prepare("SELECT h.id, h.rate_id AS rateId, h.version, h.previous_rate AS previousRate, h.new_rate AS newRate, h.currency, h.effective_from AS effectiveFrom, h.notes, h.changed_by AS changedBy, h.changed_at AS changedAt FROM inventory_vendor_material_rate_versions h ORDER BY h.changed_at DESC, h.version DESC LIMIT 1000").all<VendorRateVersionRow>(),
       db.prepare(
         "SELECT l.id, l.material_id AS materialId, m.name AS materialName, m.unit AS unit, l.vendor_id AS vendorId, v.name AS vendorName, l.vendor_lot_number AS vendorLotNumber, l.invoice_number AS invoiceNumber, l.purchased_on AS purchasedOn, l.received_qty AS receivedQty, COALESCE(SUM(u.qty_used), 0) AS usedQty, l.received_qty - COALESCE(SUM(u.qty_used), 0) AS availableQty, l.unit_cost AS unitCost, l.created_at AS createdAt FROM inventory_purchase_lots l JOIN inventory_materials m ON m.id = l.material_id JOIN inventory_vendors v ON v.id = l.vendor_id LEFT JOIN inventory_batch_material_usage u ON u.purchase_lot_id = l.id GROUP BY l.id ORDER BY l.purchased_on DESC, l.created_at DESC LIMIT 500",
       ).all<PurchaseLotRow>(),
@@ -208,6 +244,8 @@ export async function GET(request: Request) {
       products: productsResult.results ?? [],
       finishedStock: finishedStockResult.results ?? [],
       vendors: vendorsResult.results ?? [],
+      vendorRates: vendorRatesResult.results ?? [],
+      vendorRateVersions: vendorRateVersionsResult.results ?? [],
       materials: materialsResult.results ?? [],
       purchaseLots: lotsResult.results ?? [],
       batches,
@@ -286,6 +324,39 @@ export async function POST(request: Request) {
         auditStatement(db, auth.email, current ? "updated" : "created", "finished_stock", id, product.name + " · " + packSizeGrams + " g packets: " + previousCount + " → " + packetsOnHand + " packets"),
       ])
       return jsonResponse({ success: true, id, packetsOnHand }, current ? 200 : 201)
+    }
+
+    if (type === "vendor_rate") {
+      const vendorId = textValue(body.vendorId, 64)
+      const materialId = textValue(body.materialId, 64)
+      const rate = Number(body.rate)
+      const effectiveFrom = textValue(body.effectiveFrom, 10) || new Date().toISOString().slice(0, 10)
+      const notes = textValue(body.notes, 500)
+      if (!vendorId || !materialId) return jsonResponse({ error: "Choose both a vendor and an ingredient." }, 400)
+      if (!Number.isFinite(rate) || rate < 0 || rate > 1000000000000) return jsonResponse({ error: "Enter a valid rate of zero or greater." }, 400)
+      if (!validDate(effectiveFrom)) return jsonResponse({ error: "Enter a valid effective date." }, 400)
+
+      const [vendor, material] = await Promise.all([
+        db.prepare("SELECT id, name FROM inventory_vendors WHERE id = ?").bind(vendorId).first<{ id: string; name: string }>(),
+        db.prepare("SELECT id, name, unit FROM inventory_materials WHERE id = ?").bind(materialId).first<{ id: string; name: string; unit: string }>(),
+      ])
+      if (!vendor || !material) return jsonResponse({ error: "The selected vendor or ingredient no longer exists." }, 404)
+
+      const current = await db.prepare("SELECT id, rate FROM inventory_vendor_material_rates WHERE vendor_id = ? AND material_id = ?")
+        .bind(vendorId, materialId).first<{ id: string; rate: number }>()
+      const rateId = current?.id ?? crypto.randomUUID()
+      const versionRow = await db.prepare("SELECT COALESCE(MAX(version), 0) + 1 AS nextVersion FROM inventory_vendor_material_rate_versions WHERE rate_id = ?")
+        .bind(rateId).first<{ nextVersion: number }>()
+      const version = versionRow?.nextVersion ?? 1
+      const previousRate = current?.rate ?? null
+      await db.batch([
+        db.prepare("INSERT INTO inventory_vendor_material_rates (id, vendor_id, material_id, rate, currency, effective_from, notes, updated_by) VALUES (?, ?, ?, ?, 'INR', ?, ?, ?) ON CONFLICT(vendor_id, material_id) DO UPDATE SET rate = excluded.rate, currency = excluded.currency, effective_from = excluded.effective_from, notes = excluded.notes, updated_by = excluded.updated_by, updated_at = datetime('now')")
+          .bind(rateId, vendorId, materialId, rate, effectiveFrom, notes || null, auth.email),
+        db.prepare("INSERT INTO inventory_vendor_material_rate_versions (id, rate_id, version, previous_rate, new_rate, currency, effective_from, notes, changed_by) VALUES (?, ?, ?, ?, ?, 'INR', ?, ?, ?)")
+          .bind(crypto.randomUUID(), rateId, version, previousRate, rate, effectiveFrom, notes || null, auth.email),
+        auditStatement(db, auth.email, current ? "rate_updated" : "rate_created", "vendor_rate", rateId, vendor.name + " · " + material.name + ": " + (previousRate === null ? "no previous rate" : "₹" + previousRate) + " → ₹" + rate + " per " + material.unit),
+      ])
+      return jsonResponse({ success: true, id: rateId, version }, current ? 200 : 201)
     }
 
     if (type === "vendor") {
@@ -412,7 +483,45 @@ export async function PATCH(request: Request) {
     return jsonResponse({ error: "Invalid JSON body." }, 400)
   }
 
-  if (textValue(body.type, 30) !== "quality") return jsonResponse({ error: "Unsupported inventory update." }, 400)
+  const updateType = textValue(body.type, 30)
+  if (updateType === "product_update") {
+    const id = textValue(body.id, 64)
+    const name = textValue(body.name, 120)
+    const code = textValue(body.code, 40).toUpperCase()
+    const category = textValue(body.category, 80)
+    const description = textValue(body.description, 500)
+    if (!id || !name || !code) return jsonResponse({ error: "Product name and product code are required." }, 400)
+    try {
+      await db.batch([
+        db.prepare("UPDATE inventory_products SET name = ?, code = ?, category = ?, description = ?, updated_at = datetime('now') WHERE id = ?").bind(name, code, category || null, description || null, id),
+        auditStatement(db, auth.email, "updated", "product", id, "Updated product " + name + " (" + code + ")"),
+      ])
+      return jsonResponse({ success: true, id })
+    } catch (error) {
+      if (String(error).includes("UNIQUE constraint failed")) return jsonResponse({ error: "That product code is already in use." }, 409)
+      throw error
+    }
+  }
+
+  if (updateType === "vendor_update") {
+    const id = textValue(body.id, 64)
+    const name = textValue(body.name, 120)
+    const contactName = textValue(body.contactName, 120)
+    const phone = textValue(body.phone, 30)
+    const email = textValue(body.email, 160).toLowerCase()
+    const gstin = textValue(body.gstin, 20).toUpperCase()
+    const address = textValue(body.address, 300)
+    const notes = textValue(body.notes, 500)
+    if (!id || !name) return jsonResponse({ error: "Vendor name is required." }, 400)
+    if (email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) return jsonResponse({ error: "Enter a valid vendor email." }, 400)
+    await db.batch([
+      db.prepare("UPDATE inventory_vendors SET name = ?, contact_name = ?, phone = ?, email = ?, gstin = ?, address = ?, notes = ?, updated_at = datetime('now') WHERE id = ?").bind(name, contactName || null, phone || null, email || null, gstin || null, address || null, notes || null, id),
+      auditStatement(db, auth.email, "updated", "vendor", id, "Updated vendor " + name),
+    ])
+    return jsonResponse({ success: true, id })
+  }
+
+  if (updateType !== "quality") return jsonResponse({ error: "Unsupported inventory update." }, 400)
 
   const batchId = textValue(body.batchId, 64)
   const status = textValue(body.status, 20)
@@ -439,3 +548,55 @@ export async function PATCH(request: Request) {
     return jsonResponse({ error: "Could not save the quality decision. Confirm the batch exists and try again." }, 500)
   }
 }
+
+export async function DELETE(request: Request) {
+  const auth = await authorize(request)
+  if ("response" in auth) return auth.response
+
+  const db = getInventoryDB()
+  if (!db) return jsonResponse({ error: "Inventory database is not connected." }, 503)
+
+  let body: Record<string, unknown>
+  try {
+    const parsed = await request.json()
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return jsonResponse({ error: "Invalid request body." }, 400)
+    body = parsed as Record<string, unknown>
+  } catch {
+    return jsonResponse({ error: "Invalid JSON body." }, 400)
+  }
+
+  const type = textValue(body.type, 30)
+  const id = textValue(body.id, 64)
+  if (!id || !["product", "vendor"].includes(type)) return jsonResponse({ error: "Choose a valid product or vendor to delete." }, 400)
+
+  try {
+    if (type === "product") {
+      const product = await db.prepare("SELECT id, name FROM inventory_products WHERE id = ?").bind(id).first<{ id: string; name: string }>()
+      if (!product) return jsonResponse({ error: "Product not found." }, 404)
+      const count = await db.prepare("SELECT COUNT(*) AS count FROM inventory_production_batches WHERE product_id = ?").bind(id).first<{ count: number }>()
+      if ((count?.count ?? 0) > 0) return jsonResponse({ error: "This product has production batches. It cannot be permanently deleted without destroying batch history and ingredient traceability." }, 409)
+      await db.batch([
+        db.prepare("DELETE FROM inventory_finished_stock WHERE product_id = ?").bind(id),
+        db.prepare("DELETE FROM inventory_products WHERE id = ?").bind(id),
+        auditStatement(db, auth.email, "deleted", "product", id, "Permanently deleted unused product " + product.name),
+      ])
+      return jsonResponse({ success: true, deleted: "product", id })
+    }
+
+    const vendor = await db.prepare("SELECT id, name FROM inventory_vendors WHERE id = ?").bind(id).first<{ id: string; name: string }>()
+    if (!vendor) return jsonResponse({ error: "Vendor not found." }, 404)
+    const usage = await db.prepare("SELECT COUNT(*) AS lots, COUNT(DISTINCT u.batch_id) AS batches FROM inventory_purchase_lots l LEFT JOIN inventory_batch_material_usage u ON u.purchase_lot_id = l.id WHERE l.vendor_id = ? AND u.id IS NOT NULL").bind(id).first<{ lots: number; batches: number }>()
+    if ((usage?.lots ?? 0) > 0) return jsonResponse({ error: "This vendor has purchase lots already consumed in production. It cannot be permanently deleted without breaking supplier and batch traceability." }, 409)
+    await db.batch([
+      db.prepare("DELETE FROM inventory_vendor_material_rates WHERE vendor_id = ?").bind(id),
+      db.prepare("DELETE FROM inventory_purchase_lots WHERE vendor_id = ?").bind(id),
+      db.prepare("DELETE FROM inventory_vendors WHERE id = ?").bind(id),
+      auditStatement(db, auth.email, "deleted", "vendor", id, "Permanently deleted vendor and unused purchase lots: " + vendor.name),
+    ])
+    return jsonResponse({ success: true, deleted: "vendor", id })
+  } catch (error) {
+    console.error("Inventory permanent delete failed:", error)
+    return jsonResponse({ error: "Could not permanently delete this record. It may still be referenced by inventory history." }, 409)
+  }
+}
+
