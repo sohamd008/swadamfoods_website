@@ -28,7 +28,13 @@ For local development, use:
 
     npx wrangler d1 execute swadam_inventory --local --file=migrations/inventory/0001_inventory.sql
 
-The inventory migration is intentionally stored in its own directory and must not be applied to swadam_orders.
+The inventory migrations are intentionally stored in their own directory and must not be applied to swadam_orders. After the initial schema has already been installed, apply the additive finished-packet stock migration:
+
+    npx wrangler d1 execute swadam_inventory --remote --file=migrations/inventory/0002_finished_stock.sql
+
+For local development, use:
+
+    npx wrangler d1 execute swadam_inventory --local --file=migrations/inventory/0002_finished_stock.sql
 
 ## 3. Configure Cloudflare Access
 
@@ -66,4 +72,4 @@ After saving the D1 binding and Access values, deploy the Worker and test:
 6. Create a vendor, material, purchase lot, product and test batch.
 7. Try to consume more than the received lot balance; the database trigger must reject the batch atomically.
 
-The inventory interface is tablet-first, uses the site's shared glassmorphism/theme tokens and keeps production data in the dedicated INVENTORY_DB binding.
+The inventory interface is tablet-first, uses the site's shared glassmorphism/theme tokens and keeps production data in the dedicated INVENTORY_DB binding. Finished packet stock is manually maintained as whole sealed-packet counts for each product and pack size; it is separate from production kilograms and is not automatically reserved against storefront orders.
