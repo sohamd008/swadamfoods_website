@@ -188,7 +188,7 @@ export async function GET(request: Request) {
       ).all<UsageRow>(),
       db.prepare("SELECT id, actor, action, entity_type AS entityType, entity_id AS entityId, summary, created_at AS createdAt FROM inventory_audit_logs ORDER BY created_at DESC LIMIT 60").all<ActivityRow>(),
       db.prepare(
-        "SELECT COUNT(*) AS totalBatches, COALESCE(SUM(output_qty_kg), 0) AS totalOutputKg, SUM(CASE WHEN strftime('%Y-%m', manufactured_on) = strftime('%Y-%m', 'now') THEN 1 ELSE 0 END) AS monthBatches, COALESCE(SUM(CASE WHEN strftime('%Y-%m', manufactured_on) = strftime('%Y-%m', 'now') THEN output_qty_kg ELSE 0 END), 0) AS monthOutputKg, SUM(CASE WHEN status IN ('draft', 'in_progress', 'qc_hold') THEN 1 ELSE 0 END) AS qcPending FROM inventory_production_batches",
+        "SELECT COUNT(*) AS totalBatches, COALESCE(SUM(output_qty_kg), 0) AS totalOutputKg, COALESCE(SUM(CASE WHEN strftime('%Y-%m', manufactured_on) = strftime('%Y-%m', 'now') THEN 1 ELSE 0 END), 0) AS monthBatches, COALESCE(SUM(CASE WHEN strftime('%Y-%m', manufactured_on) = strftime('%Y-%m', 'now') THEN output_qty_kg ELSE 0 END), 0) AS monthOutputKg, COALESCE(SUM(CASE WHEN status IN ('draft', 'in_progress', 'qc_hold') THEN 1 ELSE 0 END), 0) AS qcPending FROM inventory_production_batches",
       ).first<StatsRow>(),
     ])
 
