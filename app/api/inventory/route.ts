@@ -552,6 +552,103 @@ export async function PATCH(request: Request) {
     }
   }
 
+  if (updateType === "batch_update") {
+    const batchId = textValue(body.batchId, 64)
+    const batchNo = textValue(body.batchNo, 40).toUpperCase()
+    const productId = textValue(body.productId, 64)
+    const manufacturedOn = textValue(body.manufacturedOn, 10)
+    const outputQtyKg = positiveNumber(body.outputQtyKg)
+    const bestBefore = textValue(body.bestBefore, 10)
+    const operatorName = textValue(body.operatorName, 120)
+    const packagingLot = textValue(body.packagingLot, 80)
+    const notes = textValue(body.notes, 1000)
+    const rawMaterials = Array.isArray(body.materials) ? body.materials : []
+
+    if (!batchId) return jsonResponse({ error: "Production batch not found." }, 400)
+    if (!batchNo || !/^[A-Z0-9][A-Z0-9/_-]{1,39}$/.test(batchNo)) return jsonResponse({ error: "Enter a valid batch number." }, 400)
+    if (!productId || !manufacturedOn || !validDate(manufacturedOn) || !outputQtyKg) return jsonResponse({ error: "Select a product, manufacturing date and finished quantity in kg." }, 400)
+    if (bestBefore && !validDate(bestBefore)) return jsonResponse({ error: "Enter a valid best-before date." }, 400)
+    if (!rawMaterials.length || rawMaterials.length > 40) return jsonResponse({ error: "Keep between 1 and 40 material usage lines." }, 400)
+
+    const currentBatch = await db.prepare(
+      "SELECT id, batch_no AS batchNo, output_qty_kg AS outputQtyKg FROM inventory_production_batches WHERE id = ?",
+    ).bind(batchId).first<{ id: string; batchNo: string; outputQtyKg: number }>()
+    if (!currentBatch) return jsonResponse({ error: "Production batch not found." }, 404)
+
+    const product = await db.prepare("SELECT id FROM inventory_products WHERE id = ?").bind(productId).first<{ id: string }>()
+    if (!product) return jsonResponse({ error: "The selected product no longer exists." }, 404)
+
+    const usageLines: Array<{ lotId: string; materialId: string; qtyUsed: number; unit: string; notes: string }> = []
+    for (const rawLine of rawMaterials) {
+      if (!rawLine || typeof rawLine !== "object") return jsonResponse({ error: "Invalid material usage line." }, 400)
+      const line = rawLine as Record<string, unknown>
+      const lotId = textValue(line.purchaseLotId, 64)
+      const qtyUsed = positiveNumber(line.qtyUsed)
+      if (!lotId || !qtyUsed) return jsonResponse({ error: "Each material line needs a purchase lot and quantity used." }, 400)
+      const lot = await db.prepare(
+        "SELECT l.id, l.material_id AS materialId, m.unit AS unit FROM inventory_purchase_lots l JOIN inventory_materials m ON m.id = l.material_id WHERE l.id = ?",
+      ).bind(lotId).first<{ id: string; materialId: string; unit: string }>()
+      if (!lot) return jsonResponse({ error: "One of the selected purchase lots no longer exists." }, 409)
+      usageLines.push({ lotId, materialId: lot.materialId, qtyUsed, unit: lot.unit, notes: textValue(line.notes, 200) })
+    }
+
+    const previousUsage = await db.prepare(
+      "SELECT purchase_lot_id AS purchaseLotId, qty_used AS qtyUsed, unit FROM inventory_batch_material_usage WHERE batch_id = ? ORDER BY rowid",
+    ).bind(batchId).all<{ purchaseLotId: string; qtyUsed: number; unit: string }>()
+
+    const statements = [
+      // Delete this batch's old usage first. D1 runs the batch atomically, so the
+      // insert trigger validates the replacement against balances with this
+      // batch's previous consumption returned to the lots.
+      db.prepare("DELETE FROM inventory_batch_material_usage WHERE batch_id = ?").bind(batchId),
+      db.prepare("UPDATE inventory_production_batches SET batch_no = ?, product_id = ?, manufactured_on = ?, output_qty_kg = ?, best_before = ?, operator_name = ?, packaging_lot = ?, notes = ?, updated_at = datetime('now') WHERE id = ?")
+        .bind(batchNo, productId, manufacturedOn, outputQtyKg, bestBefore || null, operatorName || null, packagingLot || null, notes || null, batchId),
+    ]
+
+    for (const line of usageLines) {
+      statements.push(
+        db.prepare("INSERT INTO inventory_batch_material_usage (id, batch_id, material_id, purchase_lot_id, qty_used, unit, notes) VALUES (?, ?, ?, ?, ?, ?, ?)")
+          .bind(crypto.randomUUID(), batchId, line.materialId, line.lotId, line.qtyUsed, line.unit, line.notes || null),
+      )
+    }
+
+    statements.push(
+      auditStatement(
+        db,
+        auth.email,
+        "updated",
+        "batch",
+        batchId,
+        "Updated production batch " + batchNo + "; output " + currentBatch.outputQtyKg + " → " + outputQtyKg + " kg; ingredient lines " + (previousUsage.results?.length ?? 0) + " → " + usageLines.length,
+      ),
+    )
+
+    const oldLines = previousUsage.results ?? []
+    const changedLineCount = Math.max(oldLines.length, usageLines.length)
+    for (let index = 0; index < changedLineCount; index += 1) {
+      const previous = oldLines[index]
+      const next = usageLines[index]
+      if (previous && next && previous.purchaseLotId === next.lotId && Math.abs(previous.qtyUsed - next.qtyUsed) < 0.0000001) continue
+      const before = previous ? previous.purchaseLotId + " " + previous.qtyUsed + " " + previous.unit : "none"
+      const after = next ? next.lotId + " " + next.qtyUsed + " " + next.unit : "removed"
+      statements.push(
+        auditStatement(db, auth.email, "ingredient_updated", "batch", batchId, "Batch " + batchNo + " ingredient line " + (index + 1) + ": " + before + " → " + after),
+      )
+    }
+
+    try {
+      await db.batch(statements)
+      return jsonResponse({ success: true, id: batchId, batchNo })
+    } catch (error) {
+      const message = String(error)
+      if (message.includes("UNIQUE constraint failed")) return jsonResponse({ error: "That batch number is already in use." }, 409)
+      if (message.includes("INSUFFICIENT_PURCHASE_LOT_BALANCE")) return jsonResponse({ error: "The revised batch would use more material than is available in one of the selected purchase lots." }, 409)
+      if (message.includes("PURCHASE_LOT_MATERIAL_MISMATCH")) return jsonResponse({ error: "One of the selected purchase lots is not valid for its material." }, 409)
+      console.error("Production batch update failed:", error)
+      return jsonResponse({ error: "Could not update this production batch. No changes were saved." }, 500)
+    }
+  }
+
   if (updateType !== "quality") return jsonResponse({ error: "Unsupported inventory update." }, 400)
 
   const batchId = textValue(body.batchId, 64)
