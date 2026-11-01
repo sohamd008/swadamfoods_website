@@ -5,12 +5,15 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNo
 import {
   Activity, AlertCircle, ArrowDownToLine, ArrowRight, Boxes, CalendarDays, Check, CheckCircle2,
   ClipboardCheck, Clock3, Factory, Filter, LayoutDashboard, LockKeyhole, Package, Pencil, Plus,
-  RefreshCw, Search, ShieldCheck, Trash2, Truck, Wheat, X,
+  RefreshCw, Search, ShieldCheck, Trash2, Truck, Wallet, Wheat, X,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { VendorRatesPanel } from "@/components/vendor-rates-panel"
 
 type Product = { id: string; code: string; name: string; category: string | null; description: string | null; is_active: number; batchCount: number; finishedStockCount: number }
 type FinishedStock = { id: string; productId: string; productName: string; productCode: string; packSizeG: number; packetsOnHand: number; notes: string | null; updatedBy: string; updatedAt: string }
+type VendorRate = { id: string; vendorId: string; vendorName: string; materialId: string; materialName: string; materialCode: string; unit: string; rate: number; currency: string; effectiveFrom: string; notes: string | null; updatedBy: string; updatedAt: string }
+type VendorRateVersion = { id: string; rateId: string; version: number; previousRate: number | null; newRate: number; currency: string; effectiveFrom: string; notes: string | null; changedBy: string; changedAt: string }
 type Vendor = { id: string; name: string; contact_name: string | null; phone: string | null; email: string | null; gstin: string | null; address: string | null; notes: string | null; is_active: number; purchaseLotCount: number; usedPurchaseLotCount: number; affectedBatchCount: number }
 type Material = { id: string; code: string; name: string; category: string | null; unit: string; description: string | null; is_active: number }
 type PurchaseLot = {
@@ -33,10 +36,11 @@ type Batch = {
 type ActivityLog = { id: string; actor: string; action: string; entityType: string; entityId: string; summary: string; createdAt: string }
 type Snapshot = {
   products: Product[]; finishedStock: FinishedStock[]; vendors: Vendor[]; materials: Material[]; purchaseLots: PurchaseLot[]
+  vendorRates: VendorRate[]; vendorRateVersions: VendorRateVersion[]
   batches: Batch[]; activity: ActivityLog[]
   stats: { totalBatches: number; totalOutputKg: number; monthBatches: number; monthOutputKg: number; qcPending: number }
 }
-type TabId = "overview" | "batches" | "products" | "finished_stock" | "vendors" | "materials" | "quality" | "activity"
+type TabId = "overview" | "batches" | "products" | "finished_stock" | "vendors" | "vendor_rates" | "materials" | "quality" | "activity"
 type EntityKind = "product" | "vendor" | "material" | "purchase_lot"
 type EditableMaster = { kind: "product"; record: Product } | { kind: "vendor"; record: Vendor }
 type DeletableMaster = EditableMaster
@@ -47,6 +51,7 @@ const NAV: Array<{ id: TabId; label: string; icon: typeof LayoutDashboard }> = [
   { id: "products", label: "Products", icon: Package },
   { id: "finished_stock", label: "Finished packets", icon: Boxes },
   { id: "vendors", label: "Vendors", icon: Truck },
+  { id: "vendor_rates", label: "Vendor rates", icon: Wallet },
   { id: "materials", label: "Materials & lots", icon: Wheat },
   { id: "quality", label: "Quality control", icon: ClipboardCheck },
   { id: "activity", label: "Activity history", icon: Activity },
@@ -367,6 +372,20 @@ export function InventoryWorkspace({ currentUserEmail }: { currentUserEmail: str
     }
   }, [refresh])
 
+  const saveVendorRate = useCallback(async (value: Record<string, string>) => {
+    try {
+      const response = await fetch("/api/inventory", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(value), credentials: "same-origin" })
+      const result = await response.json() as { error?: string }
+      if (!response.ok) throw new Error(result.error || "Vendor rate save failed.")
+      await refresh(true)
+      setNotice("Vendor rate saved and version history updated.")
+      return true
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not save vendor rate.")
+      return false
+    }
+  }, [refresh])
+
   const saveFinishedStock = useCallback(async (value: Record<string, string>) => {
     try {
       const response = await fetch("/api/inventory", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(value), credentials: "same-origin" })
@@ -480,6 +499,8 @@ export function InventoryWorkspace({ currentUserEmail }: { currentUserEmail: str
         </div> : null}
 
         {snapshot && tab === "vendors" ? <div className="space-y-4"><Heading title="Vendor directory" description="Edit suppliers or permanently remove vendors whose purchase lots have not been used." action={<button type="button" onClick={() => setEntity("vendor")} className={BUTTON + " bg-primary text-primary-foreground"}><Plus className="h-4 w-4" /> Add vendor</button>} />{snapshot.vendors.length ? <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">{snapshot.vendors.map((vendor) => <Panel key={vendor.id}><div className="flex items-start justify-between gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Truck className="h-5 w-5" /></span><span className="rounded-full bg-secondary px-3 py-1 text-[10px] font-extrabold">{vendor.purchaseLotCount} purchase lots</span></div><h3 className="mt-4 text-lg font-black">{vendor.name}</h3><p className="mt-1 text-sm text-muted-foreground">{vendor.contact_name || "Contact not recorded"}</p><div className="mt-4 space-y-2 border-t border-border pt-3 text-xs text-muted-foreground"><p>{vendor.phone || "Phone not recorded"}</p><p>{vendor.email || "Email not recorded"}</p><p>{vendor.gstin ? "GSTIN: " + vendor.gstin : "GSTIN not recorded"}</p><p>{vendor.address || "Address not recorded"}</p></div><div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3"><button type="button" onClick={() => setEditingMaster({kind:"vendor",record:vendor})} className={BUTTON + " border border-border bg-background/75"}><Pencil className="h-4 w-4" /> Edit</button><button type="button" onClick={() => setDeletingMaster({kind:"vendor",record:vendor})} className={BUTTON + " border border-rose-500/25 bg-rose-500/5 text-rose-700 dark:text-rose-300"}><Trash2 className="h-4 w-4" /> Delete permanently</button></div>{vendor.usedPurchaseLotCount > 0 ? <p className="mt-2 text-[11px] text-muted-foreground">{vendor.usedPurchaseLotCount} consumed lot(s) linked · deletion blocked to preserve traceability.</p> : null}</Panel>)}</div> : <Empty title="No vendors added" description="Add suppliers so every purchase lot can be attributed to the correct vendor." action={<button type="button" onClick={() => setEntity("vendor")} className={BUTTON + " bg-primary text-primary-foreground"}>Add first vendor</button>} />}</div> : null}
+
+        {snapshot && tab === "vendor_rates" ? <VendorRatesPanel vendors={snapshot.vendors} materials={snapshot.materials} rates={snapshot.vendorRates} versions={snapshot.vendorRateVersions} onSave={saveVendorRate} /> : null}
 
         {snapshot && tab === "materials" ? <div className="space-y-5"><Heading title="Materials & purchase lots" description="Received quantities, consumption and remaining lot balances." action={<button type="button" onClick={() => setEntity("purchase_lot")} className={BUTTON + " bg-primary text-primary-foreground"}><Plus className="h-4 w-4" /> Receive material</button>} />{snapshot.materials.length ? <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">{snapshot.materials.map((material) => { const lots = snapshot.purchaseLots.filter((lot) => lot.materialId === material.id); const available = lots.reduce((sum, lot) => sum + lot.availableQty, 0); return <Panel key={material.id}><div className="flex items-start justify-between gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Wheat className="h-5 w-5" /></span><span className="rounded-full border border-border px-3 py-1 text-[10px] font-extrabold">{material.code}</span></div><h3 className="mt-3 text-base font-black">{material.name}</h3><p className="mt-1 text-xs text-muted-foreground">{material.category || "Uncategorised"} · {material.unit}</p><div className="mt-4 flex items-end justify-between border-t border-border pt-3"><div><p className="text-xs text-muted-foreground">Available across lots</p><p className="text-xl font-black">{number(available, 3)} <span className="text-xs font-bold text-muted-foreground">{material.unit}</span></p></div><p className="text-xs text-muted-foreground">{lots.length} lots</p></div></Panel>})}</div> : <Empty title="No raw materials added" description="Create raw-material records before receiving supplier lots." action={<button type="button" onClick={() => setEntity("material")} className={BUTTON + " bg-primary text-primary-foreground"}>Add material</button>} />}<Panel><Heading title="Received purchase lots" description="The supplier consignments that production batches consume." />{snapshot.purchaseLots.length ? <div className="overflow-x-auto rounded-2xl border border-border"><table className="w-full min-w-[900px] text-left"><thead className="bg-secondary/55"><tr className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground"><th className="px-4 py-3">Material</th><th className="px-4 py-3">Vendor</th><th className="px-4 py-3">Purchased</th><th className="px-4 py-3">Vendor lot</th><th className="px-4 py-3">Received</th><th className="px-4 py-3">Used</th><th className="px-4 py-3">Available</th><th className="px-4 py-3">Invoice</th></tr></thead><tbody>{snapshot.purchaseLots.map((lot) => <tr key={lot.id} className="border-t border-border/70 text-sm"><td className="px-4 py-4 font-bold">{lot.materialName}</td><td className="px-4 py-4">{lot.vendorName}</td><td className="px-4 py-4 whitespace-nowrap text-muted-foreground">{date(lot.purchasedOn)}</td><td className="px-4 py-4 text-muted-foreground">{lot.vendorLotNumber || "—"}</td><td className="px-4 py-4 font-mono">{number(lot.receivedQty, 3)} {lot.unit}</td><td className="px-4 py-4 font-mono">{number(lot.usedQty, 3)} {lot.unit}</td><td className="px-4 py-4 font-mono font-extrabold">{number(lot.availableQty, 3)} {lot.unit}</td><td className="px-4 py-4 text-muted-foreground">{lot.invoiceNumber || "—"}</td></tr>)}</tbody></table></div> : <Empty title="No purchase lots yet" description="Record a received lot to connect materials with vendors and track available quantities." action={<button type="button" onClick={() => setEntity("purchase_lot")} className={BUTTON + " bg-primary text-primary-foreground"}>Receive a purchase lot</button>} />}</Panel></div> : null}
 
