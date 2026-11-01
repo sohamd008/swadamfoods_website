@@ -28,8 +28,13 @@ jobs:
       - name: Type-check
         run: npm run typecheck
 
-      - name: Validate D1 migration locally
+      - name: Validate orders D1 migrations locally
         run: npx wrangler d1 migrations apply swadam_orders --local
+
+      - name: Validate inventory D1 schema locally
+        run: |
+          npx wrangler d1 execute swadam_inventory --local --file=migrations/inventory/0001_inventory.sql
+          npx wrangler d1 execute swadam_inventory --local --file=migrations/inventory/0002_finished_stock.sql
 
       - name: Build Cloudflare worker
         run: npm run build:worker
