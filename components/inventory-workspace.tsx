@@ -365,7 +365,98 @@ function BatchModal({ data, onClose, onCreate, onAddPurchase }: { data: Snapshot
   </Modal>
 }
 
-function BatchDetail({ batch, onClose }: { batch: Batch; onClose: () => void }) {
+function EditBatchModal({ data, batch, onClose, onSave }: { data: Snapshot; batch: Batch; onClose: () => void; onSave: (value: Record<string, unknown>) => Promise<boolean> }) {
+  const [lines, setLines] = useState<Array<{ purchaseLotId: string; qtyUsed: string; notes: string }>>(
+    batch.materials.length
+      ? batch.materials.map(line => ({ purchaseLotId: line.purchaseLotId, qtyUsed: String(line.qtyUsed), notes: line.notes ?? "" }))
+      : [{ purchaseLotId: "", qtyUsed: "", notes: "" }],
+  )
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
+  const usedByThisBatch = (lotId: string) => batch.materials
+    .filter(line => line.purchaseLotId === lotId)
+    .reduce((total, line) => total + line.qtyUsed, 0)
+  const missingLots: PurchaseLot[] = batch.materials
+    .filter(line => !data.purchaseLots.some(lot => lot.id === line.purchaseLotId))
+    .filter((line, index, rows) => rows.findIndex(item => item.purchaseLotId === line.purchaseLotId) === index)
+    .map(line => ({
+      id: line.purchaseLotId,
+      materialId: line.materialId,
+      materialName: line.materialName,
+      unit: line.unit,
+      vendorId: line.vendorId,
+      vendorName: line.vendorName,
+      vendorLotNumber: line.vendorLotNumber,
+      invoiceNumber: line.invoiceNumber,
+      purchasedOn: "",
+      receivedQty: 0,
+      usedQty: 0,
+      availableQty: 0,
+      unitCost: null,
+    }))
+  const lots: PurchaseLot[] = [...data.purchaseLots, ...missingLots]
+  const availableLots = lots.filter(lot => lot.availableQty + usedByThisBatch(lot.id) > 0.000001)
+  const availableAfterRestoringBatch = (lot: PurchaseLot) => lot.availableQty + usedByThisBatch(lot.id)
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setSaving(true)
+    setError("")
+    const form = new FormData(event.currentTarget)
+    const value: Record<string, unknown> = {
+      type: "batch_update",
+      batchId: batch.id,
+      batchNo: String(form.get("batchNo") ?? ""),
+      productId: String(form.get("productId") ?? ""),
+      manufacturedOn: String(form.get("manufacturedOn") ?? ""),
+      outputQtyKg: Number(form.get("outputQtyKg")),
+      bestBefore: String(form.get("bestBefore") ?? ""),
+      operatorName: String(form.get("operatorName") ?? ""),
+      packagingLot: String(form.get("packagingLot") ?? ""),
+      notes: String(form.get("notes") ?? ""),
+      materials: lines.map(line => ({
+        purchaseLotId: line.purchaseLotId,
+        qtyUsed: Number(line.qtyUsed),
+        notes: line.notes,
+      })),
+    }
+    const success = await onSave(value)
+    setSaving(false)
+    if (!success) setError("The batch was not updated. Check the fields and purchase-lot balances, then try again.")
+  }
+
+  return <Modal title={"Edit batch " + batch.batchNo} description="Correct production details and ingredient usage. Existing lot consumption is returned before the revised quantities are checked." onClose={onClose} wide>
+    <form onSubmit={submit} className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-secondary/60 p-3">
+        <div><p className="text-xs font-bold text-muted-foreground">Current batch status</p><div className="mt-1"><StatusPill status={batch.status} /></div></div>
+        <p className="max-w-md text-xs leading-5 text-muted-foreground">Editing does not change the batch status or its existing quality records.</p>
+      </div>
+      <div><p className="mb-3 text-xs font-extrabold uppercase tracking-widest text-primary">01 · Production details</p><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <label className="block"><span className={LABEL}>Batch number *</span><input className={INPUT} name="batchNo" required maxLength={40} defaultValue={batch.batchNo} /></label>
+        <label className="block"><span className={LABEL}>Product *</span><select className={INPUT} name="productId" required defaultValue={batch.productId}><option value="">Choose product</option>{data.products.filter(item => item.is_active || item.id === batch.productId).map(product => <option key={product.id} value={product.id}>{product.name} · {product.code}</option>)}</select></label>
+        <label className="block"><span className={LABEL}>Manufacturing date *</span><input className={INPUT} name="manufacturedOn" type="date" required defaultValue={batch.manufacturedOn} /></label>
+        <label className="block"><span className={LABEL}>Finished output (kg) *</span><input className={INPUT} name="outputQtyKg" type="number" min="0.001" step="0.001" required defaultValue={batch.outputQtyKg} /></label>
+        <label className="block"><span className={LABEL}>Best-before date</span><input className={INPUT} name="bestBefore" type="date" defaultValue={batch.bestBefore ?? ""} /></label>
+        <label className="block"><span className={LABEL}>Operator / supervisor</span><input className={INPUT} name="operatorName" maxLength={120} defaultValue={batch.operatorName ?? ""} /></label>
+        <label className="block"><span className={LABEL}>Packaging lot</span><input className={INPUT} name="packagingLot" maxLength={80} defaultValue={batch.packagingLot ?? ""} /></label>
+        <label className="block sm:col-span-2 lg:col-span-3"><span className={LABEL}>Production notes</span><textarea name="notes" rows={2} maxLength={1000} className={INPUT + " min-h-24 resize-y"} defaultValue={batch.notes ?? ""} /></label>
+      </div></div>
+      <div className="border-t border-border pt-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-extrabold uppercase tracking-widest text-primary">02 · Ingredients consumed</p><p className="mt-1 text-xs text-muted-foreground">The available amount shown includes this batch's existing consumption, which is returned when changes are saved.</p></div><button type="button" onClick={() => setLines(items => [...items, { purchaseLotId: "", qtyUsed: "", notes: "" }])} className={BUTTON + " border border-border bg-background/80"}><Plus className="h-4 w-4" /> Add material</button></div>
+        <div className="space-y-3">{lines.map((line, index) => <div key={index} className="grid gap-3 rounded-2xl border border-border bg-background/55 p-3 sm:grid-cols-[minmax(0,1fr)_180px_48px] sm:items-end">
+          <label className="block min-w-0"><span className={LABEL}>Purchase lot · material · vendor</span><select className={INPUT} required value={line.purchaseLotId} onChange={event => setLines(items => items.map((item, i) => i === index ? { ...item, purchaseLotId: event.target.value } : item))}><option value="">Choose purchase lot</option>{availableLots.map(lot => <option key={lot.id} value={lot.id}>{lot.materialName} · {lot.vendorName} · {number(availableAfterRestoringBatch(lot), 3)} {lot.unit} available</option>)}</select></label>
+          <label className="block"><span className={LABEL}>Quantity used</span><input className={INPUT} type="number" min="0.001" step="0.001" required value={line.qtyUsed} onChange={event => setLines(items => items.map((item, i) => i === index ? { ...item, qtyUsed: event.target.value } : item))} placeholder="e.g. 120" /></label>
+          <button type="button" disabled={lines.length === 1} onClick={() => setLines(items => items.filter((_, i) => i !== index))} className="flex h-12 w-12 items-center justify-center rounded-xl border border-border text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-30" aria-label="Remove material line"><X className="h-4 w-4" /></button>
+        </div>)}</div>
+        {!availableLots.length ? <p className="mt-3 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200">No purchase lots are currently available for this batch. Record a received lot before changing its ingredient lines.</p> : null}
+      </div>
+      {error ? <p role="alert" className="rounded-xl bg-rose-500/10 p-3 text-sm text-rose-700 dark:text-rose-300">{error}</p> : null}
+      <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end"><button type="button" onClick={onClose} className={BUTTON + " border border-border bg-background/70"}>Cancel</button><button type="submit" disabled={saving || !data.products.length || !availableLots.length} className={BUTTON + " bg-primary text-primary-foreground"}>{saving ? "Saving changes..." : <><Check className="h-4 w-4" /> Save batch changes</>}</button></div>
+    </form>
+  </Modal>
+}
+
+function BatchDetail({ batch, onClose, onEdit }: { batch: Batch; onClose: () => void; onEdit: () => void }) {
   return <Modal title={"Batch " + batch.batchNo} description={batch.productName + " · manufactured " + date(batch.manufacturedOn)} onClose={onClose} wide>
     <div className="grid gap-3 sm:grid-cols-3">
       <div className="rounded-2xl bg-secondary/65 p-4"><p className="text-xs font-bold text-muted-foreground">Finished output</p><p className="mt-1 text-2xl font-black">{number(batch.outputQtyKg, 2)} kg</p></div>
@@ -394,6 +485,7 @@ function BatchDetail({ batch, onClose }: { batch: Batch; onClose: () => void }) 
         </div>
       </div>
     </div>
+    <div className="mt-5 flex justify-end border-t border-border pt-4"><button type="button" onClick={onEdit} className={BUTTON + " bg-primary text-primary-foreground"}><Pencil className="h-4 w-4" /> Edit batch</button></div>
   </Modal>
 }
 
@@ -415,6 +507,7 @@ export function InventoryWorkspace({ currentUserEmail }: { currentUserEmail: str
   const [batchForm, setBatchForm] = useState(false)
   const [finishedStockForm, setFinishedStockForm] = useState<{ initial?: FinishedStock } | null>(null)
   const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null)
+  const [editingBatch, setEditingBatch] = useState<Batch | null>(null)
   const [notice, setNotice] = useState("")
 
   const refresh = useCallback(async (quiet = false) => {
@@ -514,6 +607,22 @@ export function InventoryWorkspace({ currentUserEmail }: { currentUserEmail: str
     }
   }, [refresh])
 
+  const saveBatch = useCallback(async (value: Record<string, unknown>) => {
+    try {
+      const response = await fetch("/api/inventory", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(value), credentials: "same-origin" })
+      const result = await response.json() as { error?: string }
+      if (!response.ok) throw new Error(result.error || "Batch update failed.")
+      await refresh(true)
+      setNotice("Production batch updated successfully.")
+      setEditingBatch(null)
+      setSelectedBatch(null)
+      return true
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not update the production batch.")
+      return false
+    }
+  }, [refresh])
+
   const filteredBatches = useMemo(() => {
     const query = search.trim().toLowerCase()
     return (snapshot?.batches ?? []).filter((batch) => {
@@ -606,7 +715,8 @@ export function InventoryWorkspace({ currentUserEmail }: { currentUserEmail: str
   {editingMaster ? <EditMasterModal target={editingMaster} onClose={() => setEditingMaster(null)} onSave={saveMaster} /> : null}
   {deletingMaster ? <DeleteMasterModal target={deletingMaster} onClose={() => setDeletingMaster(null)} onDelete={deleteMaster} /> : null}
   {batchForm && snapshot ? <BatchModal data={snapshot} onClose={() => setBatchForm(false)} onCreate={createBatch} onAddPurchase={() => { setBatchForm(false); setEntity("purchase_lot") }} /> : null}
+  {editingBatch && snapshot ? <EditBatchModal data={snapshot} batch={editingBatch} onClose={() => setEditingBatch(null)} onSave={saveBatch} /> : null}
   {finishedStockForm && snapshot ? <FinishedStockModal data={snapshot} initial={finishedStockForm.initial} onClose={() => setFinishedStockForm(null)} onSave={saveFinishedStock} /> : null}
-  {selectedBatch && snapshot ? <BatchDetail batch={snapshot.batches.find((item) => item.id === selectedBatch.id) ?? selectedBatch} onClose={() => setSelectedBatch(null)} /> : null}
+  {selectedBatch && snapshot ? <BatchDetail batch={snapshot.batches.find((item) => item.id === selectedBatch.id) ?? selectedBatch} onClose={() => setSelectedBatch(null)} onEdit={() => { const current = snapshot.batches.find((item) => item.id === selectedBatch.id) ?? selectedBatch; setSelectedBatch(null); setEditingBatch(current) }} /> : null}
   </div>
 }
