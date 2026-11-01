@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNo
 import {
   Activity, AlertCircle, ArrowDownToLine, ArrowRight, Boxes, CalendarDays, Check, CheckCircle2,
   Clock3, Factory, Filter, LayoutDashboard, LockKeyhole, Package, Pencil, Plus,
-  RefreshCw, Search, Trash2, Truck, Wallet, Wheat, X,
+  RefreshCw, Search, ShieldCheck, Trash2, Truck, Wallet, Wheat, X,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { VendorRatesPanel } from "@/components/vendor-rates-panel"
