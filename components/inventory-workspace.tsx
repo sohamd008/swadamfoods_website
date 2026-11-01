@@ -189,15 +189,15 @@ function MaterialCategoryDropdown() {
             />
           </label>
         </div>
-        <div className="max-h-64 overflow-y-auto p-2">
-          <button type="button" onClick={() => { setSelected(""); setOpen(false); setQuery("") }} className={"mb-2 flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm transition " + (!selected ? "border-primary/30 bg-primary/5 text-primary" : "border-transparent text-muted-foreground hover:bg-secondary/70")}>
+        <div className="max-h-64 overflow-y-auto p-2" role="listbox" aria-label="Material categories">
+          <button type="button" role="option" aria-selected={!selected} onClick={() => { setSelected(""); setOpen(false); setQuery("") }} className={"mb-2 flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm transition " + (!selected ? "border-primary/30 bg-primary/5 text-primary" : "border-transparent text-muted-foreground hover:bg-secondary/70")}>
             <span><span className="block font-bold">No category</span><span className="mt-0.5 block text-[11px] opacity-75">Leave this field blank</span></span>
             {!selected ? <Check className="h-4 w-4" /> : null}
           </button>
           {groups.map(group => {
             const items = filtered.filter(item => item.group === group)
             if (!items.length) return null
-            return <div key={group} className="mb-2 last:mb-0">
+            return <div key={group} role="group" aria-label={group} className="mb-2 last:mb-0">
               <p className="px-3 pb-1.5 pt-2 text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">{group}</p>
               <div className="space-y-1">
                 {items.map(item => {
