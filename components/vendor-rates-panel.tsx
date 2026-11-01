@@ -70,7 +70,8 @@ function VendorRateModal({ vendors, materials, initial, onClose, onSave }: {
     new FormData(event.currentTarget).forEach((field, key) => { value[key] = String(field) })
     const ok = await onSave(value)
     setSaving(false)
-    if (!ok) setError("The rate could not be saved. Check the selected vendor, ingredient and amount.")
+    if (ok) onClose()
+    else setError("The rate could not be saved. Check the selected vendor, ingredient and amount.")
   }
   const material = materials.find(item => item.id === materialId)
   return <div className="fixed inset-0 z-[90] flex items-end justify-center bg-stone-950/45 p-0 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
