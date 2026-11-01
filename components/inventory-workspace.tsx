@@ -10,6 +10,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle"
 
 type Product = { id: string; code: string; name: string; category: string | null; description: string | null; is_active: number }
+type FinishedStock = { id: string; productId: string; productName: string; productCode: string; packSizeG: number; packetsOnHand: number; notes: string | null; updatedBy: string; updatedAt: string }
 type Vendor = { id: string; name: string; contact_name: string | null; phone: string | null; email: string | null; gstin: string | null; address: string | null; notes: string | null; is_active: number }
 type Material = { id: string; code: string; name: string; category: string | null; unit: string; description: string | null; is_active: number }
 type PurchaseLot = {
@@ -31,17 +32,18 @@ type Batch = {
 }
 type ActivityLog = { id: string; actor: string; action: string; entityType: string; entityId: string; summary: string; createdAt: string }
 type Snapshot = {
-  products: Product[]; vendors: Vendor[]; materials: Material[]; purchaseLots: PurchaseLot[]
+  products: Product[]; finishedStock: FinishedStock[]; vendors: Vendor[]; materials: Material[]; purchaseLots: PurchaseLot[]
   batches: Batch[]; activity: ActivityLog[]
   stats: { totalBatches: number; totalOutputKg: number; monthBatches: number; monthOutputKg: number; qcPending: number }
 }
-type TabId = "overview" | "batches" | "products" | "vendors" | "materials" | "quality" | "activity"
+type TabId = "overview" | "batches" | "products" | "finished_stock" | "vendors" | "materials" | "quality" | "activity"
 type EntityKind = "product" | "vendor" | "material" | "purchase_lot"
 
 const NAV: Array<{ id: TabId; label: string; icon: typeof LayoutDashboard }> = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "batches", label: "Production batches", icon: Factory },
   { id: "products", label: "Products", icon: Package },
+  { id: "finished_stock", label: "Finished packets", icon: Boxes },
   { id: "vendors", label: "Vendors", icon: Truck },
   { id: "materials", label: "Materials & lots", icon: Wheat },
   { id: "quality", label: "Quality control", icon: ClipboardCheck },
@@ -133,6 +135,34 @@ function EntityModal({ initialKind, data, onClose, onCreate }: { initialKind: En
   </Modal>
 }
 
+function FinishedStockModal({ data, initial, onClose, onSave }: { data: Snapshot; initial?: FinishedStock; onClose: () => void; onSave: (value: Record<string, string>) => Promise<boolean> }) {
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setSaving(true)
+    setError("")
+    const values: Record<string, string> = { type: "finished_stock" }
+    new FormData(event.currentTarget).forEach((value, key) => { values[key] = String(value) })
+    const success = await onSave(values)
+    setSaving(false)
+    if (!success) setError("The packet count could not be saved. Check the product, pack size and quantity.")
+  }
+  return <Modal title={initial ? "Update finished packet stock" : "Record finished packet stock"} description="Enter the physical count of sealed packets currently on hand." onClose={onClose}>
+    <form onSubmit={submit} className="space-y-5">
+      <label className="block"><span className={LABEL}>Product *</span><select className={INPUT} name="productId" required defaultValue={initial?.productId ?? ""}><option value="">Choose product</option>{data.products.map((product) => <option key={product.id} value={product.id}>{product.name} · {product.code}</option>)}</select></label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block"><span className={LABEL}>Packet size (grams) *</span><input className={INPUT} name="packSizeGrams" type="number" min="1" max="100000" step="1" required defaultValue={initial?.packSizeG ?? 200} placeholder="e.g. 200" /></label>
+        <label className="block"><span className={LABEL}>Packets currently on hand *</span><input className={INPUT} name="packetsOnHand" type="number" min="0" step="1" required defaultValue={initial?.packetsOnHand ?? 0} placeholder="e.g. 84" /></label>
+      </div>
+      <label className="block"><span className={LABEL}>Stock note (optional)</span><input className={INPUT} name="notes" maxLength={500} defaultValue={initial?.notes ?? ""} placeholder="e.g. Counted after today's packing shift" /></label>
+      <div className="rounded-xl border border-primary/15 bg-primary/5 p-3 text-sm leading-6 text-muted-foreground">Enter the current physical count, not the historical production quantity. Record separate entries for 200 g, 500 g or other pack sizes.</div>
+      {error ? <p role="alert" className="rounded-xl bg-rose-500/10 p-3 text-sm text-rose-700 dark:text-rose-300">{error}</p> : null}
+      <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end"><button type="button" onClick={onClose} className={BUTTON + " border border-border bg-background/70"}>Cancel</button><button type="submit" disabled={saving || !data.products.length} className={BUTTON + " bg-primary text-primary-foreground"}>{saving ? "Saving..." : <><Check className="h-4 w-4" /> Save packet stock</>}</button></div>
+    </form>
+  </Modal>
+}
+
 function BatchModal({ data, onClose, onCreate, onAddPurchase }: { data: Snapshot; onClose: () => void; onCreate: (value: Record<string, unknown>) => Promise<boolean>; onAddPurchase: () => void }) {
   const [lines, setLines] = useState<Array<{ purchaseLotId: string; qtyUsed: string }>>([{ purchaseLotId: data.purchaseLots.find((lot) => lot.availableQty > 0)?.id ?? "", qtyUsed: "" }])
   const [saving, setSaving] = useState(false)
@@ -202,6 +232,7 @@ export function InventoryWorkspace({ currentUserEmail }: { currentUserEmail: str
   const [filter, setFilter] = useState("all")
   const [entity, setEntity] = useState<EntityKind | null>(null)
   const [batchForm, setBatchForm] = useState(false)
+  const [finishedStockForm, setFinishedStockForm] = useState<{ initial?: FinishedStock } | null>(null)
   const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null)
   const [notice, setNotice] = useState("")
 
@@ -228,6 +259,22 @@ export function InventoryWorkspace({ currentUserEmail }: { currentUserEmail: str
       await refresh(true); setNotice("Record saved successfully."); setEntity(null); return true
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not save the record."); return false
+    }
+  }, [refresh])
+
+  const saveFinishedStock = useCallback(async (value: Record<string, string>) => {
+    try {
+      const response = await fetch("/api/inventory", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(value), credentials: "same-origin" })
+      const result = await response.json() as { error?: string }
+      if (!response.ok) throw new Error(result.error || "Finished stock save failed.")
+      await refresh(true)
+      setNotice("Finished packet stock saved.")
+      setFinishedStockForm(null)
+      setTab("finished_stock")
+      return true
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not save finished packet stock.")
+      return false
     }
   }, [refresh])
 
@@ -316,6 +363,17 @@ export function InventoryWorkspace({ currentUserEmail }: { currentUserEmail: str
 
         {snapshot && tab === "products" ? <div className="space-y-4"><Heading title="Product catalogue" description="Products available for production." action={<button type="button" onClick={() => setEntity("product")} className={BUTTON + " bg-primary text-primary-foreground"}><Plus className="h-4 w-4" /> Add product</button>} />{snapshot.products.length ? <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">{snapshot.products.map((product) => <Panel key={product.id}><div className="flex items-start justify-between gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Package className="h-5 w-5" /></span><span className="rounded-full border border-border px-3 py-1 text-[10px] font-extrabold text-muted-foreground">{product.code}</span></div><h3 className="mt-4 text-lg font-black">{product.name}</h3><p className="mt-1 text-xs text-muted-foreground">{product.category || "Uncategorised"}</p><p className="mt-3 text-sm leading-6 text-muted-foreground">{product.description || "No description recorded."}</p></Panel>)}</div> : <Empty title="No products added" description="Create your product catalogue before registering production." action={<button type="button" onClick={() => setEntity("product")} className={BUTTON + " bg-primary text-primary-foreground"}>Add first product</button>} />}</div> : null}
 
+        {snapshot && tab === "finished_stock" ? <div className="space-y-4">
+          <Heading title="Finished packet stock" description="Manually track sealed packets physically on hand, separately for each product and pack size." action={<button type="button" onClick={() => setFinishedStockForm({})} className={BUTTON + " bg-primary text-primary-foreground"}><Plus className="h-4 w-4" /> Record packet stock</button>} />
+          {snapshot.finishedStock.length ? <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">{snapshot.finishedStock.map((stock) => <Panel key={stock.id}>
+            <div className="flex items-start justify-between gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Package className="h-5 w-5" /></span><span className="rounded-full border border-border px-3 py-1 text-[10px] font-extrabold text-muted-foreground">{stock.productCode}</span></div>
+            <h3 className="mt-4 text-lg font-black">{stock.productName}</h3>
+            <p className="mt-1 text-xs font-semibold text-muted-foreground">{number(stock.packSizeG, 0)} g packet</p>
+            <div className="mt-4 flex items-end justify-between border-t border-border pt-3"><div><p className="text-xs text-muted-foreground">Packets on hand</p><p className="text-3xl font-black tabular-nums">{number(stock.packetsOnHand, 0)}</p></div><button type="button" onClick={() => setFinishedStockForm({ initial: stock })} className={BUTTON + " border border-border bg-background/75"}>Update count</button></div>
+            <p className="mt-3 text-xs leading-5 text-muted-foreground">Updated {dateTime(stock.updatedAt)} by {stock.updatedBy}{stock.notes ? " · " + stock.notes : ""}</p>
+          </Panel>)}</div> : <Empty title="No finished packet stock recorded" description="Add a product, choose its packet size (for example 200 g), and enter the number of sealed packets you physically have." action={<button type="button" onClick={() => setFinishedStockForm({})} disabled={!snapshot.products.length} className={BUTTON + " bg-primary text-primary-foreground"}><Plus className="h-4 w-4" /> Record first packet count</button>} />}
+        </div> : null}
+
         {snapshot && tab === "vendors" ? <div className="space-y-4"><Heading title="Vendor directory" description="Supplier contacts and purchase history references." action={<button type="button" onClick={() => setEntity("vendor")} className={BUTTON + " bg-primary text-primary-foreground"}><Plus className="h-4 w-4" /> Add vendor</button>} />{snapshot.vendors.length ? <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">{snapshot.vendors.map((vendor) => { const lots = snapshot.purchaseLots.filter((lot) => lot.vendorId === vendor.id); return <Panel key={vendor.id}><div className="flex items-start justify-between gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Truck className="h-5 w-5" /></span><span className="rounded-full bg-secondary px-3 py-1 text-[10px] font-extrabold">{lots.length} purchase lots</span></div><h3 className="mt-4 text-lg font-black">{vendor.name}</h3><p className="mt-1 text-sm text-muted-foreground">{vendor.contact_name || "Contact not recorded"}</p><div className="mt-4 space-y-2 border-t border-border pt-3 text-xs text-muted-foreground"><p>{vendor.phone || "Phone not recorded"}</p><p>{vendor.email || "Email not recorded"}</p><p>{vendor.gstin ? "GSTIN: " + vendor.gstin : "GSTIN not recorded"}</p><p>{vendor.address || "Address not recorded"}</p></div></Panel>})}</div> : <Empty title="No vendors added" description="Add suppliers so every purchase lot can be attributed to the correct vendor." action={<button type="button" onClick={() => setEntity("vendor")} className={BUTTON + " bg-primary text-primary-foreground"}>Add first vendor</button>} />}</div> : null}
 
         {snapshot && tab === "materials" ? <div className="space-y-5"><Heading title="Materials & purchase lots" description="Received quantities, consumption and remaining lot balances." action={<button type="button" onClick={() => setEntity("purchase_lot")} className={BUTTON + " bg-primary text-primary-foreground"}><Plus className="h-4 w-4" /> Receive material</button>} />{snapshot.materials.length ? <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">{snapshot.materials.map((material) => { const lots = snapshot.purchaseLots.filter((lot) => lot.materialId === material.id); const available = lots.reduce((sum, lot) => sum + lot.availableQty, 0); return <Panel key={material.id}><div className="flex items-start justify-between gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Wheat className="h-5 w-5" /></span><span className="rounded-full border border-border px-3 py-1 text-[10px] font-extrabold">{material.code}</span></div><h3 className="mt-3 text-base font-black">{material.name}</h3><p className="mt-1 text-xs text-muted-foreground">{material.category || "Uncategorised"} · {material.unit}</p><div className="mt-4 flex items-end justify-between border-t border-border pt-3"><div><p className="text-xs text-muted-foreground">Available across lots</p><p className="text-xl font-black">{number(available, 3)} <span className="text-xs font-bold text-muted-foreground">{material.unit}</span></p></div><p className="text-xs text-muted-foreground">{lots.length} lots</p></div></Panel>})}</div> : <Empty title="No raw materials added" description="Create raw-material records before receiving supplier lots." action={<button type="button" onClick={() => setEntity("material")} className={BUTTON + " bg-primary text-primary-foreground"}>Add material</button>} />}<Panel><Heading title="Received purchase lots" description="The supplier consignments that production batches consume." />{snapshot.purchaseLots.length ? <div className="overflow-x-auto rounded-2xl border border-border"><table className="w-full min-w-[900px] text-left"><thead className="bg-secondary/55"><tr className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground"><th className="px-4 py-3">Material</th><th className="px-4 py-3">Vendor</th><th className="px-4 py-3">Purchased</th><th className="px-4 py-3">Vendor lot</th><th className="px-4 py-3">Received</th><th className="px-4 py-3">Used</th><th className="px-4 py-3">Available</th><th className="px-4 py-3">Invoice</th></tr></thead><tbody>{snapshot.purchaseLots.map((lot) => <tr key={lot.id} className="border-t border-border/70 text-sm"><td className="px-4 py-4 font-bold">{lot.materialName}</td><td className="px-4 py-4">{lot.vendorName}</td><td className="px-4 py-4 whitespace-nowrap text-muted-foreground">{date(lot.purchasedOn)}</td><td className="px-4 py-4 text-muted-foreground">{lot.vendorLotNumber || "—"}</td><td className="px-4 py-4 font-mono">{number(lot.receivedQty, 3)} {lot.unit}</td><td className="px-4 py-4 font-mono">{number(lot.usedQty, 3)} {lot.unit}</td><td className="px-4 py-4 font-mono font-extrabold">{number(lot.availableQty, 3)} {lot.unit}</td><td className="px-4 py-4 text-muted-foreground">{lot.invoiceNumber || "—"}</td></tr>)}</tbody></table></div> : <Empty title="No purchase lots yet" description="Record a received lot to connect materials with vendors and track available quantities." action={<button type="button" onClick={() => setEntity("purchase_lot")} className={BUTTON + " bg-primary text-primary-foreground"}>Receive a purchase lot</button>} />}</Panel></div> : null}
@@ -330,6 +388,7 @@ export function InventoryWorkspace({ currentUserEmail }: { currentUserEmail: str
   </div>
   {entity && snapshot ? <EntityModal initialKind={entity} data={snapshot} onClose={() => setEntity(null)} onCreate={createRecord} /> : null}
   {batchForm && snapshot ? <BatchModal data={snapshot} onClose={() => setBatchForm(false)} onCreate={createBatch} onAddPurchase={() => { setBatchForm(false); setEntity("purchase_lot") }} /> : null}
+  {finishedStockForm && snapshot ? <FinishedStockModal data={snapshot} initial={finishedStockForm.initial} onClose={() => setFinishedStockForm(null)} onSave={saveFinishedStock} /> : null}
   {selectedBatch && snapshot ? <BatchDetail batch={snapshot.batches.find((item) => item.id === selectedBatch.id) ?? selectedBatch} onClose={() => setSelectedBatch(null)} onQuality={saveQuality} /> : null}
   </div>
 }
