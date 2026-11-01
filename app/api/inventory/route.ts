@@ -513,7 +513,7 @@ export async function PATCH(request: Request) {
     const address = textValue(body.address, 300)
     const notes = textValue(body.notes, 500)
     if (!id || !name) return jsonResponse({ error: "Vendor name is required." }, 400)
-    if (email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) return jsonResponse({ error: "Enter a valid vendor email." }, 400)
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return jsonResponse({ error: "Enter a valid vendor email." }, 400)
     await db.batch([
       db.prepare("UPDATE inventory_vendors SET name = ?, contact_name = ?, phone = ?, email = ?, gstin = ?, address = ?, notes = ?, updated_at = datetime('now') WHERE id = ?").bind(name, contactName || null, phone || null, email || null, gstin || null, address || null, notes || null, id),
       auditStatement(db, auth.email, "updated", "vendor", id, "Updated vendor " + name),
