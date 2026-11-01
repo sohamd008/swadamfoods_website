@@ -82,6 +82,7 @@ type MaterialRow = {
   unit: string
   description: string | null
   is_active: number
+  purchaseLotCount: number
   created_at: string
 }
 
@@ -210,7 +211,7 @@ export async function GET(request: Request) {
       db.prepare("SELECT p.id, p.code, p.name, p.category, p.description, p.is_active, (SELECT COUNT(*) FROM inventory_production_batches b WHERE b.product_id = p.id) AS batchCount, (SELECT COUNT(*) FROM inventory_finished_stock s WHERE s.product_id = p.id) AS finishedStockCount, p.created_at FROM inventory_products p ORDER BY p.name COLLATE NOCASE").all<ProductRow>(),
       db.prepare("SELECT s.id, s.product_id AS productId, p.name AS productName, p.code AS productCode, s.pack_size_g AS packSizeG, s.packets_on_hand AS packetsOnHand, s.notes, s.updated_by AS updatedBy, s.updated_at AS updatedAt FROM inventory_finished_stock s JOIN inventory_products p ON p.id = s.product_id ORDER BY p.name COLLATE NOCASE, s.pack_size_g ASC").all<FinishedStockRow>(),
       db.prepare("SELECT v.id, v.name, v.contact_name, v.phone, v.email, v.gstin, v.address, v.notes, v.is_active, (SELECT COUNT(*) FROM inventory_purchase_lots l WHERE l.vendor_id = v.id) AS purchaseLotCount, (SELECT COUNT(*) FROM inventory_purchase_lots l WHERE l.vendor_id = v.id AND EXISTS (SELECT 1 FROM inventory_batch_material_usage u WHERE u.purchase_lot_id = l.id)) AS usedPurchaseLotCount, (SELECT COUNT(DISTINCT u.batch_id) FROM inventory_batch_material_usage u JOIN inventory_purchase_lots l ON l.id = u.purchase_lot_id WHERE l.vendor_id = v.id) AS affectedBatchCount, v.created_at FROM inventory_vendors v ORDER BY v.name COLLATE NOCASE").all<VendorRow>(),
-      db.prepare("SELECT id, code, name, category, unit, description, is_active, created_at FROM inventory_materials ORDER BY name COLLATE NOCASE").all<MaterialRow>(),
+      db.prepare("SELECT m.id, m.code, m.name, m.category, m.unit, m.description, m.is_active, m.created_at, (SELECT COUNT(*) FROM inventory_purchase_lots l WHERE l.material_id = m.id) AS purchaseLotCount FROM inventory_materials m ORDER BY m.name COLLATE NOCASE").all<MaterialRow>(),
       db.prepare("SELECT r.id, r.vendor_id AS vendorId, v.name AS vendorName, r.material_id AS materialId, m.name AS materialName, m.code AS materialCode, m.unit AS unit, r.rate, r.currency, r.effective_from AS effectiveFrom, r.notes, r.updated_by AS updatedBy, r.updated_at AS updatedAt FROM inventory_vendor_material_rates r JOIN inventory_vendors v ON v.id = r.vendor_id JOIN inventory_materials m ON m.id = r.material_id ORDER BY v.name COLLATE NOCASE, m.name COLLATE NOCASE").all<VendorRateRow>(),
       db.prepare("SELECT h.id, h.rate_id AS rateId, h.version, h.previous_rate AS previousRate, h.new_rate AS newRate, h.currency, h.effective_from AS effectiveFrom, h.notes, h.changed_by AS changedBy, h.changed_at AS changedAt FROM inventory_vendor_material_rate_versions h ORDER BY h.changed_at DESC, h.version DESC LIMIT 1000").all<VendorRateVersionRow>(),
       db.prepare(
@@ -284,6 +285,26 @@ export async function POST(request: Request) {
   const type = textValue(body.type, 30)
 
   try {
+    if (type === "material") {
+      const material = await db.prepare("SELECT id, name FROM inventory_materials WHERE id = ?").bind(id).first<{ id: string; name: string }>()
+      if (!material) return jsonResponse({ error: "Raw material not found." }, 404)
+      const [lots, usage] = await Promise.all([
+        db.prepare("SELECT COUNT(*) AS count FROM inventory_purchase_lots WHERE material_id = ?").bind(id).first<{ count: number }>(),
+        db.prepare("SELECT COUNT(*) AS count FROM inventory_batch_material_usage WHERE material_id = ?").bind(id).first<{ count: number }>(),
+      ])
+      const lotCount = lots?.count ?? 0
+      const usageCount = usage?.count ?? 0
+      if (lotCount > 0 || usageCount > 0) {
+        return jsonResponse({ error: "This raw material is linked to " + lotCount + " purchase lot(s) and " + usageCount + " production usage record(s). It cannot be permanently deleted without breaking supplier and batch traceability." }, 409)
+      }
+      await db.batch([
+        db.prepare("DELETE FROM inventory_vendor_material_rates WHERE material_id = ?").bind(id),
+        db.prepare("DELETE FROM inventory_materials WHERE id = ?").bind(id),
+        auditStatement(db, auth.email, "deleted", "material", id, "Permanently deleted unused raw material " + material.name),
+      ])
+      return jsonResponse({ success: true, deleted: "material", id })
+    }
+
     if (type === "product") {
       const name = textValue(body.name, 120)
       const code = textValue(body.code, 40).toUpperCase()
@@ -521,6 +542,36 @@ export async function PATCH(request: Request) {
     return jsonResponse({ success: true, id })
   }
 
+  if (updateType === "material_update") {
+    const id = textValue(body.id, 64)
+    const name = textValue(body.name, 120)
+    const code = textValue(body.code, 40).toUpperCase()
+    const category = textValue(body.category, 80)
+    const unit = textValue(body.unit, 12)
+    const description = textValue(body.description, 500)
+    if (!id || !name || !code) return jsonResponse({ error: "Material name and code are required." }, 400)
+    if (!["kg", "g", "litre", "unit"].includes(unit)) return jsonResponse({ error: "Choose a supported base unit." }, 400)
+
+    const current = await db.prepare("SELECT id, name, unit FROM inventory_materials WHERE id = ?").bind(id).first<{ id: string; name: string; unit: string }>()
+    if (!current) return jsonResponse({ error: "Raw material not found." }, 404)
+    const lotCount = await db.prepare("SELECT COUNT(*) AS count FROM inventory_purchase_lots WHERE material_id = ?").bind(id).first<{ count: number }>()
+    if ((lotCount?.count ?? 0) > 0 && unit !== current.unit) {
+      return jsonResponse({ error: "The base unit cannot be changed after purchase lots have been recorded. The material name, code, category and description can still be edited." }, 409)
+    }
+
+    try {
+      await db.batch([
+        db.prepare("UPDATE inventory_materials SET name = ?, code = ?, category = ?, unit = ?, description = ?, updated_at = datetime('now') WHERE id = ?")
+          .bind(name, code, category || null, unit, description || null, id),
+        auditStatement(db, auth.email, "updated", "material", id, "Updated raw material " + name + " (" + code + ")"),
+      ])
+      return jsonResponse({ success: true, id })
+    } catch (error) {
+      if (String(error).includes("UNIQUE constraint failed")) return jsonResponse({ error: "That material code is already in use." }, 409)
+      throw error
+    }
+  }
+
   if (updateType !== "quality") return jsonResponse({ error: "Unsupported inventory update." }, 400)
 
   const batchId = textValue(body.batchId, 64)
@@ -567,7 +618,7 @@ export async function DELETE(request: Request) {
 
   const type = textValue(body.type, 30)
   const id = textValue(body.id, 64)
-  if (!id || !["product", "vendor"].includes(type)) return jsonResponse({ error: "Choose a valid product or vendor to delete." }, 400)
+  if (!id || !["product", "vendor", "material"].includes(type)) return jsonResponse({ error: "Choose a valid product, vendor or raw material to delete." }, 400)
 
   try {
     if (type === "product") {
