@@ -1,0 +1,335 @@
+"use client"
+
+import Image from "next/image"
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react"
+import {
+  Activity, AlertCircle, ArrowDownToLine, ArrowRight, Boxes, CalendarDays, Check, CheckCircle2,
+  ClipboardCheck, Clock3, Factory, Filter, LayoutDashboard, LockKeyhole, Package, Plus,
+  RefreshCw, Search, ShieldCheck, Truck, Wheat, X,
+} from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
+
+type Product = { id: string; code: string; name: string; category: string | null; description: string | null; is_active: number }
+type Vendor = { id: string; name: string; contact_name: string | null; phone: string | null; email: string | null; gstin: string | null; address: string | null; notes: string | null; is_active: number }
+type Material = { id: string; code: string; name: string; category: string | null; unit: string; description: string | null; is_active: number }
+type PurchaseLot = {
+  id: string; materialId: string; materialName: string; unit: string; vendorId: string; vendorName: string
+  vendorLotNumber: string | null; invoiceNumber: string | null; purchasedOn: string
+  receivedQty: number; usedQty: number; availableQty: number; unitCost: number | null
+}
+type Usage = {
+  id: string; batchId: string; materialId: string; materialName: string; unit: string
+  purchaseLotId: string; vendorId: string; vendorName: string; vendorLotNumber: string | null
+  invoiceNumber: string | null; qtyUsed: number; notes: string | null
+}
+type Batch = {
+  id: string; batchNo: string; productId: string; productName: string; manufacturedOn: string
+  outputQtyKg: number; status: string; bestBefore: string | null; operatorName: string | null
+  packagingLot: string | null; notes: string | null; createdBy: string; createdAt: string; updatedAt: string
+  qcStatus: string | null; qcRemarks: string | null; qcCheckedBy: string | null; qcCheckedAt: string | null
+  moisturePct: number | null; materials: Usage[]
+}
+type ActivityLog = { id: string; actor: string; action: string; entityType: string; entityId: string; summary: string; createdAt: string }
+type Snapshot = {
+  products: Product[]; vendors: Vendor[]; materials: Material[]; purchaseLots: PurchaseLot[]
+  batches: Batch[]; activity: ActivityLog[]
+  stats: { totalBatches: number; totalOutputKg: number; monthBatches: number; monthOutputKg: number; qcPending: number }
+}
+type TabId = "overview" | "batches" | "products" | "vendors" | "materials" | "quality" | "activity"
+type EntityKind = "product" | "vendor" | "material" | "purchase_lot"
+
+const NAV: Array<{ id: TabId; label: string; icon: typeof LayoutDashboard }> = [
+  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "batches", label: "Production batches", icon: Factory },
+  { id: "products", label: "Products", icon: Package },
+  { id: "vendors", label: "Vendors", icon: Truck },
+  { id: "materials", label: "Materials & lots", icon: Wheat },
+  { id: "quality", label: "Quality control", icon: ClipboardCheck },
+  { id: "activity", label: "Activity history", icon: Activity },
+]
+
+const BUTTON = "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+const INPUT = "min-h-12 w-full rounded-xl border border-border bg-background/75 px-3.5 py-2.5 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-primary/15"
+const LABEL = "mb-1.5 block text-xs font-bold tracking-wide text-muted-foreground"
+
+function number(value: number, digits = 1) {
+  return new Intl.NumberFormat("en-IN", { maximumFractionDigits: digits }).format(Number(value || 0))
+}
+function date(value: string | null | undefined) {
+  if (!value) return "—"
+  const parsed = new Date(value.length === 10 ? value + "T00:00:00" : value)
+  return Number.isNaN(parsed.getTime()) ? value : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(parsed)
+}
+function dateTime(value: string | null | undefined) {
+  if (!value) return "—"
+  const parsed = new Date(value.replace(" ", "T") + (value.endsWith("Z") ? "" : "Z"))
+  return Number.isNaN(parsed.getTime()) ? value : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(parsed)
+}
+function statusText(status: string) {
+  const labels: Record<string, string> = { draft: "Draft", in_progress: "In production", qc_hold: "QC hold", released: "Released", rejected: "Rejected", approved: "Approved", hold: "On hold" }
+  return labels[status] ?? status
+}
+function StatusPill({ status }: { status: string }) {
+  const tone = status === "released" || status === "approved"
+    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+    : status === "rejected"
+      ? "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+      : status === "qc_hold" || status === "hold"
+        ? "border-amber-500/25 bg-amber-500/10 text-amber-800 dark:text-amber-300"
+        : "border-border bg-secondary/75 text-muted-foreground"
+  return <span className={"inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-extrabold " + tone}>{statusText(status)}</span>
+}
+function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <section className={"glass-panel rounded-2xl p-4 sm:rounded-3xl sm:p-5 " + className}>{children}</section>
+}
+function Heading({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
+  return <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-lg font-black tracking-tight text-foreground sm:text-xl">{title}</h2>{description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}</div>{action}</div>
+}
+function Metric({ label, value, detail, icon: Icon }: { label: string; value: string; detail: string; icon: typeof Boxes }) {
+  return <div className="glass-card rounded-2xl p-4 sm:rounded-3xl sm:p-5"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs font-bold tracking-wide text-muted-foreground">{label}</p><p className="mt-2 truncate text-2xl font-black tracking-tight text-foreground sm:text-3xl">{value}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Icon className="h-5 w-5" /></span></div></div>
+}
+function Field({ label, name, required, type = "text", placeholder, step, min }: { label: string; name: string; required?: boolean; type?: string; placeholder?: string; step?: string; min?: string }) {
+  return <label className="block"><span className={LABEL}>{label}{required ? " *" : ""}</span><input className={INPUT} name={name} type={type} required={required} placeholder={placeholder} step={step} min={min} /></label>
+}
+function SelectField({ label, name, required, children }: { label: string; name: string; required?: boolean; children: ReactNode }) {
+  return <label className="block"><span className={LABEL}>{label}{required ? " *" : ""}</span><select className={INPUT} name={name} required={required} defaultValue="">{children}</select></label>
+}
+function Modal({ title, description, onClose, children, wide = false }: { title: string; description?: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose() }
+    window.addEventListener("keydown", onKey)
+    document.body.style.overflow = "hidden"
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = "" }
+  }, [onClose])
+  return <div className="fixed inset-0 z-[80] flex items-end justify-center bg-stone-950/45 p-0 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}><section role="dialog" aria-modal="true" aria-label={title} className={"glass-panel max-h-[94dvh] w-full overflow-y-auto rounded-t-[2rem] p-5 shadow-2xl sm:rounded-[2rem] sm:p-7 " + (wide ? "max-w-4xl" : "max-w-2xl")}><div className="mb-6 flex items-start justify-between gap-4"><div><h2 className="text-xl font-black tracking-tight text-foreground sm:text-2xl">{title}</h2>{description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}</div><button type="button" onClick={onClose} aria-label="Close dialog" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-background/70 text-muted-foreground"><X className="h-5 w-5" /></button></div>{children}</section></div>
+}
+function Empty({ title, description, action }: { title: string; description: string; action?: ReactNode }) {
+  return <div className="flex min-h-56 flex-col items-center justify-center rounded-3xl border border-dashed border-border bg-card/45 px-6 py-10 text-center"><span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Boxes className="h-6 w-6" /></span><h3 className="mt-4 font-extrabold">{title}</h3><p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{description}</p>{action ? <div className="mt-5">{action}</div> : null}</div>
+}
+
+function EntityModal({ initialKind, data, onClose, onCreate }: { initialKind: EntityKind; data: Snapshot; onClose: () => void; onCreate: (value: Record<string, string>) => Promise<boolean> }) {
+  const [kind, setKind] = useState<EntityKind>(initialKind)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setSaving(true); setError("")
+    const values: Record<string, string> = { type: kind }
+    new FormData(event.currentTarget).forEach((value, key) => { values[key] = String(value) })
+    const success = await onCreate(values)
+    setSaving(false)
+    if (!success) setError("The record could not be saved. Check the fields and try again.")
+  }
+  return <Modal title="Add a master record" description="Build the product, supplier and raw-material catalogue." onClose={onClose}>
+    <form onSubmit={submit} className="space-y-5">
+      <label className="block"><span className={LABEL}>Record type</span><select className={INPUT} value={kind} onChange={(event) => { setKind(event.target.value as EntityKind); setError("") }}><option value="product">Product</option><option value="vendor">Vendor</option><option value="material">Raw material</option><option value="purchase_lot">Material purchase / received lot</option></select></label>
+      {kind === "product" ? <div className="grid gap-4 sm:grid-cols-2"><Field label="Product name" name="name" required placeholder="e.g. Patal Poha Chivda" /><Field label="Product code" name="code" placeholder="Auto-generated when blank" /><Field label="Category" name="category" placeholder="Snacks, premixes..." /><Field label="Description" name="description" placeholder="Optional notes" /></div> : null}
+      {kind === "vendor" ? <div className="grid gap-4 sm:grid-cols-2"><Field label="Vendor / business name" name="name" required placeholder="Supplier name" /><Field label="Contact person" name="contactName" placeholder="Contact name" /><Field label="Phone" name="phone" placeholder="+91..." /><Field label="Email" name="email" type="email" placeholder="vendor@example.com" /><Field label="GSTIN" name="gstin" placeholder="Optional GSTIN" /><Field label="Address" name="address" placeholder="Vendor address" /><div className="sm:col-span-2"><Field label="Notes" name="notes" placeholder="Materials supplied, payment terms..." /></div></div> : null}
+      {kind === "material" ? <div className="grid gap-4 sm:grid-cols-2"><Field label="Material name" name="name" required placeholder="e.g. Flattened rice" /><Field label="Material code" name="code" placeholder="Auto-generated when blank" /><Field label="Category" name="category" placeholder="Ingredient, packaging..." /><SelectField label="Base unit" name="unit" required><option value="">Choose unit</option><option value="kg">Kilograms (kg)</option><option value="g">Grams (g)</option><option value="litre">Litres</option><option value="unit">Units</option></SelectField><div className="sm:col-span-2"><Field label="Description" name="description" placeholder="Optional specifications" /></div></div> : null}
+      {kind === "purchase_lot" ? <div className="grid gap-4 sm:grid-cols-2"><SelectField label="Material" name="materialId" required><option value="">Choose material</option>{data.materials.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.unit}</option>)}</SelectField><SelectField label="Vendor" name="vendorId" required><option value="">Choose vendor</option>{data.vendors.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectField><Field label="Purchase / received date" name="purchasedOn" type="date" required /><Field label="Quantity received" name="receivedQty" type="number" step="0.001" min="0.001" required placeholder="e.g. 250" /><Field label="Vendor lot number" name="vendorLotNumber" placeholder="Supplier lot reference" /><Field label="Invoice number" name="invoiceNumber" placeholder="Purchase invoice reference" /><Field label="Unit cost (INR, optional)" name="unitCost" type="number" step="0.01" min="0" placeholder="Cost per base unit" />{(!data.materials.length || !data.vendors.length) ? <p className="sm:col-span-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200">Add at least one vendor and one raw material before recording a purchase lot.</p> : null}</div> : null}
+      {error ? <p role="alert" className="rounded-xl bg-rose-500/10 p-3 text-sm text-rose-700 dark:text-rose-300">{error}</p> : null}
+      <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end"><button type="button" onClick={onClose} className={BUTTON + " border border-border bg-background/70"}>Cancel</button><button type="submit" disabled={saving || (kind === "purchase_lot" && (!data.materials.length || !data.vendors.length))} className={BUTTON + " bg-primary text-primary-foreground"}>{saving ? "Saving..." : <><Plus className="h-4 w-4" /> Save record</>}</button></div>
+    </form>
+  </Modal>
+}
+
+function BatchModal({ data, onClose, onCreate, onAddPurchase }: { data: Snapshot; onClose: () => void; onCreate: (value: Record<string, unknown>) => Promise<boolean>; onAddPurchase: () => void }) {
+  const [lines, setLines] = useState<Array<{ purchaseLotId: string; qtyUsed: string }>>([{ purchaseLotId: data.purchaseLots.find((lot) => lot.availableQty > 0)?.id ?? "", qtyUsed: "" }])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
+  const availableLots = data.purchaseLots.filter((lot) => lot.availableQty > 0.000001)
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); setSaving(true); setError("")
+    const form = new FormData(event.currentTarget)
+    const value: Record<string, unknown> = {
+      type: "batch", batchNo: String(form.get("batchNo") ?? ""), productId: String(form.get("productId") ?? ""),
+      manufacturedOn: String(form.get("manufacturedOn") ?? ""), outputQtyKg: Number(form.get("outputQtyKg")),
+      bestBefore: String(form.get("bestBefore") ?? ""), operatorName: String(form.get("operatorName") ?? ""),
+      packagingLot: String(form.get("packagingLot") ?? ""), notes: String(form.get("notes") ?? ""),
+      materials: lines.map((line) => ({ purchaseLotId: line.purchaseLotId, qtyUsed: Number(line.qtyUsed) })),
+    }
+    const success = await onCreate(value)
+    setSaving(false)
+    if (!success) setError("The batch was not saved. Check purchase-lot balances and required fields.")
+  }
+  return <Modal title="Register production batch" description="Record finished output and trace every ingredient to its vendor purchase lot." onClose={onClose} wide>
+    <form onSubmit={submit} className="space-y-6">
+      <div><p className="mb-3 text-xs font-extrabold uppercase tracking-widest text-primary">01 · Production details</p><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><Field label="Batch number" name="batchNo" required placeholder="e.g. SD-026" /><SelectField label="Product" name="productId" required><option value="">Choose product</option>{data.products.filter((item) => item.is_active).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.code}</option>)}</SelectField><Field label="Manufacturing date" name="manufacturedOn" type="date" required /><Field label="Finished output (kg)" name="outputQtyKg" type="number" step="0.001" min="0.001" required placeholder="e.g. 250" /><Field label="Best-before date" name="bestBefore" type="date" /><Field label="Operator / supervisor" name="operatorName" placeholder="Name" /><Field label="Packaging lot" name="packagingLot" placeholder="Optional reference" /><label className="block sm:col-span-2 lg:col-span-3"><span className={LABEL}>Production notes</span><textarea name="notes" rows={2} className={INPUT + " min-h-24 resize-y"} placeholder="Process notes, yield observations, shift details..." /></label></div></div>
+      <div className="border-t border-border pt-5"><div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-extrabold uppercase tracking-widest text-primary">02 · Ingredients consumed</p><p className="mt-1 text-xs text-muted-foreground">Choose the actual received purchase lot for each line.</p></div><button type="button" onClick={() => setLines((items) => [...items, { purchaseLotId: "", qtyUsed: "" }])} className={BUTTON + " border border-border bg-background/80"}><Plus className="h-4 w-4" /> Add material</button></div>
+        <div className="space-y-3">{lines.map((line, index) => <div key={index} className="grid gap-3 rounded-2xl border border-border bg-background/55 p-3 sm:grid-cols-[minmax(0,1fr)_180px_48px] sm:items-end"><label className="block min-w-0"><span className={LABEL}>Purchase lot · material · vendor</span><select className={INPUT} required value={line.purchaseLotId} onChange={(event) => setLines((items) => items.map((item, i) => i === index ? { ...item, purchaseLotId: event.target.value } : item))}><option value="">Choose available lot</option>{availableLots.map((lot) => <option key={lot.id} value={lot.id}>{lot.materialName} · {lot.vendorName} · {number(lot.availableQty, 3)} {lot.unit} available</option>)}</select></label><label className="block"><span className={LABEL}>Quantity used</span><input className={INPUT} type="number" min="0.001" step="0.001" required value={line.qtyUsed} onChange={(event) => setLines((items) => items.map((item, i) => i === index ? { ...item, qtyUsed: event.target.value } : item))} placeholder="e.g. 120" /></label><button type="button" disabled={lines.length === 1} onClick={() => setLines((items) => items.filter((_, i) => i !== index))} className="flex h-12 w-12 items-center justify-center rounded-xl border border-border text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-30" aria-label="Remove material line"><X className="h-4 w-4" /></button></div>)}</div>
+        {!availableLots.length ? <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-amber-900 dark:text-amber-200">No available purchase lots yet. Add vendors, raw materials and a received purchase lot first.</p><button type="button" onClick={onAddPurchase} className={BUTTON + " shrink-0 bg-primary text-primary-foreground"}>Add purchase lot</button></div> : null}
+      </div>
+      {error ? <p role="alert" className="rounded-xl bg-rose-500/10 p-3 text-sm text-rose-700 dark:text-rose-300">{error}</p> : null}
+      <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end"><button type="button" onClick={onClose} className={BUTTON + " border border-border bg-background/70"}>Cancel</button><button type="submit" disabled={saving || !data.products.length || !availableLots.length} className={BUTTON + " bg-primary text-primary-foreground"}>{saving ? "Saving batch..." : <><Check className="h-4 w-4" /> Save production batch</>}</button></div>
+    </form>
+    {!data.products.length ? <p className="mt-3 text-xs text-muted-foreground">Add a product first using Add master record.</p> : null}
+  </Modal>
+}
+
+function BatchDetail({ batch, onClose, onQuality }: { batch: Batch; onClose: () => void; onQuality: (value: Record<string, unknown>) => Promise<boolean> }) {
+  const [status, setStatus] = useState("approved")
+  const [moisture, setMoisture] = useState(batch.moisturePct === null ? "" : String(batch.moisturePct))
+  const [remarks, setRemarks] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); setSaving(true); setError("")
+    const success = await onQuality({ type: "quality", batchId: batch.id, status, moisturePct: moisture, remarks })
+    setSaving(false)
+    if (!success) setError("Could not save the quality decision.")
+    else onClose()
+  }
+  return <Modal title={"Batch " + batch.batchNo} description={batch.productName + " · manufactured " + date(batch.manufacturedOn)} onClose={onClose} wide>
+    <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-2xl bg-secondary/65 p-4"><p className="text-xs font-bold text-muted-foreground">Finished output</p><p className="mt-1 text-2xl font-black">{number(batch.outputQtyKg, 2)} kg</p></div><div className="rounded-2xl bg-secondary/65 p-4"><p className="text-xs font-bold text-muted-foreground">Batch status</p><div className="mt-2"><StatusPill status={batch.status} /></div></div><div className="rounded-2xl bg-secondary/65 p-4"><p className="text-xs font-bold text-muted-foreground">Best before</p><p className="mt-1 text-lg font-bold">{date(batch.bestBefore)}</p></div></div>
+    <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+      <div className="space-y-4"><div><div className="mb-3 flex items-center justify-between"><h3 className="font-extrabold">Material traceability</h3><span className="text-xs text-muted-foreground">{batch.materials.length} lines</span></div><div className="overflow-hidden rounded-2xl border border-border">{batch.materials.map((line) => <div key={line.id} className="border-b border-border bg-background/50 p-4 last:border-0"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-bold">{line.materialName}</p><p className="mt-1 text-xs text-muted-foreground">{line.vendorName} · lot {line.vendorLotNumber || "not specified"}</p></div><p className="font-mono text-sm font-extrabold">{number(line.qtyUsed, 3)} {line.unit}</p></div><p className="mt-2 text-xs text-muted-foreground">Invoice: {line.invoiceNumber || "Not recorded"} · Lot ID: {line.purchaseLotId.slice(0, 8)}</p></div>)}{!batch.materials.length ? <p className="p-4 text-sm text-muted-foreground">No material usage lines.</p> : null}</div></div><div className="rounded-2xl border border-border p-4"><h3 className="font-extrabold">Production notes</h3><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{batch.notes || "No production notes."}</p><div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2"><p>Operator: <span className="font-semibold text-foreground">{batch.operatorName || "—"}</span></p><p>Packaging lot: <span className="font-semibold text-foreground">{batch.packagingLot || "—"}</span></p><p>Created by: <span className="font-semibold text-foreground">{batch.createdBy}</span></p><p>Updated: <span className="font-semibold text-foreground">{dateTime(batch.updatedAt)}</span></p></div></div></div>
+      <div className="rounded-2xl border border-border bg-background/55 p-4"><div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" /><h3 className="font-extrabold">Quality decision</h3></div>{batch.qcStatus ? <div className="mt-3"><StatusPill status={batch.qcStatus} /><p className="mt-2 text-xs text-muted-foreground">Checked by {batch.qcCheckedBy || "—"} · {dateTime(batch.qcCheckedAt)}</p>{batch.qcRemarks ? <p className="mt-2 text-sm text-muted-foreground">{batch.qcRemarks}</p> : null}</div> : <p className="mt-3 text-sm text-muted-foreground">No quality inspection recorded.</p>}<form onSubmit={submit} className="mt-5 space-y-4 border-t border-border pt-4"><label className="block"><span className={LABEL}>Decision</span><select className={INPUT} value={status} onChange={(event) => setStatus(event.target.value)}><option value="approved">Approve and release</option><option value="hold">Place on QC hold</option><option value="rejected">Reject batch</option></select></label><label className="block"><span className={LABEL}>Moisture (%) · optional</span><input className={INPUT} type="number" min="0" max="100" step="0.01" value={moisture} onChange={(event) => setMoisture(event.target.value)} placeholder="Measured value" /></label><label className="block"><span className={LABEL}>Inspection remarks</span><textarea className={INPUT + " min-h-24 resize-y"} rows={3} value={remarks} onChange={(event) => setRemarks(event.target.value)} placeholder="Inspection result, packaging, etc." /></label>{error ? <p role="alert" className="text-xs text-rose-600">{error}</p> : null}<button type="submit" disabled={saving} className={BUTTON + " w-full bg-primary text-primary-foreground"}>{saving ? "Saving..." : "Save quality decision"}</button></form></div>
+    </div>
+  </Modal>
+}
+
+function csvCell(value: unknown) {
+  return '"' + String(value ?? "").replace(/"/g, '""') + '"'
+}
+
+export function InventoryWorkspace({ currentUserEmail }: { currentUserEmail: string }) {
+  const [tab, setTab] = useState<TabId>("overview")
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState("")
+  const [search, setSearch] = useState("")
+  const [filter, setFilter] = useState("all")
+  const [entity, setEntity] = useState<EntityKind | null>(null)
+  const [batchForm, setBatchForm] = useState(false)
+  const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null)
+  const [notice, setNotice] = useState("")
+
+  const refresh = useCallback(async (quiet = false) => {
+    if (quiet) setRefreshing(true); else setLoading(true)
+    try {
+      const response = await fetch("/api/inventory", { cache: "no-store", credentials: "same-origin" })
+      const payload = await response.json() as Snapshot & { error?: string }
+      if (!response.ok) throw new Error(payload.error || "Could not load inventory.")
+      setSnapshot(payload); setError("")
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not connect to inventory.")
+    } finally {
+      setLoading(false); setRefreshing(false)
+    }
+  }, [])
+  useEffect(() => { void refresh() }, [refresh])
+
+  const createRecord = useCallback(async (value: Record<string, string>) => {
+    try {
+      const response = await fetch("/api/inventory", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(value), credentials: "same-origin" })
+      const result = await response.json() as { error?: string }
+      if (!response.ok) throw new Error(result.error || "Save failed.")
+      await refresh(true); setNotice("Record saved successfully."); setEntity(null); return true
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not save the record."); return false
+    }
+  }, [refresh])
+
+  const createBatch = useCallback(async (value: Record<string, unknown>) => {
+    try {
+      const response = await fetch("/api/inventory", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(value), credentials: "same-origin" })
+      const result = await response.json() as { error?: string }
+      if (!response.ok) throw new Error(result.error || "Batch save failed.")
+      await refresh(true); setNotice("Production batch registered."); setBatchForm(false); setTab("batches"); return true
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not save batch."); return false
+    }
+  }, [refresh])
+
+  const saveQuality = useCallback(async (value: Record<string, unknown>) => {
+    try {
+      const response = await fetch("/api/inventory", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(value), credentials: "same-origin" })
+      const result = await response.json() as { error?: string }
+      if (!response.ok) throw new Error(result.error || "Quality update failed.")
+      await refresh(true); setNotice("Quality decision saved."); return true
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not save quality decision."); return false
+    }
+  }, [refresh])
+
+  const filteredBatches = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return (snapshot?.batches ?? []).filter((batch) => {
+      const statusMatch = filter === "all" || batch.status === filter
+      const queryMatch = !query || batch.batchNo.toLowerCase().includes(query) || batch.productName.toLowerCase().includes(query) || batch.materials.some((line) => line.materialName.toLowerCase().includes(query) || line.vendorName.toLowerCase().includes(query))
+      return statusMatch && queryMatch
+    })
+  }, [snapshot, search, filter])
+
+  const productOutput = useMemo(() => {
+    const totals = new Map<string, number>()
+    for (const batch of snapshot?.batches ?? []) totals.set(batch.productName, (totals.get(batch.productName) ?? 0) + batch.outputQtyKg)
+    return Array.from(totals.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5)
+  }, [snapshot])
+
+  const navigate = (next: TabId) => { setTab(next); setSearch(""); setFilter("all") }
+  const title = NAV.find((item) => item.id === tab)?.label ?? "Overview"
+
+  const exportBatches = () => {
+    if (!snapshot) return
+    const rows: unknown[][] = [["Batch", "Product", "Date", "Output kg", "Status", "Material", "Vendor", "Qty used", "Unit", "Vendor lot", "Invoice"]]
+    for (const batch of snapshot.batches) {
+      if (!batch.materials.length) rows.push([batch.batchNo, batch.productName, batch.manufacturedOn, batch.outputQtyKg, batch.status, "", "", "", "", "", ""])
+      else for (const line of batch.materials) rows.push([batch.batchNo, batch.productName, batch.manufacturedOn, batch.outputQtyKg, batch.status, line.materialName, line.vendorName, line.qtyUsed, line.unit, line.vendorLotNumber ?? "", line.invoiceNumber ?? ""])
+    }
+    const url = URL.createObjectURL(new Blob([rows.map((row) => row.map(csvCell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" }))
+    const anchor = document.createElement("a"); anchor.href = url; anchor.download = "swadam-production-batches.csv"; anchor.click(); URL.revokeObjectURL(url)
+  }
+
+  return <div className="ambient-bg min-h-screen text-foreground"><div className="mx-auto flex min-h-screen max-w-[1920px]">
+    <aside className="sticky top-0 hidden h-screen w-[238px] shrink-0 flex-col border-r border-border/70 bg-card/55 px-4 py-5 backdrop-blur-2xl lg:flex">
+      <div className="flex items-center gap-3 px-2"><Image src="/images/swadam-logo.webp" alt="Swadam Foods" width={64} height={36} className="h-9 w-auto" priority /><div><p className="text-sm font-black">Swadam Foods</p><p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-primary">Operations</p></div></div>
+      <div className="my-6 h-px bg-border" /><p className="px-3 text-[10px] font-extrabold uppercase tracking-[0.18em] text-muted-foreground">Workspace</p>
+      <nav className="mt-3 flex-1 space-y-1" aria-label="Inventory navigation">{NAV.map((item) => { const Icon = item.icon; return <button key={item.id} type="button" onClick={() => navigate(item.id)} className={"flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-bold transition " + (tab === item.id ? "bg-primary text-primary-foreground shadow-md shadow-primary/15" : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground")}><Icon className="h-[18px] w-[18px] shrink-0" /><span className="truncate">{item.label}</span>{item.id === "quality" && snapshot?.stats.qcPending ? <span className="ml-auto rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] text-amber-800 dark:text-amber-300">{snapshot.stats.qcPending}</span> : null}</button> })}</nav>
+      <div className="rounded-2xl border border-border bg-background/60 p-3"><div className="flex items-center gap-2"><LockKeyhole className="h-4 w-4 text-primary" /><span className="text-xs font-extrabold">Private workspace</span></div><p className="mt-1 break-all text-[10px] text-muted-foreground">{currentUserEmail}</p></div>
+    </aside>
+
+    <main className="min-w-0 flex-1">
+      <header className="glass-header sticky top-0 z-30 border-x-0 border-t-0 px-4 py-3 sm:px-6 lg:px-8"><div className="mx-auto flex max-w-[1600px] items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><div className="lg:hidden"><Image src="/images/swadam-logo.webp" alt="Swadam Foods" width={48} height={28} className="h-7 w-auto" /></div><div className="min-w-0"><p className="truncate text-xs font-extrabold uppercase tracking-[0.16em] text-primary">Operations workspace</p><p className="truncate text-sm font-bold text-foreground sm:text-base">{title}</p></div></div><div className="flex shrink-0 items-center gap-2"><span className="hidden items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 sm:inline-flex"><ShieldCheck className="h-3.5 w-3.5" /> Access verified</span><button type="button" onClick={() => void refresh(true)} disabled={refreshing} aria-label="Refresh inventory" className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background/70 text-muted-foreground hover:bg-secondary"><RefreshCw className={"h-4 w-4 " + (refreshing ? "animate-spin" : "")} /></button><ThemeToggle /><a href="/cdn-cgi/access/logout?returnTo=%2F" className="hidden h-11 items-center rounded-full border border-border bg-background/70 px-4 text-xs font-bold text-muted-foreground hover:bg-secondary sm:inline-flex">Sign out</a></div></div></header>
+
+      <div className="mx-auto max-w-[1600px] px-4 pb-10 pt-5 sm:px-6 sm:pt-7 lg:px-8">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-extrabold uppercase tracking-[0.2em] text-primary">Swadam Foods · Internal</p><h1 className="mt-1 text-2xl font-black tracking-tight text-foreground sm:text-3xl lg:text-4xl">{title}</h1><p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Production records, raw-material sourcing and batch-level traceability in one place.</p></div><div className="flex w-full flex-wrap gap-2 sm:w-auto"><button type="button" onClick={() => setEntity("product")} className={BUTTON + " flex-1 border border-border bg-card/75 text-foreground hover:bg-secondary sm:flex-none"}><Plus className="h-4 w-4" /> Add master record</button><button type="button" onClick={() => setBatchForm(true)} className={BUTTON + " flex-1 bg-primary text-primary-foreground shadow-md shadow-primary/15 hover:opacity-90 sm:flex-none"}><Factory className="h-4 w-4" /> Add production batch</button></div></div>
+
+        <nav className="mb-5 flex gap-2 overflow-x-auto pb-1 lg:hidden" aria-label="Inventory sections">{NAV.map((item) => { const Icon = item.icon; return <button key={item.id} type="button" onClick={() => navigate(item.id)} className={"inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border px-3 text-xs font-bold " + (tab === item.id ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card/65 text-muted-foreground")}><Icon className="h-4 w-4" />{item.label}</button> })}</nav>
+
+        {notice ? <div role="status" className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-800 dark:text-emerald-200"><CheckCircle2 className="h-4 w-4 shrink-0" />{notice}<button type="button" className="ml-auto" onClick={() => setNotice("")} aria-label="Dismiss notification"><X className="h-4 w-4" /></button></div> : null}
+        {error ? <div role="alert" className="mb-4 flex items-start gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-800 dark:text-rose-200"><AlertCircle className="mt-0.5 h-5 w-5 shrink-0" /><div className="min-w-0"><p className="font-extrabold">Inventory needs attention</p><p className="mt-1 leading-6">{error}</p>{error.toLowerCase().includes("database") ? <p className="mt-2 text-xs">Create and bind the separate inventory database. See INVENTORY_SETUP.md.</p> : null}</div><button type="button" className="ml-auto" onClick={() => setError("")} aria-label="Dismiss error"><X className="h-4 w-4" /></button></div> : null}
+        {loading && !snapshot ? <Panel className="flex min-h-64 items-center justify-center"><div className="text-center"><RefreshCw className="mx-auto h-7 w-7 animate-spin text-primary" /><p className="mt-3 text-sm font-semibold text-muted-foreground">Loading private inventory...</p></div></Panel> : null}
+
+        {snapshot && tab === "overview" ? <div className="space-y-5">
+          <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4"><Metric label="Total production" value={number(snapshot.stats.totalOutputKg) + " kg"} detail="Recorded finished output" icon={Factory} /><Metric label="Batches recorded" value={number(snapshot.stats.totalBatches, 0)} detail="All production history" icon={Boxes} /><Metric label="This month" value={number(snapshot.stats.monthOutputKg) + " kg"} detail={number(snapshot.stats.monthBatches, 0) + " batches manufactured"} icon={CalendarDays} /><Metric label="Awaiting release" value={number(snapshot.stats.qcPending, 0)} detail="Draft, production or QC hold" icon={ClipboardCheck} /></div>
+          <div className="grid gap-5 2xl:grid-cols-[1.15fr_0.85fr]">
+            <Panel><Heading title="Production by product" description="Output across the latest 200 batches." />{productOutput.length ? <div className="space-y-5">{productOutput.map(([name, qty]) => { const max = Math.max(...productOutput.map((entry) => entry[1]), 1); return <div key={name}><div className="mb-2 flex items-center justify-between gap-3"><span className="truncate text-sm font-bold">{name}</span><span className="shrink-0 font-mono text-sm font-extrabold">{number(qty)} kg</span></div><div className="h-2.5 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary" style={{ width: (qty / max * 100) + "%" }} /></div></div>})}</div> : <Empty title="No production yet" description="Add your first production batch to begin building production history." action={<button type="button" onClick={() => setBatchForm(true)} className={BUTTON + " bg-primary text-primary-foreground"}>Add first batch</button>} />}</Panel>
+            <Panel><Heading title="Quick overview" description="Your inventory setup at a glance." /><div className="grid grid-cols-2 gap-3">{[[Package, snapshot.products.length, "Products"], [Truck, snapshot.vendors.length, "Vendors"], [Wheat, snapshot.materials.length, "Raw materials"], [Boxes, snapshot.purchaseLots.length, "Purchase lots"]].map(([Icon, count, label], index) => { const ItemIcon = Icon as typeof Package; return <div key={index} className="rounded-2xl bg-secondary/65 p-4"><ItemIcon className="h-5 w-5 text-primary" /><p className="mt-3 text-2xl font-black">{count as number}</p><p className="text-xs font-semibold text-muted-foreground">{label as string}</p></div> })}</div><div className="mt-4 rounded-2xl border border-primary/15 bg-primary/5 p-4"><div className="flex items-center gap-2 text-primary"><LockKeyhole className="h-4 w-4" /><p className="text-xs font-extrabold">Traceability principle</p></div><p className="mt-2 text-sm leading-6 text-muted-foreground">Every ingredient line links to its received purchase lot, preserving the actual vendor and invoice reference.</p></div></Panel>
+          </div>
+          <Panel><Heading title="Recently recorded batches" description="Latest production activity." action={<button type="button" onClick={() => navigate("batches")} className="inline-flex min-h-10 items-center gap-1 rounded-xl px-3 text-xs font-extrabold text-primary hover:bg-primary/10">View all <ArrowRight className="h-4 w-4" /></button>} />{snapshot.batches.length ? <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left"><thead><tr className="border-b border-border text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground"><th className="px-3 py-3">Batch</th><th className="px-3 py-3">Product</th><th className="px-3 py-3">Manufactured</th><th className="px-3 py-3">Output</th><th className="px-3 py-3">Materials</th><th className="px-3 py-3">Status</th></tr></thead><tbody>{snapshot.batches.slice(0, 6).map((batch) => <tr key={batch.id} onClick={() => setSelectedBatch(batch)} className="cursor-pointer border-b border-border/70 text-sm transition hover:bg-secondary/45 last:border-0"><td className="px-3 py-4 font-mono text-xs font-extrabold">{batch.batchNo}</td><td className="px-3 py-4 font-bold">{batch.productName}</td><td className="px-3 py-4 text-muted-foreground">{date(batch.manufacturedOn)}</td><td className="px-3 py-4 font-mono font-bold">{number(batch.outputQtyKg, 2)} kg</td><td className="px-3 py-4 text-muted-foreground">{batch.materials.length} lines</td><td className="px-3 py-4"><StatusPill status={batch.status} /></td></tr>)}</tbody></table></div> : <Empty title="Your production ledger is ready" description="Register a batch to track output, ingredients, suppliers and quality decisions." />}</Panel>
+          <p className="text-center text-[11px] text-muted-foreground">Dashboard totals include all records. Product breakdown uses the latest 200 batches.</p>
+        </div> : null}
+
+        {snapshot && tab === "batches" ? <Panel><Heading title="Production ledger" description="Search by batch, product, ingredient or vendor. Select a row for full traceability." action={<button type="button" onClick={exportBatches} className={BUTTON + " border border-border bg-background/70"}><ArrowDownToLine className="h-4 w-4" /> Export CSV</button>} /><div className="mb-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px]"><label className="relative block"><Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input className={INPUT + " pl-10"} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search batch, product, material or vendor..." /></label><label className="relative block"><Filter className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><select className={INPUT + " pl-10"} value={filter} onChange={(event) => setFilter(event.target.value)}><option value="all">All statuses</option><option value="draft">Draft</option><option value="in_progress">In production</option><option value="qc_hold">QC hold</option><option value="released">Released</option><option value="rejected">Rejected</option></select></label></div>{filteredBatches.length ? <div className="overflow-x-auto rounded-2xl border border-border"><table className="w-full min-w-[850px] text-left"><thead className="bg-secondary/55"><tr className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground"><th className="px-4 py-3">Batch number</th><th className="px-4 py-3">Product</th><th className="px-4 py-3">Date</th><th className="px-4 py-3">Output</th><th className="px-4 py-3">Vendors</th><th className="px-4 py-3">QC</th><th className="px-4 py-3">Status</th></tr></thead><tbody>{filteredBatches.map((batch) => <tr key={batch.id} onClick={() => setSelectedBatch(batch)} className="cursor-pointer border-t border-border/70 text-sm transition hover:bg-primary/5"><td className="px-4 py-4 font-mono text-xs font-extrabold">{batch.batchNo}</td><td className="px-4 py-4 font-bold">{batch.productName}</td><td className="whitespace-nowrap px-4 py-4 text-muted-foreground">{date(batch.manufacturedOn)}</td><td className="whitespace-nowrap px-4 py-4 font-mono font-bold">{number(batch.outputQtyKg, 2)} kg</td><td className="px-4 py-4 text-muted-foreground">{new Set(batch.materials.map((line) => line.vendorId)).size}</td><td className="px-4 py-4">{batch.qcStatus ? <StatusPill status={batch.qcStatus} /> : <span className="text-xs text-muted-foreground">Pending</span>}</td><td className="px-4 py-4"><StatusPill status={batch.status} /></td></tr>)}</tbody></table></div> : <Empty title="No matching batches" description="Try another search or create a new production batch." action={<button type="button" onClick={() => setBatchForm(true)} className={BUTTON + " bg-primary text-primary-foreground"}>Add batch</button>} />}<p className="mt-3 text-xs text-muted-foreground">Showing {filteredBatches.length} of up to 200 most recent batches.</p></Panel> : null}
+
+        {snapshot && tab === "products" ? <div className="space-y-4"><Heading title="Product catalogue" description="Products available for production." action={<button type="button" onClick={() => setEntity("product")} className={BUTTON + " bg-primary text-primary-foreground"}><Plus className="h-4 w-4" /> Add product</button>} />{snapshot.products.length ? <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">{snapshot.products.map((product) => <Panel key={product.id}><div className="flex items-start justify-between gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Package className="h-5 w-5" /></span><span className="rounded-full border border-border px-3 py-1 text-[10px] font-extrabold text-muted-foreground">{product.code}</span></div><h3 className="mt-4 text-lg font-black">{product.name}</h3><p className="mt-1 text-xs text-muted-foreground">{product.category || "Uncategorised"}</p><p className="mt-3 text-sm leading-6 text-muted-foreground">{product.description || "No description recorded."}</p></Panel>)}</div> : <Empty title="No products added" description="Create your product catalogue before registering production." action={<button type="button" onClick={() => setEntity("product")} className={BUTTON + " bg-primary text-primary-foreground"}>Add first product</button>} />}</div> : null}
+
+        {snapshot && tab === "vendors" ? <div className="space-y-4"><Heading title="Vendor directory" description="Supplier contacts and purchase history references." action={<button type="button" onClick={() => setEntity("vendor")} className={BUTTON + " bg-primary text-primary-foreground"}><Plus className="h-4 w-4" /> Add vendor</button>} />{snapshot.vendors.length ? <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">{snapshot.vendors.map((vendor) => { const lots = snapshot.purchaseLots.filter((lot) => lot.vendorId === vendor.id); return <Panel key={vendor.id}><div className="flex items-start justify-between gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Truck className="h-5 w-5" /></span><span className="rounded-full bg-secondary px-3 py-1 text-[10px] font-extrabold">{lots.length} purchase lots</span></div><h3 className="mt-4 text-lg font-black">{vendor.name}</h3><p className="mt-1 text-sm text-muted-foreground">{vendor.contact_name || "Contact not recorded"}</p><div className="mt-4 space-y-2 border-t border-border pt-3 text-xs text-muted-foreground"><p>{vendor.phone || "Phone not recorded"}</p><p>{vendor.email || "Email not recorded"}</p><p>{vendor.gstin ? "GSTIN: " + vendor.gstin : "GSTIN not recorded"}</p><p>{vendor.address || "Address not recorded"}</p></div></Panel>})}</div> : <Empty title="No vendors added" description="Add suppliers so every purchase lot can be attributed to the correct vendor." action={<button type="button" onClick={() => setEntity("vendor")} className={BUTTON + " bg-primary text-primary-foreground"}>Add first vendor</button>} />}</div> : null}
+
+        {snapshot && tab === "materials" ? <div className="space-y-5"><Heading title="Materials & purchase lots" description="Received quantities, consumption and remaining lot balances." action={<button type="button" onClick={() => setEntity("purchase_lot")} className={BUTTON + " bg-primary text-primary-foreground"}><Plus className="h-4 w-4" /> Receive material</button>} />{snapshot.materials.length ? <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">{snapshot.materials.map((material) => { const lots = snapshot.purchaseLots.filter((lot) => lot.materialId === material.id); const available = lots.reduce((sum, lot) => sum + lot.availableQty, 0); return <Panel key={material.id}><div className="flex items-start justify-between gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Wheat className="h-5 w-5" /></span><span className="rounded-full border border-border px-3 py-1 text-[10px] font-extrabold">{material.code}</span></div><h3 className="mt-3 text-base font-black">{material.name}</h3><p className="mt-1 text-xs text-muted-foreground">{material.category || "Uncategorised"} · {material.unit}</p><div className="mt-4 flex items-end justify-between border-t border-border pt-3"><div><p className="text-xs text-muted-foreground">Available across lots</p><p className="text-xl font-black">{number(available, 3)} <span className="text-xs font-bold text-muted-foreground">{material.unit}</span></p></div><p className="text-xs text-muted-foreground">{lots.length} lots</p></div></Panel>})}</div> : <Empty title="No raw materials added" description="Create raw-material records before receiving supplier lots." action={<button type="button" onClick={() => setEntity("material")} className={BUTTON + " bg-primary text-primary-foreground"}>Add material</button>} />}<Panel><Heading title="Received purchase lots" description="The supplier consignments that production batches consume." />{snapshot.purchaseLots.length ? <div className="overflow-x-auto rounded-2xl border border-border"><table className="w-full min-w-[900px] text-left"><thead className="bg-secondary/55"><tr className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground"><th className="px-4 py-3">Material</th><th className="px-4 py-3">Vendor</th><th className="px-4 py-3">Purchased</th><th className="px-4 py-3">Vendor lot</th><th className="px-4 py-3">Received</th><th className="px-4 py-3">Used</th><th className="px-4 py-3">Available</th><th className="px-4 py-3">Invoice</th></tr></thead><tbody>{snapshot.purchaseLots.map((lot) => <tr key={lot.id} className="border-t border-border/70 text-sm"><td className="px-4 py-4 font-bold">{lot.materialName}</td><td className="px-4 py-4">{lot.vendorName}</td><td className="px-4 py-4 whitespace-nowrap text-muted-foreground">{date(lot.purchasedOn)}</td><td className="px-4 py-4 text-muted-foreground">{lot.vendorLotNumber || "—"}</td><td className="px-4 py-4 font-mono">{number(lot.receivedQty, 3)} {lot.unit}</td><td className="px-4 py-4 font-mono">{number(lot.usedQty, 3)} {lot.unit}</td><td className="px-4 py-4 font-mono font-extrabold">{number(lot.availableQty, 3)} {lot.unit}</td><td className="px-4 py-4 text-muted-foreground">{lot.invoiceNumber || "—"}</td></tr>)}</tbody></table></div> : <Empty title="No purchase lots yet" description="Record a received lot to connect materials with vendors and track available quantities." action={<button type="button" onClick={() => setEntity("purchase_lot")} className={BUTTON + " bg-primary text-primary-foreground"}>Receive a purchase lot</button>} />}</Panel></div> : null}
+
+        {snapshot && tab === "quality" ? <Panel><Heading title="Quality control queue" description="Open a batch to review its history and record an inspection decision." />{snapshot.batches.filter((batch) => batch.status !== "released" && batch.status !== "rejected").length ? <div className="space-y-2">{snapshot.batches.filter((batch) => batch.status !== "released" && batch.status !== "rejected").map((batch) => <button key={batch.id} type="button" onClick={() => setSelectedBatch(batch)} className="flex min-h-[76px] w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-background/55 p-4 text-left transition hover:border-primary/35 hover:bg-primary/5"><div className="min-w-0"><p className="font-mono text-xs font-extrabold">{batch.batchNo}</p><p className="mt-1 truncate text-sm font-bold">{batch.productName} · {number(batch.outputQtyKg, 2)} kg</p><p className="mt-1 text-xs text-muted-foreground">{date(batch.manufacturedOn)} · {batch.materials.length} material lines</p></div><div className="flex items-center gap-2"><StatusPill status={batch.status} /><ArrowRight className="h-4 w-4 text-muted-foreground" /></div></button>)}</div> : <Empty title="Quality queue is clear" description="New batches appear here until approved, held or rejected." />}</Panel> : null}
+
+        {snapshot && tab === "activity" ? <Panel><Heading title="Activity history" description="An append-only record of who created records and who made quality decisions." />{snapshot.activity.length ? <div className="space-y-1">{snapshot.activity.map((entry) => <div key={entry.id} className="flex flex-wrap items-start gap-3 border-b border-border/70 py-4 last:border-0"><span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary"><Activity className="h-4 w-4" /></span><div className="min-w-0 flex-1"><p className="text-sm font-bold">{entry.summary}</p><p className="mt-1 break-all text-xs text-muted-foreground">{entry.actor} · {entry.action} · {entry.entityType} · {entry.entityId.slice(0, 10)}</p></div><time className="text-xs text-muted-foreground">{dateTime(entry.createdAt)}</time></div>)}</div> : <Empty title="No activity recorded" description="Changes will appear here as inventory records are added." />}</Panel> : null}
+
+        <footer className="mt-8 flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-4 text-[11px] text-muted-foreground"><span>Swadam Foods · Private production records</span><span className="inline-flex items-center gap-1.5"><LockKeyhole className="h-3.5 w-3.5" /> Cloudflare Access protected</span></footer>
+      </div>
+    </main>
+  </div>
+  {entity && snapshot ? <EntityModal initialKind={entity} data={snapshot} onClose={() => setEntity(null)} onCreate={createRecord} /> : null}
+  {batchForm && snapshot ? <BatchModal data={snapshot} onClose={() => setBatchForm(false)} onCreate={createBatch} onAddPurchase={() => { setBatchForm(false); setEntity("purchase_lot") }} /> : null}
+  {selectedBatch && snapshot ? <BatchDetail batch={snapshot.batches.find((item) => item.id === selectedBatch.id) ?? selectedBatch} onClose={() => setSelectedBatch(null)} onQuality={saveQuality} /> : null}
+  </div>
+}

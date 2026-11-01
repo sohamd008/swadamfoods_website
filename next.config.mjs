@@ -27,6 +27,11 @@ const SECURITY_HEADERS = [
   { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
 ]
 
+const PRIVATE_INVENTORY_HEADERS = [
+  { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive, nosnippet" },
+  { key: "Cache-Control", value: "private, no-store, max-age=0" },
+]
+
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -43,7 +48,13 @@ const nextConfig = {
     }]
   },
   async headers() {
-    return [{ source: "/:path*", headers: SECURITY_HEADERS }]
+    return [
+      { source: "/:path*", headers: SECURITY_HEADERS },
+      { source: "/inventory", headers: PRIVATE_INVENTORY_HEADERS },
+      { source: "/inventory/:path*", headers: PRIVATE_INVENTORY_HEADERS },
+      { source: "/api/inventory", headers: PRIVATE_INVENTORY_HEADERS },
+      { source: "/api/inventory/:path*", headers: PRIVATE_INVENTORY_HEADERS },
+    ]
   },
 }
 
